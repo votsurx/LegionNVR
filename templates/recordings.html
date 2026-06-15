@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📼 Записи</h1>
+
+<table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#16213e;">
+        <th style="padding:10px; text-align:left;">Время</th>
+        <th style="padding:10px; text-align:left;">Камера</th>
+        <th style="padding:10px; text-align:left;">Тип</th>
+        <th style="padding:10px; text-align:left;">Размер</th>
+        <th style="padding:10px; text-align:left;">Просмотр</th>
+    </tr>
+    {% for rec in recordings %}
+    <tr style="border-bottom:1px solid #333;">
+        <td style="padding:10px;">{{ rec.start_time[:19] }}</td>
+        <td style="padding:10px;">{{ rec.camera_name or rec.camera_id }}</td>
+        <td style="padding:10px;">{{ rec.type }}</td>
+        <td style="padding:10px;">{% if rec.size_mb %}{{ rec.size_mb }} MB{% else %}-{% endif %}</td>
+        <td style="padding:10px;">
+            <a href="/recordings/{{ rec.id }}/play" style="color:#e94560;">▶ Воспроизвести</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% if not recordings %}
+<p style="color:#aaa; margin-top:16px;">Записей пока нет</p>
+{% endif %}
+{% endblock %}

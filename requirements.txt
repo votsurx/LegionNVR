@@ -1,0 +1,6 @@
+flask
+flask-login
+flask-socketio
+opencv-python
+paho-mqtt
+werkzeug

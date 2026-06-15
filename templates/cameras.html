@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>📷 Камеры</h1>
+
+<div style="margin-bottom:16px;">
+    <button onclick="showAddForm()" style="background:#e94560; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
+        + Добавить камеру
+    </button>
+    <button onclick="restartStreams()" style="background:#0d47a1; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; margin-left:8px;">
+        🔄 Перезапустить стримы
+    </button>
+    <span id="restartStatus" style="color:#aaa; margin-left:8px;"></span>
+</div>
+
+<div id="addForm" style="display:none; background:#16213e; padding:20px; border-radius:8px; margin-bottom:16px;">
+    <h3>Новая камера</h3>
+    <input type="text" id="camName" placeholder="Название" style="width:100%; padding:8px; margin:4px 0; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+    <input type="text" id="camRtspMain" placeholder="RTSP основной поток" style="width:100%; padding:8px; margin:4px 0; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+    <input type="text" id="camRtspSub" placeholder="RTSP сабстрим (необязательно)" style="width:100%; padding:8px; margin:4px 0; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+    <button onclick="addCamera()" style="background:#e94560; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">💾 Сохранить</button>
+    <button onclick="hideAddForm()" style="background:#333; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-left:8px;">Отмена</button>
+</div>
+
+<table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#16213e;">
+        <th style="padding:10px; text-align:left;">Название</th>
+        <th style="padding:10px; text-align:left;">RTSP</th>
+        <th style="padding:10px; text-align:left;">Статус</th>
+        <th style="padding:10px; text-align:left;">Детектор</th>
+        <th style="padding:10px; text-align:left;">Запись</th>
+        <th style="padding:10px; text-align:left;">Действия</th>
+    </tr>
+    {% for cam in cameras %}
+    <tr style="border-bottom:1px solid #333;">
+        <td style="padding:10px;">{{ cam.name }}</td>
+        <td style="padding:10px; font-size:12px; color:#aaa; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ cam.rtsp_main }}</td>
+        <td style="padding:10px;">{% if cam.enabled %}🟢{% else %}🔴{% endif %}</td>
+        <td style="padding:10px;">{% if cam.motion_enabled %}✅{% else %}❌{% endif %}</td>
+        <td style="padding:10px;">{% if cam.record_enabled %}✅{% else %}❌{% endif %}</td>
+        <td style="padding:10px;">
+            <a href="/cameras/{{ cam.id }}/edit" style="color:#e94560; margin-right:8px;">✏️</a>
+            <a href="/cameras/{{ cam.id }}/delete" style="color:#ff6b81;" onclick="return confirm('Удалить камеру {{ cam.name }}?')">🗑️</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% if not cameras %}
+<p style="color:#aaa; margin-top:16px;">Камер пока нет. Добавьте первую!</p>
+{% endif %}
+
+<script>
+function showAddForm() { document.getElementById('addForm').style.display = 'block'; }
+function hideAddForm() { document.getElementById('addForm').style.display = 'none'; }
+
+function addCamera() {
+    var name = document.getElementById('camName').value;
+    var rtsp_main = document.getElementById('camRtspMain').value;
+    var rtsp_sub = document.getElementById('camRtspSub').value;
+    
+    if (!name || !rtsp_main) { alert('Заполните название и RTSP!'); return; }
+    
+    fetch('/api/cameras', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name, rtsp_main: rtsp_main, rtsp_sub: rtsp_sub})
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert(data.error);
+    });
+}
+
+function restartStreams() {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Перезапуск...';
+    document.getElementById('restartStatus').textContent = '';
+    
+    fetch('/api/streams/restart', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = '🔄 Перезапустить стримы';
+            document.getElementById('restartStatus').textContent = '✅ Перезапущено стримов: ' + data.restarted;
+            setTimeout(function() {
+                document.getElementById('restartStatus').textContent = '';
+            }, 5000);
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.textContent = '🔄 Перезапустить стримы';
+            document.getElementById('restartStatus').textContent = '❌ Ошибка';
+        });
+}
+</script>
+{% endblock %}

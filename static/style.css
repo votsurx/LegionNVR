@@ -1,0 +1,23 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+
+nav { background: #16213e; padding: 12px 24px; display: flex; gap: 20px; align-items: center; }
+nav a { color: #e94560; text-decoration: none; font-weight: bold; }
+nav a:hover { color: #ff6b81; }
+
+main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+.flash { padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; }
+.flash.success { background: #1b5e20; color: #a5d6a7; }
+.flash.error { background: #b71c1c; color: #ef9a9a; }
+.flash.info { background: #0d47a1; color: #90caf9; }
+
+.login-container { max-width: 360px; margin: 100px auto; text-align: center; }
+.login-container h1 { margin-bottom: 24px; }
+.login-container input { display: block; width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #333; border-radius: 6px; background: #16213e; color: #fff; }
+.login-container button { width: 100%; padding: 10px; background: #e94560; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+.login-container button:hover { background: #ff6b81; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+.card { background: #16213e; padding: 20px; border-radius: 8px; }
+.card h2 { margin-bottom: 12px; color: #e94560; }

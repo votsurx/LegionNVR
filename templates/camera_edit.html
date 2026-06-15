@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>✏️ Редактирование: {{ camera.name }}</h1>
+
+<div style="background:#16213e; padding:20px; border-radius:8px; max-width:500px;">
+    <label>Название</label>
+    <input type="text" id="camName" value="{{ camera.name }}" style="width:100%; padding:8px; margin:4px 0 12px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+    
+    <label>RTSP основной поток</label>
+    <input type="text" id="camRtspMain" value="{{ camera.rtsp_main }}" style="width:100%; padding:8px; margin:4px 0 12px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+    
+    <label>RTSP сабстрим</label>
+    <input type="text" id="camRtspSub" value="{{ camera.rtsp_sub or '' }}" style="width:100%; padding:8px; margin:4px 0 12px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+    
+    <label>
+        <input type="checkbox" id="camEnabled" {% if camera.enabled %}checked{% endif %}> Камера включена
+    </label>
+    <br><br>
+    
+    <label>
+        <input type="checkbox" id="camMotion" {% if camera.motion_enabled %}checked{% endif %}> Детектор движения
+    </label>
+    <br><br>
+    
+    <button onclick="saveCamera({{ camera.id }})" style="background:#e94560; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">💾 Сохранить</button>
+    <a href="/cameras" style="color:#aaa; margin-left:12px;">Отмена</a>
+</div>
+
+<script>
+function saveCamera(id) {
+    var data = {
+        name: document.getElementById('camName').value,
+        rtsp_main: document.getElementById('camRtspMain').value,
+        rtsp_sub: document.getElementById('camRtspSub').value,
+        enabled: document.getElementById('camEnabled').checked ? 1 : 0,
+        motion_enabled: document.getElementById('camMotion').checked ? 1 : 0
+    };
+    
+    fetch('/api/cameras/' + id, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            window.location.href = '/cameras';
+        } else {
+            alert('Ошибка сохранения');
+        }
+    });
+}
+</script>
+{% endblock %}
