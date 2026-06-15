@@ -7,6 +7,7 @@ import subprocess
 import os
 import shutil
 import json
+import threading
 import time
 import glob
 import sys
@@ -22,6 +23,18 @@ HLS_DIR = "streams"
 RECORDINGS_DIR = "recordings"
 
 stream_processes = {}
+
+def get_recordings_path():
+    """Получает путь к папке записей из настроек"""
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT value FROM settings WHERE key='recordings_path'").fetchone()
+        conn.close()
+        if row:
+            return row[0]
+    except:
+        pass
+    return "recordings"  # по умолчанию
 
 def find_ffmpeg():
     if shutil.which("ffmpeg"):
@@ -70,7 +83,9 @@ def start_hls_stream(camera):
 def start_motion_recording(camera):
     cam_id = str(camera["id"])
     now = time.strftime("%Y-%m-%d_%H-%M-%S")
-    date_dir = os.path.join(RECORDINGS_DIR, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
+    
+    recordings_path = get_recordings_path()
+    date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
     os.makedirs(date_dir, exist_ok=True)
     
     output = os.path.join(date_dir, f"{now}_motion.mp4")
@@ -84,7 +99,7 @@ def start_motion_recording(camera):
         "-t", "15", "-y", output
     ]
     
-    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     # Логируем в БД
     try:
@@ -99,13 +114,19 @@ def start_motion_recording(camera):
         pass
     
     print(f"🔴 Запись тревоги: {camera['name']} → {now}_motion.mp4")
+    
+    # Ждём окончания в фоне
+    def wait_and_log():
+        proc.wait()
+        print(f"💾 Запись завершена: {now}_motion.mp4")
+    
+    threading.Thread(target=wait_and_log, daemon=True).start()
 
 def on_motion(client, userdata, msg):
     """Callback при получении MQTT-сообщения о движении"""
     try:
         data = json.loads(msg.payload.decode())
         if data.get("event") == "motion_start":
-            # Находим камеру в БД
             conn = get_db()
             cam = conn.execute("SELECT * FROM cameras WHERE id=?", (data["camera_id"],)).fetchone()
             conn.close()
@@ -114,11 +135,55 @@ def on_motion(client, userdata, msg):
     except Exception as e:
         print(f"⚠️ Ошибка обработки MQTT: {e}")
 
+def on_motion_and_cmd(client, userdata, msg):
+    """Обрабатывает и motion, и cmd"""
+    if msg.topic.endswith("/motion"):
+        on_motion(client, userdata, msg)
+    else:
+        on_cmd(client, userdata, msg)
+
 def load_cameras():
     conn = get_db()
     rows = conn.execute("SELECT * FROM cameras WHERE enabled=1").fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def on_cmd(client, userdata, msg):
+    """Обработчик команд для стримера"""
+    try:
+        data = json.loads(msg.payload.decode())
+        action = data.get("action")
+        cam_id = data.get("camera_id")
+        
+        if action == "reload_config" and cam_id:
+            print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
+            conn = get_db()
+            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
+            conn.close()
+            
+            if cam:
+                cam_dict = dict(cam)
+                # Перезапускаем HLS-стрим
+                if cam_dict.get("stream_enabled") and cam_dict.get("enabled"):
+                    start_hls_stream(cam_dict)
+                    print(f"🔄 Стрим для '{cam_dict['name']}' перезапущен")
+                else:
+                    # Останавливаем стрим если камера выключена
+                    if str(cam_id) in stream_processes:
+                        stream_processes[str(cam_id)].terminate()
+                        del stream_processes[str(cam_id)]
+                        print(f"⏹️ Стрим '{cam_dict['name']}' остановлен")
+        
+        elif action == "reload_all":
+            print("📡 [CMD] Перезагрузка ВСЕХ стримов")
+            cameras = load_cameras()
+            for cam in cameras:
+                if cam.get("stream_enabled") and cam.get("enabled"):
+                    start_hls_stream(cam)
+            print(f"🔄 Перезапущено стримов: {len(stream_processes)}")
+            
+    except Exception as e:
+        print(f"⚠️ [CMD] Ошибка: {e}")
 
 def main():
     print("🛡️ Legion NVR - Stream Engine")
@@ -131,7 +196,9 @@ def main():
     client = mqtt.Client()
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.subscribe("spartan/+/motion")
-    client.on_message = on_motion
+    client.subscribe("spartan/+/cmd")
+    client.subscribe("spartan/streams/reload")
+    client.on_message = on_motion_and_cmd
     client.loop_start()
     
     # Запускаем HLS для всех камер
@@ -141,6 +208,7 @@ def main():
         start_hls_stream(cam)
     
     print(f"🎥 HLS-стримов: {len(stream_processes)}")
+    print(f"👂 Подписки: spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
     print("⏳ Работаю... (Ctrl+C для выхода)")
     
     try:

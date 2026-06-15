@@ -2,38 +2,143 @@
 {% block content %}
 <h1>✏️ Редактирование: {{ camera.name }}</h1>
 
-<div style="background:#16213e; padding:20px; border-radius:8px; max-width:500px;">
-    <label>Название</label>
-    <input type="text" id="camName" value="{{ camera.name }}" style="width:100%; padding:8px; margin:4px 0 12px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-    
-    <label>RTSP основной поток</label>
-    <input type="text" id="camRtspMain" value="{{ camera.rtsp_main }}" style="width:100%; padding:8px; margin:4px 0 12px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-    
-    <label>RTSP сабстрим</label>
-    <input type="text" id="camRtspSub" value="{{ camera.rtsp_sub or '' }}" style="width:100%; padding:8px; margin:4px 0 12px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-    
-    <label>
-        <input type="checkbox" id="camEnabled" {% if camera.enabled %}checked{% endif %}> Камера включена
-    </label>
-    <br><br>
-    
-    <label>
-        <input type="checkbox" id="camMotion" {% if camera.motion_enabled %}checked{% endif %}> Детектор движения
-    </label>
-    <br><br>
-    
-    <button onclick="saveCamera({{ camera.id }})" style="background:#e94560; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">💾 Сохранить</button>
-    <a href="/cameras" style="color:#aaa; margin-left:12px;">Отмена</a>
+<div style="max-width:700px;">
+
+    <!-- Вкладки -->
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button onclick="showTab('basic')" class="tab-btn active" id="tab-basic">📷 Основное</button>
+        <button onclick="showTab('stream')" class="tab-btn" id="tab-stream">🎥 Стриминг</button>
+        <button onclick="showTab('detector')" class="tab-btn" id="tab-detector">🔍 Детектор</button>
+        <button onclick="showTab('record')" class="tab-btn" id="tab-record">📼 Запись</button>
+    </div>
+
+    <form id="cameraForm" style="background:#16213e; padding:24px; border-radius:8px;">
+        
+        <!-- Основное -->
+        <div id="tab-basic-content" class="tab-content">
+            <label>Название</label>
+            <input type="text" id="name" value="{{ camera.name }}" class="input-full">
+            
+            <label>RTSP основной поток</label>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="rtsp_main" value="{{ camera.rtsp_main }}" class="input-full">
+                <button type="button" onclick="testRtsp()" style="background:#0d47a1; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; white-space:nowrap;">🔍 Тест</button>
+            </div>
+            <span id="testResult" style="font-size:13px;"></span>
+            
+            <label>RTSP сабстрим</label>
+            <input type="text" id="rtsp_sub" value="{{ camera.rtsp_sub or '' }}" class="input-full">
+            
+            <label><input type="checkbox" id="enabled" {% if camera.enabled %}checked{% endif %}> Камера включена</label>
+        </div>
+
+        <!-- Стриминг -->
+        <div id="tab-stream-content" class="tab-content" style="display:none;">
+            <label><input type="checkbox" id="stream_enabled" {% if camera.stream_enabled %}checked{% endif %}> Стриминг включен</label>
+            <br><br>
+            <label>Качество:</label>
+            <select id="stream_quality" class="input-full">
+                <option value="copy" {% if camera.stream_quality == 'copy' %}selected{% endif %}>Оригинал (copy) — без нагрузки</option>
+                <option value="medium" {% if camera.stream_quality == 'medium' %}selected{% endif %}>Среднее (640x360)</option>
+                <option value="low" {% if camera.stream_quality == 'low' %}selected{% endif %}>Низкое (320x240)</option>
+            </select>
+            <label>Длительность HLS-сегмента (сек):</label>
+            <input type="number" id="stream_hls_time" value="{{ camera.stream_hls_time or 1 }}" min="1" max="5" class="input-full">
+        </div>
+
+        <!-- Детектор -->
+        <div id="tab-detector-content" class="tab-content" style="display:none;">
+            <label><input type="checkbox" id="motion_enabled" {% if camera.motion_enabled %}checked{% endif %}> Детектор включен</label>
+            <br><br>
+            <label>Порог чувствительности: <span id="thresholdValue">{{ camera.motion_threshold or 2.0 }}</span>%</label>
+            <input type="range" id="motion_threshold" min="0.5" max="20" step="0.1" value="{{ camera.motion_threshold or 2.0 }}" oninput="document.getElementById('thresholdValue').textContent=this.value" class="input-full">
+            
+            <label>Пауза между тревогами (сек):</label>
+            <input type="number" id="motion_cooldown" value="{{ camera.motion_cooldown or 5 }}" min="1" max="60" class="input-full">
+            
+            <label>FPS для детектора:</label>
+            <input type="number" id="motion_fps" value="{{ camera.motion_fps or 5 }}" min="1" max="15" class="input-full">
+            
+            <a href="/cameras/{{ camera.id }}/zones" style="color:#e94560;">🎯 Настроить зоны детекции →</a>
+        </div>
+
+        <!-- Запись -->
+        <div id="tab-record-content" class="tab-content" style="display:none;">
+            <label><input type="checkbox" id="record_enabled" {% if camera.record_enabled %}checked{% endif %}> Запись включена</label>
+            <br><br>
+            <label>Режим записи:</label>
+            <select id="record_mode" class="input-full">
+                <option value="motion" {% if camera.record_mode == 'motion' %}selected{% endif %}>По тревоге</option>
+                <option value="continuous" {% if camera.record_mode == 'continuous' %}selected{% endif %}>Непрерывная</option>
+            </select>
+            <label>Секунд до тревоги:</label>
+            <input type="number" id="record_pre_sec" value="{{ camera.record_pre_sec or 5 }}" min="1" max="30" class="input-full">
+            <label>Секунд после тревоги:</label>
+            <input type="number" id="record_post_sec" value="{{ camera.record_post_sec or 10 }}" min="1" max="60" class="input-full">
+            <label>Хранить записи (дней):</label>
+            <input type="number" id="record_retention_days" value="{{ camera.record_retention_days or 7 }}" min="1" max="90" class="input-full">
+        </div>
+
+        <br>
+        <button type="button" onclick="saveCamera({{ camera.id }})" style="background:#e94560; color:#fff; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-size:16px;">💾 Сохранить</button>
+        <a href="/cameras" style="color:#aaa; margin-left:12px;">Отмена</a>
+        <span id="saveStatus" style="margin-left:12px;"></span>
+    </form>
 </div>
 
+<style>
+.input-full { width:100%; padding:8px; margin:4px 0 16px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px; }
+.tab-btn { background:#333; color:#aaa; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; }
+.tab-btn.active { background:#e94560; color:#fff; }
+</style>
+
 <script>
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name + '-content').style.display = 'block';
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+function testRtsp() {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    document.getElementById('testResult').textContent = '';
+    
+    fetch('/api/cameras/{{ camera.id }}/test', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = '🔍 Тест';
+            document.getElementById('testResult').textContent = data.success ? '✅ OK' : '❌ ' + data.error;
+            document.getElementById('testResult').style.color = data.success ? '#4caf50' : '#ff6b81';
+        });
+}
+
 function saveCamera(id) {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Сохранение...';
+    document.getElementById('saveStatus').textContent = '';
+    
     var data = {
-        name: document.getElementById('camName').value,
-        rtsp_main: document.getElementById('camRtspMain').value,
-        rtsp_sub: document.getElementById('camRtspSub').value,
-        enabled: document.getElementById('camEnabled').checked ? 1 : 0,
-        motion_enabled: document.getElementById('camMotion').checked ? 1 : 0
+        name: document.getElementById('name').value,
+        rtsp_main: document.getElementById('rtsp_main').value,
+        rtsp_sub: document.getElementById('rtsp_sub').value,
+        enabled: document.getElementById('enabled').checked ? 1 : 0,
+        stream_enabled: document.getElementById('stream_enabled').checked ? 1 : 0,
+        stream_quality: document.getElementById('stream_quality').value,
+        stream_hls_time: parseInt(document.getElementById('stream_hls_time').value),
+        motion_enabled: document.getElementById('motion_enabled').checked ? 1 : 0,
+        motion_threshold: parseFloat(document.getElementById('motion_threshold').value),
+        motion_cooldown: parseInt(document.getElementById('motion_cooldown').value),
+        motion_fps: parseInt(document.getElementById('motion_fps').value),
+        record_enabled: document.getElementById('record_enabled').checked ? 1 : 0,
+        record_mode: document.getElementById('record_mode').value,
+        record_pre_sec: parseInt(document.getElementById('record_pre_sec').value),
+        record_post_sec: parseInt(document.getElementById('record_post_sec').value),
+        record_retention_days: parseInt(document.getElementById('record_retention_days').value)
     };
     
     fetch('/api/cameras/' + id, {
@@ -41,12 +146,21 @@ function saveCamera(id) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     }).then(r => r.json()).then(data => {
+        btn.disabled = false;
+        btn.textContent = '💾 Сохранить';
+        document.getElementById('saveStatus').textContent = data.success ? '✅ Сохранено!' : '❌ Ошибка';
+        document.getElementById('saveStatus').style.color = data.success ? '#4caf50' : '#ff6b81';
         if (data.success) {
-            window.location.href = '/cameras';
-        } else {
-            alert('Ошибка сохранения');
+            setTimeout(function() { document.getElementById('saveStatus').textContent = ''; }, 3000);
         }
+    }).catch(function() {
+        btn.disabled = false;
+        btn.textContent = '💾 Сохранить';
+        document.getElementById('saveStatus').textContent = '❌ Ошибка сети';
     });
 }
+
+// Показываем первую вкладку
+showTab('basic');
 </script>
 {% endblock %}

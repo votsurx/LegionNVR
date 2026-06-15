@@ -3,17 +3,52 @@
 <h1>⚙️ Настройки</h1>
 
 <div class="card" style="margin-bottom:16px;">
+    <h2>💾 Папка для записей</h2>
+    <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="recordingsPath" style="flex:1; padding:8px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
+        <button onclick="savePath()" style="background:#e94560; color:#fff; border:none; padding:10px 16px; border-radius:4px; cursor:pointer;">💾 Сохранить</button>
+    </div>
+    <span id="pathStatus" style="font-size:13px; color:#aaa; margin-top:4px;"></span>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
     <h2>🔐 Пользователи</h2>
     <p style="color:#aaa;">Управление пользователями скоро будет доступно</p>
 </div>
 
 <div class="card" style="margin-bottom:16px;">
     <h2>📡 MQTT</h2>
-    <p style="color:#aaa;">Настройка MQTT-брокера скоро будет доступна</p>
+    <p style="color:#aaa;">Брокер: 127.0.0.1:1883</p>
 </div>
 
-<div class="card">
-    <h2>💾 Хранилище</h2>
-    <p style="color:#aaa;">Настройка путей и очистки записей скоро будет доступна</p>
-</div>
+<script>
+// Загружаем текущий путь
+fetch('/api/settings/recordings_path')
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById('recordingsPath').value = d.path;
+    });
+
+function savePath() {
+    var path = document.getElementById('recordingsPath').value.trim();
+    if (!path) { alert('Введите путь!'); return; }
+    
+    fetch('/api/settings/recordings_path', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({path: path})
+    })
+    .then(r => r.json())
+    .then(d => {
+        var status = document.getElementById('pathStatus');
+        if (d.success) {
+            status.textContent = '✅ ' + d.message;
+            status.style.color = '#4caf50';
+        } else {
+            status.textContent = '❌ ' + d.error;
+            status.style.color = '#ff6b81';
+        }
+    });
+}
+</script>
 {% endblock %}

@@ -111,6 +111,50 @@ def load_cameras():
     conn.close()
     return [dict(r) for r in rows]
 
+def on_cmd(client, userdata, msg):
+    """Обработчик команд управления"""
+    try:
+        data = json.loads(msg.payload.decode())
+        action = data.get("action")
+        
+        if action == "reload_config":
+            cam_id = data.get("camera_id")
+            print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
+            # Перечитываем настройки из БД
+            conn = get_db()
+            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
+            conn.close()
+            
+            if cam:
+                cam_dict = dict(cam)
+                # Ищем детектор для этой камеры
+                for det in userdata["detectors"]:
+                    if str(det.camera["id"]) == str(cam_id):
+                        # Обновляем настройки без перезапуска
+                        det.threshold = cam_dict.get("motion_threshold", 2.0)
+                        det.cooldown = cam_dict.get("motion_cooldown", 5)
+                        
+                        # Если детектор выключен — останавливаем, включен — запускаем
+                        if not cam_dict.get("motion_enabled"):
+                            print(f"⏸️ [{det.camera['name']}] Детектор остановлен по команде")
+                            det.running = False
+                        else:
+                            if not det.running:
+                                print(f"▶️ [{det.camera['name']}] Детектор запущен по команде")
+                                det.camera = cam_dict  # обновляем все поля
+                                det.start()
+                        
+                        print(f"✅ [{det.camera['name']}] Настройки применены (порог: {det.threshold}%)")
+                        break
+        
+        elif action == "snapshot":
+            cam_id = data.get("camera_id")
+            print(f"📸 [CMD] Запрос снимка для камеры {cam_id}")
+            # TODO: сохранить кадр
+            
+    except Exception as e:
+        print(f"⚠️ [CMD] Ошибка: {e}")
+
 def main():
     print("🛡️ Legion NVR - Motion Detector")
     print(f"📡 MQTT: {MQTT_BROKER}:{MQTT_PORT}")
@@ -118,7 +162,6 @@ def main():
     # Подключаем MQTT
     mqtt_client = mqtt.Client()
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    mqtt_client.loop_start()
     
     # Загружаем камеры
     cameras = load_cameras()
@@ -130,14 +173,21 @@ def main():
         if det.start():
             detectors.append(det)
     
+    # Передаём список детекторов в userdata для callback
+    mqtt_client.user_data_set({"detectors": detectors})
+    mqtt_client.on_message = on_cmd
+    mqtt_client.subscribe("spartan/+/cmd")
+    mqtt_client.loop_start()
+    
     print(f"🔍 Активных детекторов: {len(detectors)}")
+    print(f"👂 Подписка: spartan/+/cmd")
     print("⏳ Работаю... (Ctrl+C для выхода)")
     
     try:
         while True:
-            # Периодически обновляем список камер (раз в 30 сек)
             for det in detectors:
-                det.loop()
+                if det.running:
+                    det.loop()
             time.sleep(0.05)
     except KeyboardInterrupt:
         print("\n⏹️ Завершение...")

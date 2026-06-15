@@ -28,12 +28,25 @@ def init_db():
             name TEXT NOT NULL,
             rtsp_main TEXT NOT NULL,
             rtsp_sub TEXT,
+            -- Статусы
             enabled INTEGER DEFAULT 1,
+            stream_enabled INTEGER DEFAULT 1,
             motion_enabled INTEGER DEFAULT 1,
             record_enabled INTEGER DEFAULT 0,
+            -- Детектор
+            motion_threshold REAL DEFAULT 2.0,
+            motion_cooldown INTEGER DEFAULT 5,
+            motion_fps INTEGER DEFAULT 5,
+            -- Запись
             record_mode TEXT DEFAULT 'motion',
+            record_pre_sec INTEGER DEFAULT 5,
+            record_post_sec INTEGER DEFAULT 10,
             record_retention_days INTEGER DEFAULT 7,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            -- Стриминг
+            stream_quality TEXT DEFAULT 'copy',
+            stream_hls_time INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
         CREATE TABLE IF NOT EXISTS recordings (
@@ -57,11 +70,60 @@ def init_db():
             FOREIGN KEY (camera_id) REFERENCES cameras(id)
         );
         
+        CREATE TABLE IF NOT EXISTS detection_zones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            camera_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            zone_type TEXT DEFAULT 'exclude',
+            points_json TEXT DEFAULT '[]',
+            enabled INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (camera_id) REFERENCES cameras(id)
+        );
+        
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
         );
     """)
+    
+    # Добавляем новые колонки если их нет (миграция старой БД)
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN stream_enabled INTEGER DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN motion_threshold REAL DEFAULT 2.0")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN motion_cooldown INTEGER DEFAULT 5")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN motion_fps INTEGER DEFAULT 5")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN record_pre_sec INTEGER DEFAULT 5")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN record_post_sec INTEGER DEFAULT 10")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN stream_quality TEXT DEFAULT 'copy'")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN stream_hls_time INTEGER DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except:
+        pass
     
     conn.commit()
     conn.close()
