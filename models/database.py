@@ -129,5 +129,27 @@ def init_db():
     conn.close()
     print("✅ База данных готова")
 
+def get_mqtt_config():
+    """Читает MQTT-настройки из БД"""
+    conn = get_db()
+    rows = conn.execute("SELECT key, value FROM settings WHERE key LIKE 'mqtt_%'").fetchall()
+    conn.close()
+    
+    config = {
+        "broker": "127.0.0.1",
+        "port": 1883,
+        "username": "",
+        "password": ""
+    }
+    
+    for row in rows:
+        key = row["key"].replace("mqtt_", "")
+        if key == "port":
+            config[key] = int(row["value"])
+        else:
+            config[key] = row["value"]
+    
+    return config
+
 if __name__ == '__main__':
     init_db()

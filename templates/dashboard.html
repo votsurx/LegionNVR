@@ -11,7 +11,12 @@
     {% for cam in cameras %}
     <div class="card">
         <h2>📷 {{ cam.name }}</h2>
-        <video id="video{{ cam.id }}" controls width="100%" muted autoplay playsinline></video>
+        
+        <!-- MJPEG-поток — простой как топор, не подвисает! -->
+        <img src="/camera/{{ cam.id }}/mjpeg" 
+             style="width:100%; border-radius:4px; min-height:200px; background:#000;"
+             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22360%22><rect fill=%22%23111%22 width=%22640%22 height=%22360%22/><text fill=%22%23aaa%22 x=%22200%22 y=%22180%22 font-size=%2220%22>Нет сигнала</text></svg>'"
+             alt="Поток с камеры {{ cam.name }}">
         
         <!-- Быстрые кнопки -->
         <div style="display:flex; gap:6px; margin:8px 0; flex-wrap:wrap;">
@@ -25,19 +30,11 @@
                 background:{% if cam.record_enabled %}#1b5e20{% else %}#b71c1c{% endif %}; color:#fff;">
                 📼 {% if cam.record_enabled %}Запись ON{% else %}Запись OFF{% endif %}
             </button>
-            <button onclick="snapshot({{ cam.id }})"
-                style="font-size:11px; padding:4px 8px; border-radius:4px; border:none; cursor:pointer; background:#0d47a1; color:#fff;">
-                📸 Снимок
-            </button>
             <a href="/cameras/{{ cam.id }}/edit" 
                 style="font-size:11px; padding:4px 8px; border-radius:4px; background:#333; color:#fff; text-decoration:none;">
                 ⚙️
             </a>
         </div>
-        
-        <p style="font-size:12px; color:#aaa;">
-            📺 <a href="/camera/{{ cam.id }}/stream.m3u8" style="color:#e94560;">Прямой HLS</a>
-        </p>
     </div>
     {% endfor %}
     
@@ -75,29 +72,6 @@
 </div>
 
 <script>
-// === HLS-плеер ===
-{% for cam in cameras %}
-(function() {
-    var video = document.getElementById('video{{ cam.id }}');
-    var src = '/camera/{{ cam.id }}/stream.m3u8';
-    setTimeout(function() {
-        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-            var hls = new Hls({manifestLoadMaxRetry: 2, levelLoadMaxRetry: 2});
-            hls.loadSource(src);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play().catch(function(){}); });
-            hls.on(Hls.Events.ERROR, function(event, data) {
-                if (data.fatal) { setTimeout(function() { hls.loadSource(src); }, 3000); }
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = src;
-            video.play().catch(function(){});
-        }
-    }, 2000);
-})();
-{% endfor %}
-
-// === Быстрые кнопки ===
 function toggleDetector(camId) {
     var btn = document.getElementById('btn-det-' + camId);
     var isOn = btn.textContent.includes('ON');
@@ -134,17 +108,10 @@ function toggleRecord(camId) {
     });
 }
 
-function snapshot(camId) {
-    fetch('/api/cameras/' + camId + '/apply', {method:'POST'})
-        .then(r => r.json())
-        .then(d => alert(d.success ? '✅ Команда отправлена' : '❌ Ошибка'));
-}
-
 function restartStreams() {
     var btn = event.target;
     btn.disabled = true;
     btn.textContent = '⏳ Перезапуск...';
-    document.getElementById('restartStatus').textContent = '';
     
     fetch('/api/streams/restart', { method: 'POST' })
         .then(r => r.json())
@@ -152,12 +119,11 @@ function restartStreams() {
             btn.disabled = false;
             btn.textContent = '🔄 Перезапустить стримы';
             document.getElementById('restartStatus').textContent = '✅ Команда отправлена';
-            setTimeout(function() { document.getElementById('restartStatus').textContent = ''; location.reload(); }, 2000);
+            setTimeout(function() { location.reload(); }, 2000);
         })
         .catch(function() {
             btn.disabled = false;
             btn.textContent = '🔄 Перезапустить стримы';
-            document.getElementById('restartStatus').textContent = '❌ Ошибка';
         });
 }
 </script>

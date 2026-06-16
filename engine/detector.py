@@ -3,6 +3,7 @@ Legion NVR - Motion Detector
 Запуск: python engine/detector.py
 Читает камеры из БД, детектит движение, публикует MQTT
 """
+import io
 import cv2
 import numpy as np
 import paho.mqtt.client as mqtt
@@ -10,6 +11,8 @@ import json
 import time
 import os
 import sys
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Добавляем родительскую папку в path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -44,9 +47,14 @@ class MotionDetector:
         self.cap.set(cv2.CAP_PROP_FPS, 5)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.running = True
+        
+        # Сбрасываем счётчик разогрева ПЕРЕД return
+        self.warmup_frames = 0
+        self.WARMUP_NEEDED = 25
+        
         print(f"🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
         return True
-    
+
     def loop(self):
         """Один цикл детекции (вызывается из внешнего цикла)"""
         if not self.running:
@@ -58,6 +66,12 @@ class MotionDetector:
         
         small = cv2.resize(frame, (320, 240))
         fgmask = self.fgbg.apply(small)
+        
+        # Пропускаем первые кадры для разогрева фона
+        if self.warmup_frames < self.WARMUP_NEEDED:
+            self.warmup_frames += 1
+            return
+        
         motion_pixels = np.count_nonzero(fgmask)
         motion_percent = motion_pixels / (320 * 240) * 100
         now = time.time()
@@ -178,7 +192,6 @@ def main():
     mqtt_client.on_message = on_cmd
     mqtt_client.subscribe("spartan/+/cmd")
     mqtt_client.loop_start()
-    
     print(f"🔍 Активных детекторов: {len(detectors)}")
     print(f"👂 Подписка: spartan/+/cmd")
     print("⏳ Работаю... (Ctrl+C для выхода)")
