@@ -54,6 +54,10 @@
                 class="btn btn-sm {% if cam.record_enabled %}btn-green{% else %}btn-outline{% endif %}">
                 📼
             </button>
+            <a href="/cameras/{{ cam.id }}/zones" 
+                class="btn btn-sm btn-outline" style="text-decoration:none;">
+                🎯
+            </a>
         </div>
     </div>
     {% endfor %}

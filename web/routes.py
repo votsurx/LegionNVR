@@ -80,6 +80,15 @@ def settings_storage():
 def settings_locations():
     return render_template('settings_locations.html', user=current_user)
 
+@main_bp.route('/cameras/<int:camera_id>/zones')
+@login_required
+def camera_zones(camera_id):
+    from models.camera import Camera
+    cam = Camera.get_by_id(camera_id)
+    if not cam:
+        return "Камера не найдена", 404
+    return render_template('camera_zones.html', user=current_user, camera=cam)
+
 @main_bp.route('/cameras/<int:camera_id>/edit')
 @login_required
 def edit_camera(camera_id):
