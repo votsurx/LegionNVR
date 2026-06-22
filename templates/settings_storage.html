@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад</a>
+<h1 style="margin:12px 0;">💾 Хранилище</h1>
+
+<div class="card">
+    <label>Папка для записей</label>
+    <div style="display:flex;gap:8px;">
+        <input type="text" id="recordingsPath" class="input" style="flex:1;">
+        <button onclick="savePath()" class="btn btn-primary">💾 Сохранить</button>
+    </div>
+    <span id="pathStatus" style="font-size:13px;color:var(--text-secondary);margin-top:4px;"></span>
+</div>
+
+<script>
+fetch('/api/settings/recordings_path').then(r=>r.json()).then(d=>{
+    if(d.success)document.getElementById('recordingsPath').value=d.path;
+});
+function savePath(){
+    var p=document.getElementById('recordingsPath').value.trim();
+    if(!p)return;
+    fetch('/api/settings/recordings_path',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})})
+    .then(r=>r.json()).then(d=>{
+        var s=document.getElementById('pathStatus');
+        if(d.success){
+            s.textContent='✅ ' + (d.message || 'Сохранено');
+            s.style.color='#4caf50';
+        }else{
+            s.textContent='❌ ' + (d.error || 'Ошибка');
+            s.style.color='#f44336';
+        }
+        setTimeout(function(){ s.textContent=''; }, 3000);
+    });
+}
+</script>
+{% endblock %}

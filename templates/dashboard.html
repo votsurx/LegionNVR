@@ -1,80 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>📊 Дашборд</h1>
 
-<button onclick="restartStreams()" style="background:#0d47a1; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; margin-bottom:16px;">
-    🔄 Перезапустить стримы
-</button>
-<span id="restartStatus" style="color:#aaa; margin-left:8px;"></span>
+<!-- Чипсы фильтра (как RoomSelector) -->
+<div class="chips">
+    <span class="chip active" onclick="filterCameras('all', this)">🏠 Все</span>
+    {% for loc in locations %}
+    <span class="chip" onclick="filterCameras('loc_{{ loc.id }}', this)">{{ loc.icon }} {{ loc.name }}</span>
+    {% endfor %}
+</div>
 
-<div class="grid">
+<!-- Адаптивная сетка камер (DeviceCard) -->
+<div class="grid" id="camerasGrid">
     {% for cam in cameras %}
-    <div class="card">
-        <h2>📷 {{ cam.name }}</h2>
+    <div class="card" data-camera="{{ cam.id }}" data-location="{{ cam.location_id or '' }}">
+        <!-- Заголовок карточки -->
+        <div class="card-header">
+            <span class="card-icon">📷</span>
+            <span class="card-title">{{ cam.name }}</span>
+        </div>
         
-        <!-- MJPEG-поток — простой как топор, не подвисает! -->
-        <img src="/camera/{{ cam.id }}/mjpeg" 
-             style="width:100%; border-radius:4px; min-height:200px; background:#000;"
-             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22360%22><rect fill=%22%23111%22 width=%22640%22 height=%22360%22/><text fill=%22%23aaa%22 x=%22200%22 y=%22180%22 font-size=%2220%22>Нет сигнала</text></svg>'"
-             alt="Поток с камеры {{ cam.name }}">
+        <!-- Тело карточки — MJPEG поток -->
+        <div class="card-body">
+            <img src="/camera/{{ cam.id }}/mjpeg" 
+                 alt="Поток {{ cam.name }}"
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22240%22><rect fill=%22%23111%22 width=%22320%22 height=%22240%22/><text fill=%22%23666%22 x=%22120%22 y=%22125%22 font-size=%2214%22>Нет сигнала</text></svg>'"
+                 style="width:100%;">
+        </div>
+        
+        <!-- Футер — статусы -->
+        <div class="card-footer">
+            <span class="card-badge {% if cam.enabled %}badge-online{% else %}badge-offline{% endif %}">
+                {% if cam.enabled %}🟢 Онлайн{% else %}🔴 Офлайн{% endif %}
+            </span>
+            <span class="card-badge {% if cam.motion_enabled %}badge-on{% else %}badge-off{% endif %}">
+                🔍 {% if cam.motion_enabled %}Детектор{% else %}Выкл{% endif %}
+            </span>
+            <span class="card-badge {% if cam.record_enabled %}badge-on{% else %}badge-off{% endif %}">
+                📼 {% if cam.record_enabled %}Запись{% else %}Выкл{% endif %}
+            </span>
+        </div>
         
         <!-- Быстрые кнопки -->
-        <div style="display:flex; gap:6px; margin:8px 0; flex-wrap:wrap;">
+        <div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">
+            <button onclick="toggleCamera({{ cam.id }})" id="btn-cam-{{ cam.id }}" 
+                class="btn btn-sm {% if cam.enabled %}btn-green{% else %}btn-red{% endif %}">
+                {% if cam.enabled %}🟢 Вкл{% else %}🔴 Выкл{% endif %}
+            </button>
             <button onclick="toggleDetector({{ cam.id }})" id="btn-det-{{ cam.id }}" 
-                style="font-size:11px; padding:4px 8px; border-radius:4px; border:none; cursor:pointer;
-                background:{% if cam.motion_enabled %}#1b5e20{% else %}#b71c1c{% endif %}; color:#fff;">
-                🔍 {% if cam.motion_enabled %}Детектор ON{% else %}Детектор OFF{% endif %}
+                class="btn btn-sm {% if cam.motion_enabled %}btn-green{% else %}btn-outline{% endif %}">
+                🔍
             </button>
             <button onclick="toggleRecord({{ cam.id }})" id="btn-rec-{{ cam.id }}"
-                style="font-size:11px; padding:4px 8px; border-radius:4px; border:none; cursor:pointer;
-                background:{% if cam.record_enabled %}#1b5e20{% else %}#b71c1c{% endif %}; color:#fff;">
-                📼 {% if cam.record_enabled %}Запись ON{% else %}Запись OFF{% endif %}
+                class="btn btn-sm {% if cam.record_enabled %}btn-green{% else %}btn-outline{% endif %}">
+                📼
             </button>
-            <a href="/cameras/{{ cam.id }}/edit" 
-                style="font-size:11px; padding:4px 8px; border-radius:4px; background:#333; color:#fff; text-decoration:none;">
-                ⚙️
-            </a>
         </div>
     </div>
     {% endfor %}
     
     {% if not cameras %}
-    <div class="card">
-        <h2>📷 Нет камер</h2>
-        <p>Добавьте камеру в разделе <a href="/cameras">Камеры</a></p>
+    <div class="card" style="align-items:center; justify-content:center; min-height:200px;">
+        <div style="text-align:center;">
+            <span style="font-size:48px;">📷</span>
+            <p style="color:var(--text-secondary); margin-top:8px;">Нет камер</p>
+            <a href="/cameras" class="btn btn-primary btn-sm" style="margin-top:8px;">+ Добавить</a>
+        </div>
     </div>
     {% endif %}
 </div>
 
-<div class="grid" style="margin-top:24px;">
-    <div class="card">
-        <h2>📼 Записей сегодня: {{ today_recordings }}</h2>
-        <a href="/recordings">Смотреть все записи →</a>
-    </div>
-    
-    <div class="card">
-        <h2>⚠️ Последние события</h2>
-        {% if recent_events %}
-        <table style="width:100%; font-size:14px;">
-            <tr><th>Время</th><th>Камера</th><th>Событие</th></tr>
-            {% for ev in recent_events %}
-            <tr>
-                <td>{{ ev.timestamp[:19] }}</td>
-                <td>{{ ev.camera_name or '-' }}</td>
-                <td>{{ ev.event_type }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-        <p>Событий пока нет</p>
-        {% endif %}
-    </div>
-</div>
-
 <script>
+// === Фильтр по камерам ===
+function filterCameras(filter, chip) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    
+    document.querySelectorAll('.card[data-camera]').forEach(card => {
+        if (filter === 'all') {
+            card.style.display = '';
+        } else if (filter.startsWith('loc_')) {
+            var locId = filter.replace('loc_', '');
+            card.style.display = card.dataset.location === locId ? '' : 'none';
+        } else {
+            card.style.display = card.dataset.camera === filter ? '' : 'none';
+        }
+    });
+}
+
+// === Вкл/выкл камеру ===
+function toggleCamera(camId) {
+    var btn = document.getElementById('btn-cam-' + camId);
+    var isOn = btn.classList.contains('btn-green');
+    var newState = isOn ? 0 : 1;
+    
+    fetch('/api/cameras/' + camId, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({enabled: newState})
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
+            location.reload();
+        }
+    });
+}
+
+// === Детектор ===
 function toggleDetector(camId) {
     var btn = document.getElementById('btn-det-' + camId);
-    var isOn = btn.textContent.includes('ON');
+    var isOn = btn.classList.contains('btn-green');
     var newState = isOn ? 0 : 1;
     
     fetch('/api/cameras/' + camId, {
@@ -83,16 +117,16 @@ function toggleDetector(camId) {
         body: JSON.stringify({motion_enabled: newState})
     }).then(r => r.json()).then(d => {
         if (d.success) {
-            btn.textContent = '🔍 ' + (newState ? 'Детектор ON' : 'Детектор OFF');
-            btn.style.background = newState ? '#1b5e20' : '#b71c1c';
             fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
+            location.reload();
         }
     });
 }
 
+// === Запись ===
 function toggleRecord(camId) {
     var btn = document.getElementById('btn-rec-' + camId);
-    var isOn = btn.textContent.includes('ON');
+    var isOn = btn.classList.contains('btn-green');
     var newState = isOn ? 0 : 1;
     
     fetch('/api/cameras/' + camId, {
@@ -101,30 +135,10 @@ function toggleRecord(camId) {
         body: JSON.stringify({record_enabled: newState})
     }).then(r => r.json()).then(d => {
         if (d.success) {
-            btn.textContent = '📼 ' + (newState ? 'Запись ON' : 'Запись OFF');
-            btn.style.background = newState ? '#1b5e20' : '#b71c1c';
             fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
+            location.reload();
         }
     });
-}
-
-function restartStreams() {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '⏳ Перезапуск...';
-    
-    fetch('/api/streams/restart', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.textContent = '🔄 Перезапустить стримы';
-            document.getElementById('restartStatus').textContent = '✅ Команда отправлена';
-            setTimeout(function() { location.reload(); }, 2000);
-        })
-        .catch(function() {
-            btn.disabled = false;
-            btn.textContent = '🔄 Перезапустить стримы';
-        });
 }
 </script>
 {% endblock %}

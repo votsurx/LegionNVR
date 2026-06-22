@@ -18,6 +18,11 @@
         <div id="tab-basic-content" class="tab-content">
             <label>Название</label>
             <input type="text" id="name" value="{{ camera.name }}" class="input-full">
+
+            <label>Локация</label>
+            <select id="location_id" class="input-full">
+                <option value="">🏠 Все</option>
+            </select>
             
             <label>RTSP основной поток</label>
             <div style="display:flex; gap:8px;">
@@ -138,7 +143,8 @@ function saveCamera(id) {
         record_mode: document.getElementById('record_mode').value,
         record_pre_sec: parseInt(document.getElementById('record_pre_sec').value),
         record_post_sec: parseInt(document.getElementById('record_post_sec').value),
-        record_retention_days: parseInt(document.getElementById('record_retention_days').value)
+        record_retention_days: parseInt(document.getElementById('record_retention_days').value),
+        location_id: document.getElementById('location_id').value || null
     };
     
     fetch('/api/cameras/' + id, {
@@ -162,5 +168,22 @@ function saveCamera(id) {
 
 // Показываем первую вкладку
 showTab('basic');
+</script>
+<script>
+// Загружаем локации для выпадающего списка
+fetch('/api/locations')
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            var sel = document.getElementById('location_id');
+            d.locations.forEach(function(loc) {
+                var opt = document.createElement('option');
+                opt.value = loc.id;
+                opt.textContent = loc.icon + ' ' + loc.name;
+                if (loc.id == {{ camera.location_id or 'null' }}) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+    });
 </script>
 {% endblock %}

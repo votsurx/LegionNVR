@@ -28,6 +28,10 @@ def dashboard():
         LIMIT 20
     """)
     recent_events = [dict(row) for row in cursor.fetchall()]
+    
+    # Локации
+    locations = [dict(r) for r in conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()]
+    
     conn.close()
     
     today_recordings = Recording.count_today()
@@ -36,7 +40,8 @@ def dashboard():
                          user=current_user,
                          cameras=cameras,
                          recent_events=recent_events,
-                         today_recordings=today_recordings)
+                         today_recordings=today_recordings,
+                         locations=locations)
 
 @main_bp.route('/cameras')
 @login_required
@@ -54,6 +59,26 @@ def recordings():
 @login_required
 def settings():
     return render_template('settings.html', user=current_user)
+
+@main_bp.route('/settings/users')
+@login_required
+def settings_users():
+    return render_template('settings_users.html', user=current_user)
+
+@main_bp.route('/settings/mqtt')
+@login_required
+def settings_mqtt():
+    return render_template('settings_mqtt.html', user=current_user)
+
+@main_bp.route('/settings/storage')
+@login_required
+def settings_storage():
+    return render_template('settings_storage.html', user=current_user)
+
+@main_bp.route('/settings/locations')
+@login_required
+def settings_locations():
+    return render_template('settings_locations.html', user=current_user)
 
 @main_bp.route('/cameras/<int:camera_id>/edit')
 @login_required

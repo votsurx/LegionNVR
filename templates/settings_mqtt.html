@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад</a>
+<h1 style="margin:12px 0;">📡 MQTT Брокер</h1>
+
+<div class="card">
+    <label>Адрес</label>
+    <input type="text" id="mqttBroker" class="input" placeholder="127.0.0.1">
+    <label>Порт</label>
+    <input type="number" id="mqttPort" class="input" placeholder="1883">
+    <label>Логин</label>
+    <input type="text" id="mqttUser" class="input" placeholder="необязательно">
+    <label>Пароль</label>
+    <input type="password" id="mqttPass" class="input" placeholder="необязательно">
+    <button onclick="saveMqtt()" class="btn btn-primary" style="margin-top:12px;">💾 Сохранить</button>
+    <span id="mqttStatus" style="margin-left:8px;font-size:13px;"></span>
+</div>
+
+<script>
+fetch('/api/settings/mqtt').then(r=>r.json()).then(d=>{
+    if(d.success){
+        document.getElementById('mqttBroker').value=d.config.broker;
+        document.getElementById('mqttPort').value=d.config.port;
+        document.getElementById('mqttUser').value=d.config.username;
+        document.getElementById('mqttPass').value=d.config.password;
+    }
+});
+function saveMqtt(){
+    fetch('/api/settings/mqtt',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({broker:document.getElementById('mqttBroker').value,port:parseInt(document.getElementById('mqttPort').value),username:document.getElementById('mqttUser').value,password:document.getElementById('mqttPass').value})})
+    .then(r=>r.json()).then(d=>{
+        var s=document.getElementById('mqttStatus');
+        if(d.success){
+            s.textContent='✅ Сохранено';
+            s.style.color='#4caf50';
+        }else{
+            s.textContent='❌ Ошибка: ' + (d.error || '');
+            s.style.color='#f44336';
+        }
+        setTimeout(function(){ s.textContent=''; }, 3000);
+    });
+}
+</script>
+{% endblock %}

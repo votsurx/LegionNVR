@@ -15,6 +15,14 @@ def init_db():
     cursor = conn.cursor()
     
     cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            icon TEXT DEFAULT '📍',
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -88,6 +96,10 @@ def init_db():
     """)
     
     # Добавляем новые колонки если их нет (миграция старой БД)
+    try:
+        cursor.execute("ALTER TABLE cameras ADD COLUMN location_id INTEGER DEFAULT NULL REFERENCES locations(id)")
+    except:
+        pass
     try:
         cursor.execute("ALTER TABLE cameras ADD COLUMN stream_enabled INTEGER DEFAULT 1")
     except:

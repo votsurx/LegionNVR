@@ -1,148 +1,47 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>⚙️ Настройки</h1>
 
-<div class="card" style="margin-bottom:16px;">
-    <h2>💾 Папка для записей</h2>
-    <div style="display:flex; gap:8px; align-items:center;">
-        <input type="text" id="recordingsPath" style="flex:1; padding:8px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-        <button onclick="savePath()" style="background:#e94560; color:#fff; border:none; padding:10px 16px; border-radius:4px; cursor:pointer;">💾 Сохранить</button>
-    </div>
-    <span id="pathStatus" style="font-size:13px; color:#aaa; margin-top:4px;"></span>
+<!-- Сетка плиток как MenuScreen в SHomeDART -->
+<div class="menu-grid">
+    
+    <a href="/dashboard" class="menu-tile">
+        <span class="menu-tile-icon">📊</span>
+        <span class="menu-tile-label">Дашборд</span>
+    </a>
+    
+    <a href="/cameras" class="menu-tile">
+        <span class="menu-tile-icon">📷</span>
+        <span class="menu-tile-label">Камеры</span>
+    </a>
+    
+    <a href="/recordings" class="menu-tile">
+        <span class="menu-tile-icon">📼</span>
+        <span class="menu-tile-label">Записи</span>
+    </a>
+    
+    <a href="/settings/locations" class="menu-tile">
+        <span class="menu-tile-icon">🏠</span>
+        <span class="menu-tile-label">Локации</span>
+    </a>
+    
+    <a href="/settings/users" class="menu-tile">
+        <span class="menu-tile-icon">👤</span>
+        <span class="menu-tile-label">Пользователи</span>
+    </a>
+    
+    <a href="/settings/mqtt" class="menu-tile">
+        <span class="menu-tile-icon">📡</span>
+        <span class="menu-tile-label">MQTT Брокер</span>
+    </a>
+    
+    <a href="/settings/storage" class="menu-tile">
+        <span class="menu-tile-icon">💾</span>
+        <span class="menu-tile-label">Хранилище</span>
+    </a>
+    
+    <a href="/logout" class="menu-tile">
+        <span class="menu-tile-icon">🚪</span>
+        <span class="menu-tile-label">Выйти</span>
+    </a>
 </div>
-
-<div class="card" style="margin-bottom:16px;">
-    <h2>🔐 Пользователи</h2>
-    
-    <div style="margin-bottom:12px;">
-        <button onclick="showAddUser()" style="background:#e94560; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">+ Добавить</button>
-    </div>
-    
-    <div id="addUserForm" style="display:none; background:#1a1a2e; padding:16px; border-radius:6px; margin-bottom:12px;">
-        <input type="text" id="newUsername" placeholder="Логин" class="input-full">
-        <input type="password" id="newPassword" placeholder="Пароль" class="input-full">
-        <select id="newRole" class="input-full">
-            <option value="viewer">Наблюдатель</option>
-            <option value="admin">Администратор</option>
-        </select>
-        <button onclick="addUser()" style="background:#4caf50; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">💾 Сохранить</button>
-        <button onclick="hideAddUser()" style="background:#333; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-left:4px;">Отмена</button>
-    </div>
-    
-    <table style="width:100%; border-collapse:collapse;">
-        <tr style="background:#1a1a2e;">
-            <th style="padding:8px; text-align:left;">Логин</th>
-            <th style="padding:8px; text-align:left;">Роль</th>
-            <th style="padding:8px; text-align:left;">Создан</th>
-            <th style="padding:8px; text-align:left;">Действия</th>
-        </tr>
-        <tbody id="usersTable">
-            <tr><td colspan="4" style="color:#aaa; padding:12px;">Загрузка...</td></tr>
-        </tbody>
-    </table>
-</div>
-
-<div class="card" style="margin-bottom:16px;">
-    <h2>📡 MQTT</h2>
-    <p style="color:#aaa;">Брокер: 127.0.0.1:1883</p>
-</div>
-
-<script>
-// Загружаем текущий путь
-fetch('/api/settings/recordings_path')
-    .then(r => r.json())
-    .then(d => {
-        document.getElementById('recordingsPath').value = d.path;
-    });
-
-function savePath() {
-    var path = document.getElementById('recordingsPath').value.trim();
-    if (!path) { alert('Введите путь!'); return; }
-    
-    fetch('/api/settings/recordings_path', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({path: path})
-    })
-    .then(r => r.json())
-    .then(d => {
-        var status = document.getElementById('pathStatus');
-        if (d.success) {
-            status.textContent = '✅ ' + d.message;
-            status.style.color = '#4caf50';
-        } else {
-            status.textContent = '❌ ' + d.error;
-            status.style.color = '#ff6b81';
-        }
-    });
-}
-</script>
-
-<script>
-// ===== ПОЛЬЗОВАТЕЛИ =====
-function loadUsers() {
-    fetch('/api/users')
-        .then(r => r.json())
-        .then(d => {
-            if (!d.success) return;
-            var html = '';
-            d.users.forEach(u => {
-                html += '<tr style="border-bottom:1px solid #333;">';
-                html += '<td style="padding:8px;">' + u.username + '</td>';
-                html += '<td style="padding:8px;">' + u.role + '</td>';
-                html += '<td style="padding:8px; font-size:12px; color:#aaa;">' + (u.created_at || '-') + '</td>';
-                html += '<td style="padding:8px;">';
-                html += '<button onclick="changeUserPass(' + u.id + ')" style="font-size:11px; background:#0d47a1; color:#fff; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; margin-right:4px;">🔑</button>';
-                html += '<button onclick="deleteUser(' + u.id + ', \'' + u.username + '\')" style="font-size:11px; background:#b71c1c; color:#fff; border:none; padding:4px 8px; border-radius:3px; cursor:pointer;">🗑️</button>';
-                html += '</td></tr>';
-            });
-            document.getElementById('usersTable').innerHTML = html || '<tr><td colspan="4" style="color:#aaa; padding:12px;">Нет пользователей</td></tr>';
-        });
-}
-
-function showAddUser() { document.getElementById('addUserForm').style.display = 'block'; }
-function hideAddUser() { document.getElementById('addUserForm').style.display = 'none'; }
-
-function addUser() {
-    var username = document.getElementById('newUsername').value.trim();
-    var password = document.getElementById('newPassword').value.trim();
-    var role = document.getElementById('newRole').value;
-    
-    fetch('/api/users', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({username, password, role})
-    }).then(r => r.json()).then(d => {
-        if (d.success) { hideAddUser(); loadUsers(); }
-        else alert(d.error);
-    });
-}
-
-function changeUserPass(userId) {
-    var pass = prompt('Новый пароль (минимум 4 символа):');
-    if (!pass || pass.length < 4) { alert('Пароль должен быть не менее 4 символов'); return; }
-    
-    fetch('/api/users/' + userId, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({password: pass})
-    }).then(r => r.json()).then(d => {
-        alert(d.message || (d.success ? 'Пароль изменён' : 'Ошибка'));
-    });
-}
-
-function deleteUser(userId, username) {
-    if (!confirm('Удалить пользователя ' + username + '?')) return;
-    
-    fetch('/api/users/' + userId, { method: 'DELETE' })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) loadUsers();
-            else alert(d.error);
-        });
-}
-
-// Загружаем при старте
-loadUsers();
-</script>
 {% endblock %}

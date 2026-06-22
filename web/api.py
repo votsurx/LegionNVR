@@ -36,6 +36,12 @@ def delete_camera(camera_id):
 def update_camera(camera_id):
     """Полное обновление камеры (все поля из формы)"""
     data = request.get_json()
+    # Преобразуем location_id
+    if 'location_id' in data:
+        if data['location_id'] == '' or data['location_id'] is None:
+            data['location_id'] = None
+        else:
+            data['location_id'] = int(data['location_id'])
     Camera.update_full(camera_id, data)
     return jsonify({'success': True})
 
@@ -70,6 +76,45 @@ def test_camera(camera_id):
         return jsonify({'success': False, 'error': 'Таймаут подключения'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+    
+# ============================================================
+# API: MQTT настройки
+# ============================================================
+@api_bp.route('/api/settings/mqtt', methods=['GET'])
+@login_required
+def get_mqtt():
+    """Получить MQTT-настройки"""
+    conn = get_db()
+    rows = conn.execute("SELECT key, value FROM settings WHERE key LIKE 'mqtt_%'").fetchall()
+    conn.close()
+    
+    config = {"broker": "127.0.0.1", "port": 1883, "username": "", "password": ""}
+    for row in rows:
+        key = row["key"].replace("mqtt_", "")
+        if key == "port":
+            config[key] = int(row["value"])
+        else:
+            config[key] = row["value"]
+    
+    return jsonify({'success': True, 'config': config})
+
+@api_bp.route('/api/settings/mqtt', methods=['POST'])
+@login_required
+def save_mqtt():
+    """Сохранить MQTT-настройки"""
+    data = request.get_json()
+    conn = get_db()
+    
+    for key in ['broker', 'port', 'username', 'password']:
+        if key in data:
+            conn.execute(
+                "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                (f"mqtt_{key}", str(data[key]))
+            )
+    
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Настройки MQTT сохранены'})
 
 # ============================================================
 # API: Пользователи
@@ -216,6 +261,74 @@ def get_cameras_list():
     """Список камер для фильтров (без авторизации admin)"""
     cameras = Camera.get_all()
     return jsonify({'success': True, 'cameras': cameras})
+
+# ============================================================
+# API: Локации
+# ============================================================
+@api_bp.route('/api/locations', methods=['GET'])
+@login_required
+def get_locations():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()
+    conn.close()
+    return jsonify({'success': True, 'locations': [dict(r) for r in rows]})
+
+@api_bp.route('/api/locations', methods=['POST'])
+@login_required
+def create_location():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+    
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    icon = data.get('icon', '📍').strip()
+    
+    if not name:
+        return jsonify({'success': False, 'error': 'Название обязательно'}), 400
+    
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO locations (name, icon) VALUES (?, ?)", (name, icon))
+        conn.commit()
+        return jsonify({'success': True, 'id': conn.execute("SELECT last_insert_rowid()").fetchone()[0]})
+    except:
+        return jsonify({'success': False, 'error': 'Локация уже существует'}), 400
+    finally:
+        conn.close()
+
+@api_bp.route('/api/locations/<int:loc_id>', methods=['PUT'])
+@login_required
+def update_location(loc_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+    
+    data = request.get_json()
+    conn = get_db()
+    
+    if 'name' in data:
+        conn.execute("UPDATE locations SET name=? WHERE id=?", (data['name'].strip(), loc_id))
+    if 'icon' in data:
+        conn.execute("UPDATE locations SET icon=? WHERE id=?", (data['icon'].strip(), loc_id))
+    if 'sort_order' in data:
+        conn.execute("UPDATE locations SET sort_order=? WHERE id=?", (data['sort_order'], loc_id))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@api_bp.route('/api/locations/<int:loc_id>', methods=['DELETE'])
+@login_required
+def delete_location(loc_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+    
+    conn = get_db()
+    # Переносим камеры в NULL (Все)
+    conn.execute("UPDATE cameras SET location_id=NULL WHERE location_id=?", (loc_id,))
+    conn.execute("DELETE FROM locations WHERE id=?", (loc_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Локация удалена, камеры перенесены в «Все»'})
 
 # Зоны детекции
 @api_bp.route('/api/cameras/<int:camera_id>/zones', methods=['GET'])

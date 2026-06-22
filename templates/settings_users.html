@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад</a>
+<h1 style="margin:12px 0;">👤 Пользователи</h1>
+
+<div class="card">
+    <button onclick="showAddUser()" class="btn btn-primary btn-sm" style="margin-bottom:12px;">+ Добавить</button>
+    
+    <div id="addUserForm" style="display:none; background:var(--bg-input); padding:16px; border-radius:8px; margin-bottom:12px;">
+        <input type="text" id="newUsername" placeholder="Логин" class="input" style="margin-bottom:8px;">
+        <input type="password" id="newPassword" placeholder="Пароль" class="input" style="margin-bottom:8px;">
+        <select id="newRole" class="input" style="margin-bottom:8px;">
+            <option value="viewer">Наблюдатель</option>
+            <option value="admin">Администратор</option>
+        </select>
+        <button onclick="addUser()" class="btn btn-green btn-sm">💾 Сохранить</button>
+        <button onclick="hideAddUser()" class="btn btn-outline btn-sm">Отмена</button>
+    </div>
+    
+    <table>
+        <thead><tr><th>Логин</th><th>Роль</th><th>Создан</th><th>Действия</th></tr></thead>
+        <tbody id="usersTable"><tr><td colspan="4">Загрузка...</td></tr></tbody>
+    </table>
+</div>
+
+<script>
+function loadUsers() {
+    fetch('/api/users').then(r=>r.json()).then(d=>{
+        if(!d.success)return;
+        var h='';
+        d.users.forEach(u=>{
+            h+='<tr><td>'+u.username+'</td><td>'+u.role+'</td><td style="font-size:12px;color:var(--text-secondary);">'+(u.created_at||'-')+'</td>';
+            h+='<td><button onclick="changeUserPass('+u.id+')" class="btn btn-blue btn-sm">🔑</button> ';
+            h+='<button onclick="deleteUser('+u.id+',\''+u.username+'\')" class="btn btn-red btn-sm">🗑️</button></td></tr>';
+        });
+        document.getElementById('usersTable').innerHTML=h||'<tr><td colspan="4">Нет пользователей</td></tr>';
+    });
+}
+function showAddUser(){document.getElementById('addUserForm').style.display='block';}
+function hideAddUser(){document.getElementById('addUserForm').style.display='none';}
+function addUser(){
+    var u=document.getElementById('newUsername').value.trim();
+    var p=document.getElementById('newPassword').value.trim();
+    var r=document.getElementById('newRole').value;
+    fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,role:r})})
+    .then(r=>r.json()).then(d=>{if(d.success){hideAddUser();loadUsers();}else alert(d.error);});
+}
+function changeUserPass(id){
+    var p=prompt('Новый пароль (мин 4 символа):');
+    if(!p||p.length<4)return;
+    fetch('/api/users/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
+    .then(r=>r.json()).then(d=>alert(d.message||(d.success?'✅ Пароль изменён':'❌ Ошибка')));
+}
+function deleteUser(id,name){
+    if(!confirm('Удалить '+name+'?'))return;
+    fetch('/api/users/'+id,{method:'DELETE'}).then(r=>r.json()).then(d=>{if(d.success)loadUsers();else alert(d.error);});
+}
+loadUsers();
+</script>
+{% endblock %}
