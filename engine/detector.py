@@ -16,6 +16,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Добавляем родительскую папку в path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.stdout.reconfigure(line_buffering=True)
 
 from models.database import get_db
 
@@ -35,6 +36,10 @@ class MotionDetector:
         # Параметры из БД
         self.threshold = camera.get("motion_threshold", 2.0)
         self.cooldown = camera.get("cooldown_sec", 5)
+
+        # Зоны детекции
+        self.zones = []  
+        self._load_zones() 
     
     def start(self):
         rtsp_url = self.camera.get("rtsp_sub") or self.camera.get("rtsp_main")
@@ -54,6 +59,28 @@ class MotionDetector:
         
         print(f"🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
         return True
+    
+    def _load_zones(self):
+        """Загружает зоны детекции из БД"""
+        try:
+            conn = get_db()
+            rows = conn.execute(
+                "SELECT * FROM detection_zones WHERE camera_id=? AND enabled=1",
+                (self.camera["id"],)
+            ).fetchall()
+            conn.close()
+            
+            self.zones = []
+            for row in rows:
+                zone = dict(row)
+                zone["points"] = json.loads(zone["points_json"])
+                self.zones.append(zone)
+            
+            if self.zones:
+                print(f"🎯 [{self.camera['name']}] Загружено зон: {len(self.zones)}")
+        except Exception as e:
+            print(f"⚠️ [{self.camera['name']}] Ошибка загрузки зон: {e}")
+            self.zones = []
 
     def loop(self):
         """Один цикл детекции (вызывается из внешнего цикла)"""
@@ -66,11 +93,37 @@ class MotionDetector:
         
         small = cv2.resize(frame, (320, 240))
         fgmask = self.fgbg.apply(small)
-        
-        # Пропускаем первые кадры для разогрева фона
-        if self.warmup_frames < self.WARMUP_NEEDED:
-            self.warmup_frames += 1
-            return
+
+        # Применяем зоны детекции
+        if self.zones:
+            mask = np.zeros((240, 320), dtype=np.uint8)
+            
+            for zone in self.zones:
+                # Масштабируем точки зоны под 320x240
+                scale_x = 320 / frame.shape[1]
+                scale_y = 240 / frame.shape[0]
+                pts = np.array([[(int(p["x"] * scale_x), int(p["y"] * scale_y)) for p in zone["points"]]], dtype=np.int32)
+                
+                if zone["zone_type"] == "include":
+                    # Включаем зону в маску
+                    cv2.fillPoly(mask, pts, 255)
+                else:
+                    # Исключаем зону из маски
+                    cv2.fillPoly(mask, pts, 0)
+            
+            # Если есть include-зоны, применяем маску
+            has_include = any(z["zone_type"] == "include" for z in self.zones)
+            if has_include:
+                fgmask = cv2.bitwise_and(fgmask, mask)
+            else:
+                # Только exclude-зоны — инвертируем
+                exclude_mask = cv2.bitwise_not(mask)
+                fgmask = cv2.bitwise_and(fgmask, exclude_mask)
+                
+                # Пропускаем первые кадры для разогрева фона
+                if self.warmup_frames < self.WARMUP_NEEDED:
+                    self.warmup_frames += 1
+                    return
         
         motion_pixels = np.count_nonzero(fgmask)
         motion_percent = motion_pixels / (320 * 240) * 100
@@ -156,6 +209,7 @@ def on_cmd(client, userdata, msg):
                             if not det.running:
                                 print(f"▶️ [{det.camera['name']}] Детектор запущен по команде")
                                 det.camera = cam_dict  # обновляем все поля
+                                det._load_zones()  # перезагружаем зоны
                                 det.start()
                         
                         print(f"✅ [{det.camera['name']}] Настройки применены (порог: {det.threshold}%)")
