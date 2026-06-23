@@ -6,7 +6,7 @@ auth_bp = Blueprint('auth', __name__)
 login_manager = LoginManager()
 
 class UserSession(UserMixin):
-    """Обёртка для Flask-Login"""
+    """  Flask-Login"""
     def __init__(self, user_dict):
         self.id = str(user_dict['id'])
         self.username = user_dict['username']
@@ -31,11 +31,11 @@ def login():
         user = User.get_by_username(username)
         if user and User.check_password(user, password):
             login_user(UserSession(user), remember=True)
-            flash('Добро пожаловать!', 'success')
+            flash(' !', 'success')
             next_page = request.args.get('next')
             return redirect(next_page or url_for('main.dashboard'))
         else:
-            flash('Неверный логин или пароль', 'error')
+            flash('   ', 'error')
     
     return render_template('login.html')
 
@@ -43,5 +43,5 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('Вы вышли из системы', 'info')
+    flash('   ', 'info')
     return redirect(url_for('auth.login'))

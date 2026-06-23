@@ -11,7 +11,7 @@ class MotionDetector:
         self.camera = camera_config
         self.mqtt_client = None
         self.mqtt_available = False
-        self.on_motion_callback = None  # ← ДОБАВЬ ЭТУ СТРОКУ
+        self.on_motion_callback = None  #    
         
         try:
             self.mqtt_client = mqtt.Client()
@@ -19,9 +19,9 @@ class MotionDetector:
                 self.mqtt_client.username_pw_set(mqtt_config["username"], mqtt_config["password"])
             self.mqtt_client.connect(mqtt_config.get("broker", "127.0.0.1"), mqtt_config.get("port", 1883), 10)
             self.mqtt_available = True
-            print(f"✅ MQTT подключён для {camera_config['name']}")
+            print(f" MQTT   {camera_config['name']}")
         except Exception as e:
-            print(f"⚠️ MQTT недоступен для {camera_config['name']}: {e}")
+            print(f" MQTT   {camera_config['name']}: {e}")
         
         self.cap = None
         self.fgbg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
@@ -35,7 +35,7 @@ class MotionDetector:
         
         self.cap = cv2.VideoCapture(rtsp_url)
         if not self.cap.isOpened():
-            print(f"❌ Не могу открыть RTSP: {rtsp_url}")
+            print(f"    RTSP: {rtsp_url}")
             return
         
         self.cap.set(cv2.CAP_PROP_FPS, 5)
@@ -44,7 +44,7 @@ class MotionDetector:
         thread = threading.Thread(target=self._detect_loop)
         thread.daemon = True
         thread.start()
-        print(f"🔍 Детектор для {self.camera['name']} запущен (порог: {self.camera.get('motion_threshold', 2.0)}%)")
+        print(f"   {self.camera['name']}  (: {self.camera.get('motion_threshold', 2.0)}%)")
 
     def _detect_loop(self):
         while self.running:
@@ -67,12 +67,12 @@ class MotionDetector:
                     self.motion_active = True
                     self.last_motion_time = now
                     self._on_motion("start", motion_percent)
-                    print(f"🔴 {self.camera['name']}: ДВИЖЕНИЕ! {motion_percent:.1f}%")
+                    print(f" {self.camera['name']}: ! {motion_percent:.1f}%")
             else:
                 if self.motion_active:
                     self.motion_active = False
                     self._on_motion("end", 0)
-                    print(f"🟢 {self.camera['name']}: движение прекратилось")
+                    print(f" {self.camera['name']}:  ")
 
             time.sleep(0.1)
 
@@ -89,14 +89,14 @@ class MotionDetector:
             })
             self.mqtt_client.publish(topic, payload)
         
-        # Callback для записи
+        # Callback  
         if self.on_motion_callback:
             try:
                 self.on_motion_callback(event_type, self.camera["id"])
             except Exception as e:
-                print(f"⚠️ Ошибка callback: {e}")
+                print(f"  callback: {e}")
         
-        # Логируем в БД
+        #   
         try:
             conn = get_db()
             cursor = conn.cursor()

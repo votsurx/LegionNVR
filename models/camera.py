@@ -52,7 +52,7 @@ class Camera:
     
     @staticmethod
     def update_full(camera_id, data):
-        """Обновляет все поля камеры (полная форма)"""
+        """    ( )"""
         allowed = [
             'name', 'rtsp_main', 'rtsp_sub',
             'enabled', 'stream_enabled', 'motion_enabled', 'record_enabled',

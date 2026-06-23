@@ -52,15 +52,15 @@ class StreamServer:
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.streams[cam_id] = proc
-            print(f"🎥 Стрим {camera['name']} запущен")
+            print(f"  {camera['name']} ")
         except FileNotFoundError:
-            print(f"❌ ffmpeg не найден!")
+            print(f" ffmpeg  !")
 
     def start_all(self):
         for cam in self.cameras:
             if cam.get("enabled", True):
                 self.start_stream(cam)
-        print(f"🌐 Стрим-сервер на порту {self.config.get('port', 8081)}")
+        print(f" -   {self.config.get('port', 8081)}")
         self.app.run(host='0.0.0.0', port=self.config.get('port', 8081), debug=False)
 
     def stop_all(self):

@@ -4,7 +4,7 @@ from models.database import get_db
 class User:
     @staticmethod
     def create(username, password, role='viewer'):
-        """Создаёт нового пользователя"""
+        """  """
         conn = get_db()
         cursor = conn.cursor()
         try:
@@ -22,7 +22,7 @@ class User:
     
     @staticmethod
     def get_by_id(user_id):
-        """Возвращает пользователя по ID"""
+        """   ID"""
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -32,7 +32,7 @@ class User:
     
     @staticmethod
     def get_by_username(username):
-        """Возвращает пользователя по имени"""
+        """   """
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
@@ -42,12 +42,12 @@ class User:
     
     @staticmethod
     def check_password(user, password):
-        """Проверяет пароль"""
+        """ """
         return check_password_hash(user['password_hash'], password)
     
     @staticmethod
     def get_all():
-        """Список всех пользователей (без хэшей паролей)"""
+        """   (  )"""
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT id, username, role, created_at FROM users ORDER BY id")
@@ -57,7 +57,7 @@ class User:
     
     @staticmethod
     def change_password(user_id, new_password):
-        """Меняет пароль пользователя"""
+        """  """
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
@@ -69,7 +69,7 @@ class User:
     
     @staticmethod
     def update_role(user_id, new_role):
-        """Меняет роль пользователя"""
+        """  """
         if new_role not in ('admin', 'viewer'):
             return False
         conn = get_db()
@@ -81,7 +81,7 @@ class User:
     
     @staticmethod
     def delete(user_id):
-        """Удаляет пользователя"""
+        """ """
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
@@ -90,7 +90,7 @@ class User:
     
     @staticmethod
     def count():
-        """Количество пользователей"""
+        """ """
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) as cnt FROM users")

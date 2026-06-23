@@ -20,7 +20,7 @@ def add_camera():
     rtsp_sub = data.get('rtsp_sub', '').strip()
     
     if not name or not rtsp_main:
-        return jsonify({'success': False, 'error': 'Название и RTSP обязательны'}), 400
+        return jsonify({'success': False, 'error': '  RTSP '}), 400
     
     camera_id = Camera.create(name, rtsp_main, rtsp_sub or None)
     return jsonify({'success': True, 'id': camera_id})
@@ -34,9 +34,9 @@ def delete_camera(camera_id):
 @api_bp.route('/api/cameras/<int:camera_id>', methods=['PUT'])
 @login_required
 def update_camera(camera_id):
-    """Полное обновление камеры (все поля из формы)"""
+    """   (   )"""
     data = request.get_json()
-    # Преобразуем location_id
+    #  location_id
     if 'location_id' in data:
         if data['location_id'] == '' or data['location_id'] is None:
             data['location_id'] = None
@@ -48,10 +48,10 @@ def update_camera(camera_id):
 @api_bp.route('/api/cameras/<int:camera_id>/test', methods=['POST'])
 @login_required
 def test_camera(camera_id):
-    """Тест RTSP-соединения"""
+    """ RTSP-"""
     cam = Camera.get_by_id(camera_id)
     if not cam:
-        return jsonify({'success': False, 'error': 'Камера не найдена'}), 404
+        return jsonify({'success': False, 'error': '  '}), 404
     
     import subprocess, shutil
     ffmpeg = "ffmpeg"
@@ -69,21 +69,21 @@ def test_camera(camera_id):
             capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0:
-            return jsonify({'success': True, 'message': 'RTSP работает!'})
+            return jsonify({'success': True, 'message': 'RTSP !'})
         else:
             return jsonify({'success': False, 'error': result.stderr[:200]})
     except subprocess.TimeoutExpired:
-        return jsonify({'success': False, 'error': 'Таймаут подключения'})
+        return jsonify({'success': False, 'error': ' '})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     
 # ============================================================
-# API: MQTT настройки
+# API: MQTT 
 # ============================================================
 @api_bp.route('/api/settings/mqtt', methods=['GET'])
 @login_required
 def get_mqtt():
-    """Получить MQTT-настройки"""
+    """ MQTT-"""
     conn = get_db()
     rows = conn.execute("SELECT key, value FROM settings WHERE key LIKE 'mqtt_%'").fetchall()
     conn.close()
@@ -101,7 +101,7 @@ def get_mqtt():
 @api_bp.route('/api/settings/mqtt', methods=['POST'])
 @login_required
 def save_mqtt():
-    """Сохранить MQTT-настройки"""
+    """ MQTT-"""
     data = request.get_json()
     conn = get_db()
     
@@ -114,26 +114,26 @@ def save_mqtt():
     
     conn.commit()
     conn.close()
-    return jsonify({'success': True, 'message': 'Настройки MQTT сохранены'})
+    return jsonify({'success': True, 'message': ' MQTT '})
 
 # ============================================================
-# API: Пользователи
+# API: 
 # ============================================================
 @api_bp.route('/api/users', methods=['GET'])
 @login_required
 def get_users():
-    """Список пользователей (только для admin)"""
+    """  (  admin)"""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Доступ запрещён'}), 403
+        return jsonify({'success': False, 'error': ' '}), 403
     users = User.get_all()
     return jsonify({'success': True, 'users': users})
 
 @api_bp.route('/api/users', methods=['POST'])
 @login_required
 def create_user():
-    """Создать пользователя (только admin)"""
+    """  ( admin)"""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Доступ запрещён'}), 403
+        return jsonify({'success': False, 'error': ' '}), 403
     
     data = request.get_json()
     username = data.get('username', '').strip()
@@ -141,61 +141,61 @@ def create_user():
     role = data.get('role', 'viewer')
     
     if not username or len(username) < 2:
-        return jsonify({'success': False, 'error': 'Логин должен быть не менее 2 символов'}), 400
+        return jsonify({'success': False, 'error': '     2 '}), 400
     if not password or len(password) < 4:
-        return jsonify({'success': False, 'error': 'Пароль должен быть не менее 4 символов'}), 400
+        return jsonify({'success': False, 'error': '     4 '}), 400
     if role not in ('admin', 'viewer'):
-        return jsonify({'success': False, 'error': 'Неверная роль'}), 400
+        return jsonify({'success': False, 'error': ' '}), 400
     
     if User.get_by_username(username):
-        return jsonify({'success': False, 'error': 'Пользователь уже существует'}), 400
+        return jsonify({'success': False, 'error': '  '}), 400
     
     user_id = User.create(username, password, role)
     if user_id:
-        return jsonify({'success': True, 'id': user_id, 'message': f'Пользователь {username} создан'})
-    return jsonify({'success': False, 'error': 'Ошибка создания'}), 500
+        return jsonify({'success': True, 'id': user_id, 'message': f' {username} '})
+    return jsonify({'success': False, 'error': ' '}), 500
 
 @api_bp.route('/api/users/<int:user_id>', methods=['PUT'])
 @login_required
 def update_user(user_id):
-    """Изменить роль или пароль пользователя"""
+    """    """
     if current_user.role != 'admin' and current_user.id != user_id:
-        return jsonify({'success': False, 'error': 'Доступ запрещён'}), 403
+        return jsonify({'success': False, 'error': ' '}), 403
     
     data = request.get_json()
     
-    # Смена пароля
+    #  
     if 'password' in data:
         new_pass = data['password'].strip()
         if len(new_pass) < 4:
-            return jsonify({'success': False, 'error': 'Пароль должен быть не менее 4 символов'}), 400
+            return jsonify({'success': False, 'error': '     4 '}), 400
         User.change_password(user_id, new_pass)
     
-    # Смена роли (только admin)
+    #   ( admin)
     if 'role' in data and current_user.role == 'admin':
         User.update_role(user_id, data['role'])
     
-    return jsonify({'success': True, 'message': 'Пользователь обновлён'})
+    return jsonify({'success': True, 'message': ' '})
 
 @api_bp.route('/api/users/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
-    """Удалить пользователя (только admin, нельзя удалить себя)"""
+    """  ( admin,   )"""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Доступ запрещён'}), 403
+        return jsonify({'success': False, 'error': ' '}), 403
     
     if str(current_user.id) == str(user_id):
-        return jsonify({'success': False, 'error': 'Нельзя удалить самого себя'}), 400
+        return jsonify({'success': False, 'error': '   '}), 400
     
     User.delete(user_id)
-    return jsonify({'success': True, 'message': 'Пользователь удалён'})
+    return jsonify({'success': True, 'message': ' '})
 
 @api_bp.route('/api/recordings', methods=['DELETE'])
 @login_required
 def delete_recordings_bulk():
-    """Массовое удаление записей по фильтру"""
+    """    """
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+        return jsonify({'success': False, 'error': '  '}), 403
     
     from models.database import get_db
     
@@ -206,7 +206,7 @@ def delete_recordings_bulk():
     
     conn = get_db()
     
-    # Сначала получаем список файлов для удаления с диска
+    #        
     query = "SELECT filename FROM recordings WHERE 1=1"
     params = []
     
@@ -223,9 +223,9 @@ def delete_recordings_bulk():
         params.append(date_before)
     else:
         conn.close()
-        return jsonify({'success': False, 'error': 'Укажите фильтр или all=true'}), 400
+        return jsonify({'success': False, 'error': '   all=true'}), 400
     
-    # Получаем файлы
+    #  
     rows = conn.execute(query, params).fetchall()
     deleted_files = 0
     
@@ -237,7 +237,7 @@ def delete_recordings_bulk():
         except:
             pass
     
-    # Удаляем из БД
+    #   
     if all_records:
         cursor = conn.execute("DELETE FROM recordings")
     else:
@@ -252,18 +252,18 @@ def delete_recordings_bulk():
         'success': True, 
         'deleted_rows': deleted_rows,
         'deleted_files': deleted_files,
-        'message': f'Удалено записей: {deleted_rows}, файлов: {deleted_files}'
+        'message': f' : {deleted_rows}, : {deleted_files}'
     })
 
 @api_bp.route('/api/cameras', methods=['GET'])
 @login_required
 def get_cameras_list():
-    """Список камер для фильтров (без авторизации admin)"""
+    """    (  admin)"""
     cameras = Camera.get_all()
     return jsonify({'success': True, 'cameras': cameras})
 
 # ============================================================
-# API: Локации
+# API: 
 # ============================================================
 @api_bp.route('/api/locations', methods=['GET'])
 @login_required
@@ -277,14 +277,14 @@ def get_locations():
 @login_required
 def create_location():
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+        return jsonify({'success': False, 'error': '  '}), 403
     
     data = request.get_json()
     name = data.get('name', '').strip()
-    icon = data.get('icon', '📍').strip()
+    icon = data.get('icon', '').strip()
     
     if not name:
-        return jsonify({'success': False, 'error': 'Название обязательно'}), 400
+        return jsonify({'success': False, 'error': ' '}), 400
     
     conn = get_db()
     try:
@@ -292,7 +292,7 @@ def create_location():
         conn.commit()
         return jsonify({'success': True, 'id': conn.execute("SELECT last_insert_rowid()").fetchone()[0]})
     except:
-        return jsonify({'success': False, 'error': 'Локация уже существует'}), 400
+        return jsonify({'success': False, 'error': '  '}), 400
     finally:
         conn.close()
 
@@ -300,7 +300,7 @@ def create_location():
 @login_required
 def update_location(loc_id):
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+        return jsonify({'success': False, 'error': '  '}), 403
     
     data = request.get_json()
     conn = get_db()
@@ -320,17 +320,17 @@ def update_location(loc_id):
 @login_required
 def delete_location(loc_id):
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Только для администратора'}), 403
+        return jsonify({'success': False, 'error': '  '}), 403
     
     conn = get_db()
-    # Переносим камеры в NULL (Все)
+    #    NULL ()
     conn.execute("UPDATE cameras SET location_id=NULL WHERE location_id=?", (loc_id,))
     conn.execute("DELETE FROM locations WHERE id=?", (loc_id,))
     conn.commit()
     conn.close()
-    return jsonify({'success': True, 'message': 'Локация удалена, камеры перенесены в «Все»'})
+    return jsonify({'success': True, 'message': ' ,    '})
 
-# Зоны детекции
+#  
 @api_bp.route('/api/cameras/<int:camera_id>/zones', methods=['GET'])
 @login_required
 def get_zones(camera_id):
@@ -347,7 +347,7 @@ def save_zone(camera_id):
 @api_bp.route('/api/settings/recordings_path', methods=['GET', 'POST'])
 @login_required
 def recordings_path():
-    """Получить или изменить путь к папке записей"""
+    """      """
     from models.database import get_db
     
     if request.method == 'GET':
@@ -357,13 +357,13 @@ def recordings_path():
         path = row[0] if row else "recordings"
         return jsonify({'success': True, 'path': path})
     
-    # POST — изменить путь
+    # POST   
     data = request.get_json()
     new_path = data.get('path', '').strip()
     if not new_path:
-        return jsonify({'success': False, 'error': 'Путь не может быть пустым'}), 400
+        return jsonify({'success': False, 'error': '    '}), 400
     
-    # Создаём папку если нет
+    #    
     os.makedirs(new_path, exist_ok=True)
     
     conn = get_db()
@@ -371,12 +371,12 @@ def recordings_path():
     conn.commit()
     conn.close()
     
-    return jsonify({'success': True, 'path': new_path, 'message': 'Путь обновлён. Перезапустите Stream Engine.'})
+    return jsonify({'success': True, 'path': new_path, 'message': ' .  Stream Engine.'})
 
 @api_bp.route('/api/cameras/<int:camera_id>/apply', methods=['POST'])
 @login_required
 def apply_camera_config(camera_id):
-    """Отправляет MQTT-команду на перезагрузку конфига камеры"""
+    """ MQTT-    """
     try:
         import paho.mqtt.client as mqtt
         import json
@@ -393,14 +393,14 @@ def apply_camera_config(camera_id):
         client.publish(f"spartan/{camera_id}/cmd", payload)
         client.disconnect()
         
-        return jsonify({'success': True, 'message': 'Команда отправлена'})
+        return jsonify({'success': True, 'message': ' '})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @api_bp.route('/api/streams/restart', methods=['POST'])
 @login_required
 def restart_streams():
-    """Перезапуск всех стримов через MQTT"""
+    """    MQTT"""
     try:
         import paho.mqtt.client as mqtt
         import json
@@ -410,7 +410,7 @@ def restart_streams():
         client.publish("spartan/streams/reload", json.dumps({"action": "reload_all"}))
         client.disconnect()
         
-        return jsonify({'success': True, 'message': 'Команда отправлена'})
+        return jsonify({'success': True, 'message': ' '})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -423,7 +423,7 @@ def delete_zone(camera_id, zone_id):
 @api_bp.route('/api/recordings', methods=['GET'])
 @login_required
 def get_recordings():
-    """Список записей с фильтрацией"""
+    """   """
     camera_id = request.args.get('camera_id')
     date = request.args.get('date')
     

@@ -7,9 +7,9 @@ from datetime import datetime
 from models.database import get_db
 
 RECORDINGS_DIR = "recordings"
-SEGMENT_DURATION = 300  # 5 минут для кольцевой записи
-MOTION_PRE_RECORD = 5   # секунд до тревоги
-MOTION_POST_RECORD = 10 # секунд после тревоги
+SEGMENT_DURATION = 300  # 5    
+MOTION_PRE_RECORD = 5   #   
+MOTION_POST_RECORD = 10 #   
 
 class Recorder:
     def __init__(self, camera):
@@ -21,11 +21,11 @@ class Recorder:
         self.motion_process = None
         self.recording_motion = False
         
-        # Создаём папки
+        #  
         self.cam_dir = os.path.join(RECORDINGS_DIR, f"camera_{self.cam_id}")
         os.makedirs(self.cam_dir, exist_ok=True)
         
-        # Ищем ffmpeg
+        #  ffmpeg
         self.ffmpeg_path = "ffmpeg"
         if shutil.which(self.ffmpeg_path) is None:
             for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
@@ -34,7 +34,7 @@ class Recorder:
                     break
     
     def start_continuous(self):
-        """Кольцевая запись сегментами по 5 минут"""
+        """    5 """
         if self.continuous_process:
             return
         
@@ -62,13 +62,13 @@ class Recorder:
         self.continuous_process = subprocess.Popen(
             cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
-        print(f"📼 Кольцевая запись запущена: {self.cam_name}")
+        print(f"   : {self.cam_name}")
         
-        # Запускаем очистку старых записей в фоне
+        #      
         threading.Thread(target=self._cleanup_old, daemon=True).start()
     
     def start_motion(self):
-        """Запись по тревоге (5 сек до + 10 сек после)"""
+        """   (5   + 10  )"""
         if self.recording_motion:
             return
         
@@ -82,7 +82,7 @@ class Recorder:
         
         output_file = os.path.join(date_dir, f"{timestamp}_motion.mp4")
         
-        # Записываем с буфером: 5 сек до + 10 сек после = всего 15 сек минимум
+        #   : 5   + 10   =  15  
         cmd = [
             self.ffmpeg_path,
             "-loglevel", "error",
@@ -99,7 +99,7 @@ class Recorder:
             cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         
-        # Сохраняем в БД
+        #   
         try:
             conn = get_db()
             cursor = conn.cursor()
@@ -112,33 +112,33 @@ class Recorder:
         except:
             pass
         
-        print(f"🔴 Запись тревоги: {self.cam_name} → {timestamp}_motion.mp4")
+        print(f"  : {self.cam_name}  {timestamp}_motion.mp4")
         
-        # Ждём окончания записи
+        #   
         def wait_motion():
             time.sleep(MOTION_PRE_RECORD + MOTION_POST_RECORD + 2)
             self.recording_motion = False
             self.motion_process = None
-            print(f"💾 Запись завершена: {timestamp}_motion.mp4")  # ← ДОБАВЬ ЭТУ СТРОКУ
+            print(f"  : {timestamp}_motion.mp4")  #    
         
         threading.Thread(target=wait_motion, daemon=True).start()
     
     def stop_motion(self):
-        """Принудительно остановить запись тревоги"""
+        """   """
         if self.motion_process:
             self.motion_process.terminate()
             self.motion_process = None
             self.recording_motion = False
     
     def stop_all(self):
-        """Остановить всю запись"""
+        """  """
         if self.continuous_process:
             self.continuous_process.terminate()
             self.continuous_process = None
         self.stop_motion()
     
     def _cleanup_old(self):
-        """Удаляет записи старше N дней"""
+        """   N """
         retention = self.camera.get("record_retention_days", 7)
         while True:
             try:
@@ -148,7 +148,7 @@ class Recorder:
                         fpath = os.path.join(root, f)
                         if os.path.getmtime(fpath) < cutoff:
                             os.remove(fpath)
-                            print(f"🗑️ Удалена старая запись: {f}")
+                            print(f"   : {f}")
             except:
                 pass
-            time.sleep(3600)  # Проверяем раз в час
+            time.sleep(3600)  #    

@@ -4,13 +4,13 @@ import os
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database.db')
 
 def get_db():
-    """Возвращает соединение с БД"""
+    """   """
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # чтобы обращаться к полям по имени
+    conn.row_factory = sqlite3.Row  #      
     return conn
 
 def init_db():
-    """Создаёт таблицы при первом запуске"""
+    """    """
     conn = get_db()
     cursor = conn.cursor()
     
@@ -18,7 +18,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS locations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            icon TEXT DEFAULT '📍',
+            icon TEXT DEFAULT '',
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -36,21 +36,21 @@ def init_db():
             name TEXT NOT NULL,
             rtsp_main TEXT NOT NULL,
             rtsp_sub TEXT,
-            -- Статусы
+            -- 
             enabled INTEGER DEFAULT 1,
             stream_enabled INTEGER DEFAULT 1,
             motion_enabled INTEGER DEFAULT 1,
             record_enabled INTEGER DEFAULT 0,
-            -- Детектор
+            -- 
             motion_threshold REAL DEFAULT 2.0,
             motion_cooldown INTEGER DEFAULT 5,
             motion_fps INTEGER DEFAULT 5,
-            -- Запись
+            -- 
             record_mode TEXT DEFAULT 'motion',
             record_pre_sec INTEGER DEFAULT 5,
             record_post_sec INTEGER DEFAULT 10,
             record_retention_days INTEGER DEFAULT 7,
-            -- Стриминг
+            -- 
             stream_quality TEXT DEFAULT 'copy',
             stream_hls_time INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -95,7 +95,7 @@ def init_db():
         );
     """)
     
-    # Добавляем новые колонки если их нет (миграция старой БД)
+    #       (  )
     try:
         cursor.execute("ALTER TABLE cameras ADD COLUMN location_id INTEGER DEFAULT NULL REFERENCES locations(id)")
     except:
@@ -139,10 +139,10 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print("✅ База данных готова")
+    print("[OK] Database ready")
 
 def get_mqtt_config():
-    """Читает MQTT-настройки из БД"""
+    """ MQTT-  """
     conn = get_db()
     rows = conn.execute("SELECT key, value FROM settings WHERE key LIKE 'mqtt_%'").fetchall()
     conn.close()

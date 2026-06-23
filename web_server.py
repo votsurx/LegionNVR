@@ -3,8 +3,8 @@ Legion NVR - Web Server
 Запуск: python web_server.py
 Только веб-интерфейс, без детектора и стримов
 """
-from flask import Flask, send_file, jsonify, Response
-from flask_login import login_required
+from flask import Flask, send_file, jsonify, Response, request
+from flask_login import login_required, LoginManager
 from models.database import init_db, get_db
 from models.user import User
 from models.camera import Camera
@@ -15,31 +15,188 @@ import os
 import subprocess
 import shutil
 import logging
+import sys
+import time
+import json
+import paho.mqtt.client as mqtt
 
 # Отключаем логи HTTP-запросов
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
+# ============================================================
+# СОЗДАЁМ ПРИЛОЖЕНИЕ
+# ============================================================
 app = Flask(__name__)
 app.secret_key = os.urandom(24).hex()
 
+# ✅ Отключаем авторизацию для API
+app.config['LOGIN_DISABLED'] = True
+
+# Инициализируем Flask-Login
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 
+# Регистрируем Blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
 app.register_blueprint(api_bp)
 
 HLS_DIR = "streams"
 
+
 # ============================================================
-# HLS-эндпоинты
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ============================================================
+
+def send_mqtt_command(camera_id, action, params=None):
+    """Отправляет MQTT команду детектору или стримеру"""
+    try:
+        client = mqtt.Client()
+        client.connect("127.0.0.1", 1883, 5)
+
+        payload = {
+            'action': action,
+            'camera_id': camera_id,
+            'timestamp': int(time.time())
+        }
+        if params:
+            payload.update(params)
+
+        client.publish(f"spartan/{camera_id}/cmd", json.dumps(payload))
+        client.disconnect()
+        return True
+    except Exception as e:
+        print(f"❌ MQTT ошибка: {e}")
+        return False
+
+
+def check_rtsp_available(rtsp_url):
+    """Проверяет доступность RTSP потока"""
+    ffmpeg = "ffmpeg"
+    if shutil.which(ffmpeg) is None:
+        for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
+            if os.path.exists(p):
+                ffmpeg = p
+                break
+
+    if not os.path.exists(ffmpeg):
+        return False
+
+    try:
+        cmd = [
+            ffmpeg, "-loglevel", "error",
+            "-rtsp_transport", "tcp",
+            "-i", rtsp_url,
+            "-frames:v", "1",
+            "-f", "null", "NUL"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        return result.returncode == 0
+    except:
+        return False
+
+
+# ============================================================
+# API КАМЕРЫ
+# ============================================================
+
+@app.route('/api/cameras', methods=['GET'])
+def api_get_cameras():
+    """Возвращает список всех камер с проверкой доступности"""
+    from models.camera import Camera
+    cameras = Camera.get_all()
+    result = []
+    for cam in cameras:
+        cam_dict = dict(cam)
+        # Проверяем доступность RTSP
+        cam_dict['online'] = check_rtsp_available(cam_dict['rtsp_main'])
+        result.append(cam_dict)
+    return jsonify({'success': True, 'cameras': result})
+
+
+@app.route('/api/cameras/<int:camera_id>', methods=['PUT'])
+def api_update_camera(camera_id):
+    """Обновляет камеру и управляет компонентами"""
+    data = request.get_json()
+
+    # Получаем текущую камеру
+    cam = Camera.get_by_id(camera_id)
+    if not cam:
+        return jsonify({'success': False, 'error': 'Камера не найдена'}), 404
+
+    # Проверяем, изменился ли enabled
+    old_enabled = cam.get('enabled', 1)
+    new_enabled = data.get('enabled', old_enabled)
+
+    # Обновляем камеру в БД
+    Camera.update_full(camera_id, data)
+
+    # Если изменился enabled — управляем компонентами
+    if new_enabled != old_enabled:
+        cam_updated = Camera.get_by_id(camera_id)
+
+        if new_enabled == 1:
+            # ВКЛЮЧАЕМ камеру
+            print(f"🟢 Камера {camera_id} ВКЛЮЧЕНА")
+
+            # Запускаем HLS стрим
+            send_mqtt_command(camera_id, 'start_stream')
+
+            # Запускаем детектор
+            send_mqtt_command(camera_id, 'start_detector')
+
+            # Перезагружаем конфиг
+            send_mqtt_command(camera_id, 'reload_config')
+
+        else:
+            # ВЫКЛЮЧАЕМ камеру
+            print(f"🔴 Камера {camera_id} ВЫКЛЮЧЕНА")
+
+            # Останавливаем HLS стрим
+            send_mqtt_command(camera_id, 'stop_stream')
+
+            # Останавливаем детектор
+            send_mqtt_command(camera_id, 'stop_detector')
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/cameras/<int:camera_id>/apply', methods=['POST'])
+def api_apply_camera(camera_id):
+    """Применяет настройки камеры (перезагружает конфиг)"""
+    cam = Camera.get_by_id(camera_id)
+    if not cam:
+        return jsonify({'success': False, 'error': 'Камера не найдена'}), 404
+
+    send_mqtt_command(camera_id, 'reload_config')
+    return jsonify({'success': True})
+
+
+@app.route('/api/cameras/<int:camera_id>/test', methods=['POST'])
+def api_test_camera(camera_id):
+    """Тест RTSP соединения"""
+    cam = Camera.get_by_id(camera_id)
+    if not cam:
+        return jsonify({'success': False, 'error': 'Камера не найдена'}), 404
+
+    is_available = check_rtsp_available(cam['rtsp_main'])
+    return jsonify({
+        'success': is_available,
+        'message': 'RTSP доступен' if is_available else 'RTSP недоступен'
+    })
+
+
+# ============================================================
+# HLS-ЭНДПОИНТЫ
+# ============================================================
+
 @app.route('/camera/<id>/stream.m3u8')
 def stream(id):
     m3u8_path = os.path.join(HLS_DIR, f"camera{id}.m3u8")
     if os.path.exists(m3u8_path):
         return send_file(m3u8_path, mimetype='application/vnd.apple.mpegurl')
     return "Стрим не запущен", 404
+
 
 @app.route('/camera/<id>/<segment>')
 def segment(id, segment):
@@ -48,50 +205,55 @@ def segment(id, segment):
         return send_file(seg_path)
     return "Сегмент не найден", 404
 
+
 # ============================================================
-# MJPEG-эндпоинт (живое видео без подвисаний)
+# MJPEG-ЭНДПОИНТ
 # ============================================================
+
 @app.route('/camera/<id>/mjpeg')
 def mjpeg_stream(id):
-    """MJPEG-поток для браузера — через временный файл"""
+    """MJPEG-поток для браузера"""
     cam = Camera.get_by_id(int(id))
     if not cam:
         return "Камера не найдена", 404
-    
+
+    # ✅ Проверяем, включена ли камера
+    if not cam.get('enabled', True):
+        return "Камера отключена", 403
+
     ffmpeg = "ffmpeg"
     if shutil.which(ffmpeg) is None:
         for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
             if os.path.exists(p):
                 ffmpeg = p
                 break
-    
-    import tempfile, time
-    
+
+    import tempfile
+
     def generate():
         tmpfile = os.path.join(tempfile.gettempdir(), f"mjpeg_{id}_{int(time.time())}.mjpeg")
-        
+
         cmd = [
             ffmpeg,
             "-loglevel", "error",
             "-rtsp_transport", "tcp",
-            "-fflags", "nobuffer",        # ← ДОБАВЬ
-            "-flags", "low_delay",        # ← ДОБАВЬ
+            "-fflags", "nobuffer",
+            "-flags", "low_delay",
             "-i", cam["rtsp_sub"] or cam["rtsp_main"],
-            "-vf", "fps=8,scale=640:360", # ← 8 fps вместо 5
+            "-vf", "fps=8,scale=640:360",
             "-f", "mjpeg",
             "-q:v", "5",
-            "-avioflags", "direct",       # ← ДОБАВЬ (прямая запись)
-            "-flush_packets", "1",        # ← ДОБАВЬ (сброс пакетов)
+            "-avioflags", "direct",
+            "-flush_packets", "1",
             "-y",
             tmpfile
         ]
-        
+
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
+
         try:
-            # Ждём пока ffmpeg создаст файл и начнёт писать
             time.sleep(1)
-            
+
             last_size = 0
             while proc.poll() is None:
                 if os.path.exists(tmpfile) and os.path.getsize(tmpfile) > last_size:
@@ -99,14 +261,11 @@ def mjpeg_stream(id):
                         f.seek(last_size)
                         data = f.read()
                         if data:
-                            # Ищем JPEG-кадры (начинаются с FF D8, заканчиваются FF D9)
                             start = 0
                             while start < len(data):
-                                # Ищем начало JPEG
                                 soi = data.find(b'\xff\xd8', start)
                                 if soi == -1:
                                     break
-                                # Ищем конец JPEG
                                 eoi = data.find(b'\xff\xd9', soi)
                                 if eoi == -1:
                                     break
@@ -128,78 +287,83 @@ def mjpeg_stream(id):
                 os.remove(tmpfile)
             except:
                 pass
-    
+
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
 # ============================================================
-# Записи
+# ЗАПИСИ
 # ============================================================
+
 @app.route('/recordings/<int:recording_id>/play')
 @login_required
 def play_recording(recording_id):
-    """Отдаёт mp4-файл записи для просмотра"""
     conn = get_db()
     row = conn.execute("SELECT * FROM recordings WHERE id = ?", (recording_id,)).fetchone()
     conn.close()
-    
+
     if not row:
         return "Запись не найдена", 404
-    
+
     rec = dict(row)
     filepath = rec['filename']
-    
+
     if not os.path.exists(filepath):
         return "Файл не найден на диске", 404
-    
+
     return send_file(filepath, mimetype='video/mp4')
+
 
 @app.route('/api/recordings/<int:recording_id>', methods=['DELETE'])
 @login_required
 def delete_recording(recording_id):
-    """Удаляет запись из БД и с диска"""
     conn = get_db()
     row = conn.execute("SELECT * FROM recordings WHERE id = ?", (recording_id,)).fetchone()
-    
+
     if not row:
         conn.close()
         return jsonify({'success': False, 'error': 'Запись не найдена'}), 404
-    
+
     rec = dict(row)
-    
+
     try:
         if os.path.exists(rec['filename']):
             os.remove(rec['filename'])
     except:
         pass
-    
+
     conn.execute("DELETE FROM recordings WHERE id = ?", (recording_id,))
     conn.commit()
     conn.close()
-    
+
     return jsonify({'success': True, 'message': 'Запись удалена'})
+
 
 # ============================================================
 # Health-check
 # ============================================================
+
 @app.route('/api/health')
 def health():
-    import time
     return jsonify({
         "status": "alive",
         "service": "web_server",
         "timestamp": int(time.time())
     })
 
+
 # ============================================================
 # ИНИЦИАЛИЗАЦИЯ
 # ============================================================
+
 with app.app_context():
     init_db()
     if not User.get_by_username('admin'):
         User.create('admin', 'admin123', 'admin')
         print("👤 Создан пользователь: admin / admin123")
 
+
 if __name__ == '__main__':
-    print("🛡️ Legion NVR - Web Server")
-    print("🌐 http://localhost:8080")
+    print("[Legion NVR] Web Server")
+    print("[Web] http://localhost:8080")
     app.run(host='0.0.0.0', port=8080, threaded=True)

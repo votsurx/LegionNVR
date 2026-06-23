@@ -29,7 +29,7 @@ def dashboard():
     """)
     recent_events = [dict(row) for row in cursor.fetchall()]
     
-    # Локации
+    # 
     locations = [dict(r) for r in conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()]
     
     conn.close()
@@ -86,7 +86,7 @@ def camera_zones(camera_id):
     from models.camera import Camera
     cam = Camera.get_by_id(camera_id)
     if not cam:
-        return "Камера не найдена", 404
+        return "  ", 404
     return render_template('camera_zones.html', user=current_user, camera=cam)
 
 @main_bp.route('/cameras/<int:camera_id>/edit')
@@ -95,7 +95,7 @@ def edit_camera(camera_id):
     from models.camera import Camera
     cam = Camera.get_by_id(camera_id)
     if not cam:
-        return "Камера не найдена", 404
+        return "  ", 404
     return render_template('camera_edit.html', user=current_user, camera=cam)
 
 @main_bp.route('/cameras/<int:camera_id>/delete')
@@ -104,6 +104,6 @@ def delete_camera(camera_id):
     from models.camera import Camera
     cam = Camera.get_by_id(camera_id)
     if not cam:
-        return "Камера не найдена", 404
+        return "  ", 404
     Camera.delete(camera_id)
     return redirect(url_for('main.cameras'))
