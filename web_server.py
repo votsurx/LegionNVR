@@ -74,10 +74,14 @@ def mjpeg_stream(id):
             ffmpeg,
             "-loglevel", "error",
             "-rtsp_transport", "tcp",
+            "-fflags", "nobuffer",        # ← ДОБАВЬ
+            "-flags", "low_delay",        # ← ДОБАВЬ
             "-i", cam["rtsp_sub"] or cam["rtsp_main"],
-            "-vf", "fps=5,scale=640:360",
+            "-vf", "fps=8,scale=640:360", # ← 8 fps вместо 5
             "-f", "mjpeg",
             "-q:v", "5",
+            "-avioflags", "direct",       # ← ДОБАВЬ (прямая запись)
+            "-flush_packets", "1",        # ← ДОБАВЬ (сброс пакетов)
             "-y",
             tmpfile
         ]
