@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 
-<a href="/cameras/{{ camera.id }}/edit" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад к камере</a>
+<a href="/cameras" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад к камере</a>
 <h1 style="margin:12px 0;">🎯 Зоны детекции: {{ camera.name }}</h1>
 
 <div style="display:flex; gap:16px; flex-wrap:wrap;">
-    
+
     <!-- Canvas для рисования -->
     <div style="flex:1; min-width:500px;">
         <div style="position:relative; background:#000; border-radius:12px; overflow:hidden;">
-            <canvas id="zoneCanvas" width="640" height="360" 
+            <canvas id="zoneCanvas" width="640" height="360"
                     style="width:100%; cursor:crosshair; display:block;"></canvas>
             <div id="canvasLoading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#aaa;">
                 Загрузка кадра...
             </div>
         </div>
-        
+
         <!-- Инструменты -->
         <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
             <button onclick="setTool('draw')" id="btn-draw" class="btn btn-sm btn-blue">✏️ Рисовать</button>
@@ -31,7 +31,7 @@
             </span>
         </div>
     </div>
-    
+
     <!-- Список зон -->
     <div style="width:280px;">
         <h3 style="margin-bottom:12px;">Сохранённые зоны</h3>
@@ -44,324 +44,315 @@
 </div>
 
 <script>
-// ============================================================
-// КОНФИГ
-// ============================================================
-var cameraId = {{ camera.id }};
-var canvas = document.getElementById('zoneCanvas');
-var ctx = canvas.getContext('2d');
+    // ============================================================
+    // КОНФИГ
+    // ============================================================
+    (function() {
+        console.log('🔄 Camera Zones page loaded');
 
-var currentTool = 'draw';       // draw | erase
-var currentType = 'include';    // include | exclude
-var zones = [];                 // [{type, points: [{x,y}]}]
-var drawingPoints = [];         // текущий рисуемый полигон
-var frameImg = new Image();
+        var cameraId = {{ camera.id }};
+        console.log('📷 Camera ID:', cameraId);
+        console.log('📷 Camera Name:', '{{ camera.name }}');
 
-// ============================================================
-// ЗАГРУЗКА КАДРА
-// ============================================================
-function loadFrame() {
-    frameImg.onload = function() {
-        canvas.width = frameImg.width;
-        canvas.height = frameImg.height;
-        document.getElementById('canvasLoading').style.display = 'none';
-        redraw();
-    };
-    frameImg.src = '/camera/{{ camera.id }}/mjpeg?' + Date.now();
-}
+        var canvas = document.getElementById('zoneCanvas');
+        var ctx = canvas.getContext('2d');
+        var currentTool = 'draw';
+        var currentType = 'include';
+        var zones = [];
+        var drawingPoints = [];
+        var frameImg = new Image();
+        var mouseX = 0, mouseY = 0;
 
-// Пробуем загрузить кадр из MJPEG-потока
-setTimeout(function() {
-    // Берём первый кадр из потока
-    fetch('/camera/{{ camera.id }}/mjpeg')
-        .then(function(r) {
-            return r.blob();
-        })
-        .then(function(blob) {
-            var url = URL.createObjectURL(blob);
+        // ============================================================
+        // ЗАГРУЗКА КАДРА
+        // ============================================================
+        function loadFrame() {
+            console.log('📸 Загружаем кадр для камеры:', cameraId);
+            var url = '/camera/' + cameraId + '/snapshot?' + Date.now();
+            console.log('📸 URL:', url);
+
+            frameImg.src = url;
+
             frameImg.onload = function() {
+                console.log('✅ Кадр загружен!');
                 canvas.width = frameImg.width || 640;
                 canvas.height = frameImg.height || 360;
                 document.getElementById('canvasLoading').style.display = 'none';
-                URL.revokeObjectURL(url);
                 redraw();
             };
-            frameImg.src = url;
-        })
-        .catch(function() {
-            // Fallback: серый фон
-            document.getElementById('canvasLoading').textContent = '⚠️ Нет сигнала';
-            canvas.width = 640;
-            canvas.height = 360;
-            ctx.fillStyle = '#222';
-            ctx.fillRect(0, 0, 640, 360);
-            document.getElementById('canvasLoading').style.display = 'none';
-        });
-}, 500);
 
-// ============================================================
-// ЗАГРУЗКА ЗОН ИЗ БД
-// ============================================================
-function loadZones() {
-    fetch('/api/cameras/' + cameraId + '/zones')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (d.success && d.zones) {
-                zones = d.zones.map(function(z) {
-                    return {
-                        id: z.id,
-                        type: z.zone_type,
-                        name: z.name,
-                        points: JSON.parse(z.points_json),
-                        enabled: z.enabled
-                    };
+            frameImg.onerror = function(e) {
+                console.error('❌ Ошибка загрузки кадра:', e);
+                canvas.width = 640;
+                canvas.height = 360;
+                ctx.fillStyle = '#222';
+                ctx.fillRect(0, 0, 640, 360);
+                ctx.fillStyle = '#666';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠️ Нет сигнала', 320, 180);
+                document.getElementById('canvasLoading').style.display = 'none';
+                redraw();
+            };
+        }
+
+        // ============================================================
+        // ЗАГРУЗКА ЗОН ИЗ БД
+        // ============================================================
+        function loadZones() {
+            fetch('/api/cameras/' + cameraId + '/zones')
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.zones) {
+                        zones = d.zones.map(function(z) {
+                            return {
+                                id: z.id,
+                                type: z.zone_type,
+                                name: z.name,
+                                points: JSON.parse(z.points_json),
+                                enabled: z.enabled
+                            };
+                        });
+                    }
+                    renderZonesList();
+                    redraw();
                 });
+        }
+
+        // ============================================================
+        // РИСОВАНИЕ
+        // ============================================================
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (frameImg.complete && frameImg.naturalWidth > 0) {
+                ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
+
+            zones.forEach(function(zone) {
+                drawPolygon(zone.points, zone.type, 0.6);
+            });
+
+            if (drawingPoints.length > 0) {
+                drawPolygon(drawingPoints, currentType, 0.8);
+                if (drawingPoints.length >= 1) {
+                    var last = drawingPoints[drawingPoints.length - 1];
+                    ctx.beginPath();
+                    ctx.moveTo(last.x, last.y);
+                    ctx.lineTo(mouseX, mouseY);
+                    ctx.strokeStyle = currentType === 'include' ? 'rgba(76,175,80,0.5)' : 'rgba(244,67,54,0.5)';
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+
+        function drawPolygon(points, type, alpha) {
+            if (points.length < 2) return;
+
+            var color = type === 'include' ? 'rgba(76,175,80,' + alpha + ')' : 'rgba(244,67,54,' + alpha + ')';
+            var fillColor = type === 'include' ? 'rgba(76,175,80,' + (alpha * 0.3) + ')' : 'rgba(244,67,54,' + (alpha * 0.3) + ')';
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (var i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            points.forEach(function(p) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+            });
+        }
+
+        // ============================================================
+        // МЫШЬ
+        // ============================================================
+        canvas.addEventListener('mousemove', function(e) {
+            var rect = canvas.getBoundingClientRect();
+            var scaleX = canvas.width / rect.width;
+            var scaleY = canvas.height / rect.height;
+            mouseX = (e.clientX - rect.left) * scaleX;
+            mouseY = (e.clientY - rect.top) * scaleY;
+
+            if (drawingPoints.length > 0) redraw();
+        });
+
+        canvas.addEventListener('click', function(e) {
+            if (currentTool !== 'draw') return;
+
+            var rect = canvas.getBoundingClientRect();
+            var scaleX = canvas.width / rect.width;
+            var scaleY = canvas.height / rect.height;
+            var x = (e.clientX - rect.left) * scaleX;
+            var y = (e.clientY - rect.top) * scaleY;
+
+            drawingPoints.push({x: Math.round(x), y: Math.round(y)});
+            redraw();
+        });
+
+        canvas.addEventListener('dblclick', function(e) {
+            if (currentTool !== 'draw' || drawingPoints.length < 3) return;
+
+            zones.push({
+                id: null,
+                type: currentType,
+                name: 'Зона ' + (zones.length + 1),
+                points: [...drawingPoints],
+                enabled: 1
+            });
+
+            drawingPoints = [];
             renderZonesList();
             redraw();
         });
-}
 
-// ============================================================
-// РИСОВАНИЕ
-// ============================================================
-function redraw() {
-    // Очищаем
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Рисуем кадр
-    if (frameImg.complete && frameImg.naturalWidth > 0) {
-        ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
-    } else {
-        ctx.fillStyle = '#111';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    
-    // Рисуем сохранённые зоны
-    zones.forEach(function(zone) {
-        drawPolygon(zone.points, zone.type, 0.6);
-    });
-    
-    // Рисуем текущий рисуемый полигон
-    if (drawingPoints.length > 0) {
-        drawPolygon(drawingPoints, currentType, 0.8);
-        // Линия к курсору
-        if (drawingPoints.length >= 1) {
-            var last = drawingPoints[drawingPoints.length - 1];
-            ctx.beginPath();
-            ctx.moveTo(last.x, last.y);
-            ctx.lineTo(mouseX, mouseY);
-            ctx.strokeStyle = currentType === 'include' ? 'rgba(76,175,80,0.5)' : 'rgba(244,67,54,0.5)';
-            ctx.setLineDash([5, 5]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-    }
-}
-
-function drawPolygon(points, type, alpha) {
-    if (points.length < 2) return;
-    
-    var color = type === 'include' ? 'rgba(76,175,80,' + alpha + ')' : 'rgba(244,67,54,' + alpha + ')';
-    var fillColor = type === 'include' ? 'rgba(76,175,80,' + (alpha * 0.3) + ')' : 'rgba(244,67,54,' + (alpha * 0.3) + ')';
-    
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (var i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.closePath();
-    ctx.fillStyle = fillColor;
-    ctx.fill();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // Точки
-    points.forEach(function(p) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-    });
-}
-
-// ============================================================
-// МЫШЬ
-// ============================================================
-var mouseX = 0, mouseY = 0;
-
-canvas.addEventListener('mousemove', function(e) {
-    var rect = canvas.getBoundingClientRect();
-    var scaleX = canvas.width / rect.width;
-    var scaleY = canvas.height / rect.height;
-    mouseX = (e.clientX - rect.left) * scaleX;
-    mouseY = (e.clientY - rect.top) * scaleY;
-    
-    if (drawingPoints.length > 0) redraw();
-});
-
-canvas.addEventListener('click', function(e) {
-    if (currentTool !== 'draw') return;
-    
-    var rect = canvas.getBoundingClientRect();
-    var scaleX = canvas.width / rect.width;
-    var scaleY = canvas.height / rect.height;
-    var x = (e.clientX - rect.left) * scaleX;
-    var y = (e.clientY - rect.top) * scaleY;
-    
-    drawingPoints.push({x: Math.round(x), y: Math.round(y)});
-    redraw();
-});
-
-canvas.addEventListener('dblclick', function(e) {
-    if (currentTool !== 'draw' || drawingPoints.length < 3) return;
-    
-    // Замыкаем полигон
-    zones.push({
-        id: null,
-        type: currentType,
-        name: 'Зона ' + (zones.length + 1),
-        points: [...drawingPoints],
-        enabled: 1
-    });
-    
-    drawingPoints = [];
-    renderZonesList();
-    redraw();
-});
-
-canvas.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    // ПКМ — отмена рисования
-    drawingPoints = [];
-    redraw();
-});
-
-// ============================================================
-// ИНСТРУМЕНТЫ
-// ============================================================
-function setTool(tool) {
-    currentTool = tool;
-    document.getElementById('btn-draw').classList.toggle('btn-blue', tool === 'draw');
-    document.getElementById('btn-draw').classList.toggle('btn-outline', tool !== 'draw');
-    document.getElementById('btn-erase').classList.toggle('btn-blue', tool === 'erase');
-    document.getElementById('btn-erase').classList.toggle('btn-outline', tool !== 'erase');
-    
-    if (tool === 'erase') {
-        canvas.style.cursor = 'pointer';
-    } else {
-        canvas.style.cursor = 'crosshair';
-    }
-}
-
-function setZoneType() {
-    currentType = document.getElementById('zoneType').value;
-}
-
-function clearAll() {
-    if (!confirm('Удалить ВСЕ зоны?')) return;
-    zones = [];
-    drawingPoints = [];
-    renderZonesList();
-    redraw();
-}
-
-// ============================================================
-// УПРАВЛЕНИЕ ЗОНАМИ
-// ============================================================
-function renderZonesList() {
-    var html = '';
-    zones.forEach(function(zone, index) {
-        var color = zone.type === 'include' ? '#4caf50' : '#f44336';
-        var icon = zone.type === 'include' ? '🟢' : '🔴';
-        html += '<div style="background:var(--bg-card); padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:8px;">';
-        html += '<span>' + icon + '</span>';
-        html += '<span style="flex:1; font-size:13px;">' + zone.name + '</span>';
-        html += '<button onclick="editZone(' + index + ')" class="btn btn-blue btn-sm">✏️</button>';
-        html += '<button onclick="deleteZone(' + index + ')" class="btn btn-red btn-sm">🗑️</button>';
-        html += '</div>';
-    });
-    
-    if (zones.length === 0) {
-        html = '<div style="color:var(--text-secondary); padding:16px; text-align:center;">Нет зон.<br>Рисуйте на кадре.</div>';
-    }
-    
-    document.getElementById('zonesList').innerHTML = html;
-}
-
-function editZone(index) {
-    var zone = zones[index];
-    var newName = prompt('Название зоны:', zone.name);
-    if (newName) zone.name = newName;
-    renderZonesList();
-}
-
-function deleteZone(index) {
-    zones.splice(index, 1);
-    renderZonesList();
-    redraw();
-}
-
-// ============================================================
-// СОХРАНЕНИЕ
-// ============================================================
-function saveZones() {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '⏳ Сохранение...';
-    
-    // Удаляем старые зоны
-    var deletePromises = [];
-    // Сначала удаляем все существующие зоны
-    fetch('/api/cameras/' + cameraId + '/zones')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (d.success && d.zones) {
-                d.zones.forEach(function(z) {
-                    deletePromises.push(
-                        fetch('/api/cameras/' + cameraId + '/zones/' + z.id, { method: 'DELETE' })
-                    );
-                });
-            }
-            return Promise.all(deletePromises);
-        })
-        .then(function() {
-            // Сохраняем новые зоны
-            var savePromises = zones.map(function(zone) {
-                return fetch('/api/cameras/' + cameraId + '/zones', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        name: zone.name,
-                        zone_type: zone.type,
-                        points_json: JSON.stringify(zone.points),
-                        enabled: zone.enabled
-                    })
-                });
-            });
-            return Promise.all(savePromises);
-        })
-        .then(function() {
-            var s = document.getElementById('saveStatus');
-            s.textContent = '✅ Зоны сохранены! (' + zones.length + ' шт.)';
-            s.style.color = '#4caf50';
-            btn.disabled = false;
-            btn.textContent = '💾 Сохранить все зоны';
-            setTimeout(function() { s.textContent = ''; }, 3000);
-        })
-        .catch(function(e) {
-            var s = document.getElementById('saveStatus');
-            s.textContent = '❌ Ошибка: ' + e;
-            s.style.color = '#f44336';
-            btn.disabled = false;
-            btn.textContent = '💾 Сохранить все зоны';
+        canvas.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            drawingPoints = [];
+            redraw();
         });
-}
 
-// ============================================================
-// СТАРТ
-// ============================================================
-loadZones();
+        // ============================================================
+        // ИНСТРУМЕНТЫ
+        // ============================================================
+        window.setTool = function(tool) {
+            currentTool = tool;
+            document.getElementById('btn-draw').classList.toggle('btn-blue', tool === 'draw');
+            document.getElementById('btn-draw').classList.toggle('btn-outline', tool !== 'draw');
+            document.getElementById('btn-erase').classList.toggle('btn-blue', tool === 'erase');
+            document.getElementById('btn-erase').classList.toggle('btn-outline', tool !== 'erase');
+
+            if (tool === 'erase') {
+                canvas.style.cursor = 'pointer';
+            } else {
+                canvas.style.cursor = 'crosshair';
+            }
+        };
+
+        window.setZoneType = function() {
+            currentType = document.getElementById('zoneType').value;
+        };
+
+        window.clearAll = function() {
+            if (!confirm('Удалить ВСЕ зоны?')) return;
+            zones = [];
+            drawingPoints = [];
+            renderZonesList();
+            redraw();
+        };
+
+        // ============================================================
+        // УПРАВЛЕНИЕ ЗОНАМИ
+        // ============================================================
+        function renderZonesList() {
+            var html = '';
+            zones.forEach(function(zone, index) {
+                var color = zone.type === 'include' ? '#4caf50' : '#f44336';
+                var icon = zone.type === 'include' ? '🟢' : '🔴';
+                html += '<div style="background:var(--bg-card); padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:8px;">';
+                html += '<span>' + icon + '</span>';
+                html += '<span style="flex:1; font-size:13px;">' + zone.name + '</span>';
+                html += '<button onclick="editZone(' + index + ')" class="btn btn-blue btn-sm">✏️</button>';
+                html += '<button onclick="deleteZone(' + index + ')" class="btn btn-red btn-sm">🗑️</button>';
+                html += '</div>';
+            });
+
+            if (zones.length === 0) {
+                html = '<div style="color:var(--text-secondary); padding:16px; text-align:center;">Нет зон.<br>Рисуйте на кадре.</div>';
+            }
+
+            document.getElementById('zonesList').innerHTML = html;
+        }
+
+        window.editZone = function(index) {
+            var zone = zones[index];
+            var newName = prompt('Название зоны:', zone.name);
+            if (newName) zone.name = newName;
+            renderZonesList();
+        };
+
+        window.deleteZone = function(index) {
+            zones.splice(index, 1);
+            renderZonesList();
+            redraw();
+        };
+
+        // ============================================================
+        // СОХРАНЕНИЕ
+        // ============================================================
+        window.saveZones = function() {
+            var btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Сохранение...';
+
+            var deletePromises = [];
+            fetch('/api/cameras/' + cameraId + '/zones')
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.zones) {
+                        d.zones.forEach(function(z) {
+                            deletePromises.push(
+                                fetch('/api/cameras/' + cameraId + '/zones/' + z.id, { method: 'DELETE' })
+                            );
+                        });
+                    }
+                    return Promise.all(deletePromises);
+                })
+                .then(function() {
+                    var savePromises = zones.map(function(zone) {
+                        return fetch('/api/cameras/' + cameraId + '/zones', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                name: zone.name,
+                                zone_type: zone.type,
+                                points_json: JSON.stringify(zone.points),
+                                enabled: zone.enabled
+                            })
+                        });
+                    });
+                    return Promise.all(savePromises);
+                })
+                .then(function() {
+                    var s = document.getElementById('saveStatus');
+                    s.textContent = '✅ Зоны сохранены! (' + zones.length + ' шт.)';
+                    s.style.color = '#4caf50';
+                    btn.disabled = false;
+                    btn.textContent = '💾 Сохранить все зоны';
+                    setTimeout(function() { s.textContent = ''; }, 3000);
+                })
+                .catch(function(e) {
+                    var s = document.getElementById('saveStatus');
+                    s.textContent = '❌ Ошибка: ' + e;
+                    s.style.color = '#f44336';
+                    btn.disabled = false;
+                    btn.textContent = '💾 Сохранить все зоны';
+                });
+        };
+
+        // ============================================================
+        // СТАРТ
+        // ============================================================
+        console.log('🚀 Вызываем loadFrame()...');
+        loadZones();
+
+        setTimeout(function() {
+            loadFrame();
+        }, 500);
+
+    })();
 </script>
 {% endblock %}

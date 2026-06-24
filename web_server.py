@@ -291,6 +291,52 @@ def mjpeg_stream(id):
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+@app.route('/camera/<int:camera_id>/snapshot')
+def camera_snapshot(camera_id):
+    """Возвращает один кадр с камеры"""
+    cam = Camera.get_by_id(camera_id)
+    if not cam:
+        return "Камера не найдена", 404
+
+    ffmpeg = "ffmpeg"
+    if shutil.which(ffmpeg) is None:
+        for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
+            if os.path.exists(p):
+                ffmpeg = p
+                break
+
+    import tempfile
+    import subprocess
+    import os
+
+    tmpfile = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+    tmpfile.close()
+
+    cmd = [
+        ffmpeg,
+        "-loglevel", "error",
+        "-rtsp_transport", "tcp",
+        "-i", cam["rtsp_sub"] or cam["rtsp_main"],
+        "-frames:v", "1",
+        "-q:v", "2",
+        "-y",
+        tmpfile.name
+    ]
+
+    try:
+        subprocess.run(cmd, timeout=5, capture_output=True)
+        if os.path.exists(tmpfile.name) and os.path.getsize(tmpfile.name) > 0:
+            return send_file(tmpfile.name, mimetype='image/jpeg')
+        return "Не удалось получить кадр", 404
+    except Exception as e:
+        return f"Ошибка: {e}", 500
+    finally:
+        try:
+            os.remove(tmpfile.name)
+        except:
+            pass
+
+
 # ============================================================
 # ЗАПИСИ
 # ============================================================
