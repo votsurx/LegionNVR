@@ -47,47 +47,51 @@ function toggleCamera(camId, enabled) {
     });
 }
 
-function toggleDetector(camId, enabled) {
-    fetch(`/api/cameras/${camId}`, {
+// === Детектор ===
+function toggleDetector(camId) {
+    var btn = document.getElementById('btn-det-' + camId);
+    var isOn = btn.classList.contains('btn-green');
+    var newState = isOn ? 0 : 1;
+
+    fetch('/api/cameras/' + camId, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ motion_enabled: enabled ? 1 : 0 })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            fetch(`/api/cameras/${camId}/apply`, {
-                method: 'POST'
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': 'sHomeSecretKey2026'
+        },
+        body: JSON.stringify({motion_enabled: newState})
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            fetch('/api/cameras/' + camId + '/apply', {
+                method: 'POST',
+                headers: {'X-API-Key': 'sHomeSecretKey2026'}
             });
             location.reload();
-        } else {
-            showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
         }
-    })
-    .catch(err => {
-        showToast('Ошибка: ' + err, 'error');
     });
 }
 
-function toggleRecord(camId, enabled) {
-    fetch(`/api/cameras/${camId}`, {
+// === Запись ===
+function toggleRecord(camId) {
+    var btn = document.getElementById('btn-rec-' + camId);
+    var isOn = btn.classList.contains('btn-green');
+    var newState = isOn ? 0 : 1;
+
+    fetch('/api/cameras/' + camId, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ record_enabled: enabled ? 1 : 0 })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            fetch(`/api/cameras/${camId}/apply`, {
-                method: 'POST'
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': 'sHomeSecretKey2026'
+        },
+        body: JSON.stringify({record_enabled: newState})
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            fetch('/api/cameras/' + camId + '/apply', {
+                method: 'POST',
+                headers: {'X-API-Key': 'sHomeSecretKey2026'}
             });
             location.reload();
-        } else {
-            showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
         }
-    })
-    .catch(err => {
-        showToast('Ошибка: ' + err, 'error');
     });
 }
 

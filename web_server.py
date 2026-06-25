@@ -48,22 +48,20 @@ HLS_DIR = "streams"
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ============================================================
 
-def send_mqtt_command(camera_id, action, params=None):
-    """Отправляет MQTT команду детектору или стримеру"""
+def send_mqtt_status(camera_id, status_type, value):
+    """Отправляет статус камеры в MQTT"""
     try:
         client = mqtt.Client()
         client.connect("127.0.0.1", 1883, 5)
-
-        payload = {
-            'action': action,
+        payload = json.dumps({
             'camera_id': camera_id,
+            status_type: value,
             'timestamp': int(time.time())
-        }
-        if params:
-            payload.update(params)
-
-        client.publish(f"spartan/{camera_id}/cmd", json.dumps(payload))
+        })
+        topic = f"spartan/{camera_id}/{status_type}"
+        client.publish(topic, payload)
         client.disconnect()
+        print(f"📡 MQTT: {topic} -> {payload}")
         return True
     except Exception as e:
         print(f"❌ MQTT ошибка: {e}")
@@ -119,48 +117,59 @@ def api_update_camera(camera_id):
     """Обновляет камеру и управляет компонентами"""
     data = request.get_json()
 
-    # Получаем текущую камеру
     cam = Camera.get_by_id(camera_id)
     if not cam:
         return jsonify({'success': False, 'error': 'Камера не найдена'}), 404
 
-    # Проверяем, изменился ли enabled
+    # Проверяем изменения
     old_enabled = cam.get('enabled', 1)
     new_enabled = data.get('enabled', old_enabled)
+
+    old_motion = cam.get('motion_enabled', 0)
+    new_motion = data.get('motion_enabled', old_motion)
+
+    old_record = cam.get('record_enabled', 0)
+    new_record = data.get('record_enabled', old_record)
 
     # Обновляем камеру в БД
     Camera.update_full(camera_id, data)
 
-    # Если изменился enabled — управляем компонентами
+    # ════════════════════════════════════════════════════════════
+    # 1. ON/OFF камеры
+    # ════════════════════════════════════════════════════════════
     if new_enabled != old_enabled:
-        cam_updated = Camera.get_by_id(camera_id)
-
         if new_enabled == 1:
-            # ВКЛЮЧАЕМ камеру
             print(f"🟢 Камера {camera_id} ВКЛЮЧЕНА")
-
-            # Запускаем HLS стрим
             send_mqtt_command(camera_id, 'start_stream')
-
-            # Запускаем детектор
             send_mqtt_command(camera_id, 'start_detector')
-
-            # Перезагружаем конфиг
             send_mqtt_command(camera_id, 'reload_config')
-
         else:
-            # ВЫКЛЮЧАЕМ камеру
             print(f"🔴 Камера {camera_id} ВЫКЛЮЧЕНА")
-
-            # Останавливаем HLS стрим
             send_mqtt_command(camera_id, 'stop_stream')
-
-            # Останавливаем детектор
             send_mqtt_command(camera_id, 'stop_detector')
 
+        # ✅ ОТПРАВЛЯЕМ СТАТУС
+        send_mqtt_status(camera_id, 'status', new_enabled)
+
+    # ════════════════════════════════════════════════════════════
+    # 2. ДЕТЕКТОР
+    # ════════════════════════════════════════════════════════════
+    if new_motion != old_motion:
+        print(f"🔍 Детектор камеры {camera_id}: {'ВКЛ' if new_motion else 'ВЫКЛ'}")
+        # ✅ ОТПРАВЛЯЕМ СТАТУС
+        send_mqtt_status(camera_id, 'motion_status', new_motion)
+        if new_motion == 1:
+            send_mqtt_command(camera_id, 'reload_config')
+
+    # ════════════════════════════════════════════════════════════
+    # 3. ЗАПИСЬ
+    # ════════════════════════════════════════════════════════════
+    if new_record != old_record:
+        print(f"📼 Запись камеры {camera_id}: {'ВКЛ' if new_record else 'ВЫКЛ'}")
+        # ✅ ОТПРАВЛЯЕМ СТАТУС
+        send_mqtt_status(camera_id, 'record_status', new_record)
+
     return jsonify({'success': True})
-
-
 @app.route('/api/cameras/<int:camera_id>/apply', methods=['POST'])
 def api_apply_camera(camera_id):
     """Применяет настройки камеры (перезагружает конфиг)"""

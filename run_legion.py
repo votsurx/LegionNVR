@@ -150,13 +150,14 @@ class ProcessManager:
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=subprocess.PIPE,
                 cwd=str(comp["dir"]),
                 shell=True,
                 text=True,
                 bufsize=0,  #   
                 encoding='utf-8',
                 errors='replace'
+                creationflags=subprocess.CREATE_NO_WINDOW  # ← ДЛЯ WINDOWS!
             )
 
             self.processes[name] = process
@@ -188,7 +189,7 @@ class ProcessManager:
                 if not self.running:
                     break
                 if line.strip():
-                    #   
+                    #
                     timestamp = datetime.now().strftime("%H:%M:%S")
                     print(f"{Colors.DIM}{timestamp}{Colors.RESET} {prefix} {line.rstrip()}")
 

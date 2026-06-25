@@ -3,13 +3,14 @@ Legion NVR - Motion Detector
 Запуск: python engine/detector.py
 Читает камеры из БД, детектит движение, публикует MQTT
 """
+import os
+import sys
 import io
 import cv2
 import numpy as np
 import paho.mqtt.client as mqtt
 import json
 import time
-import os
 import sys
 import threading
 
@@ -24,6 +25,24 @@ from models.database import get_db
 MQTT_BROKER = "127.0.0.1"
 MQTT_PORT = 1883
 
+def send_mqtt_command(camera_id, action, params=None):
+        """Отправляет MQTT команду"""
+        try:
+            client = mqtt.Client()
+            client.connect("127.0.0.1", 1883, 5)
+            payload = {
+                'action': action,
+                'camera_id': camera_id,
+                'timestamp': int(time.time())
+            }
+            if params:
+                payload.update(params)
+            client.publish(f"spartan/{camera_id}/cmd", json.dumps(payload))
+            client.disconnect()
+            return True
+        except Exception as e:
+            print(f"❌ MQTT ошибка: {e}")
+            return False
 
 class MotionDetector:
     def __init__(self, camera, mqtt_client):
@@ -44,9 +63,17 @@ class MotionDetector:
         self.threshold = camera.get("motion_threshold", 2.0)
         self.cooldown = camera.get("cooldown_sec", 5)
 
+        # ✅ ДОБАВЛЯЕМ МИНИМАЛЬНЫЙ ПОРОГ ДЛЯ ЛОГОВ
+        self.log_min_threshold = 5.0  # Не показывать движение ниже 5%
+
         # Зоны детекции
         self.zones = []
         self._load_zones()
+
+        # ✅ ЗАДЕРЖКА ПЕРЕД ОСТАНОВКОЙ (сек)
+        self.motion_end_delay = 2.0
+        self.motion_end_time = None
+        self.motion_end_timer = None
 
         # Счётчик разогрева
         self.warmup_frames = 0
@@ -109,7 +136,7 @@ class MotionDetector:
 
         # Пытаемся подключиться с повторными попытками
         for attempt in range(self._max_reconnect_attempts):
-            self.cap = cv2.VideoCapture(rtsp_url)
+            self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
             if self.cap.isOpened():
                 break
             print(f"⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts} подключиться...")
@@ -149,7 +176,6 @@ class MotionDetector:
             return
 
         if self.cap is None:
-            # Пытаемся переподключиться
             self._reconnect_attempts += 1
             if self._reconnect_attempts <= self._max_reconnect_attempts:
                 self.start()
@@ -157,7 +183,6 @@ class MotionDetector:
 
         ret, frame = self.cap.read()
         if not ret:
-            # Потеря потока
             self._reconnect_attempts += 1
             if self._reconnect_attempts <= self._max_reconnect_attempts:
                 print(f"⚠️ [{self.camera['name']}] Потеря потока, переподключение...")
@@ -169,7 +194,6 @@ class MotionDetector:
                 print(f"❌ [{self.camera['name']}] Потеря потока, детектор остановлен")
             return
 
-        # Сброс счётчика переподключений при успешном чтении
         self._reconnect_attempts = 0
 
         small = cv2.resize(frame, (320, 240))
@@ -196,25 +220,53 @@ class MotionDetector:
                 exclude_mask = cv2.bitwise_not(mask)
                 fgmask = cv2.bitwise_and(fgmask, exclude_mask)
 
-                if self.warmup_frames < self.WARMUP_NEEDED:
-                    self.warmup_frames += 1
-                    return
+        # ✅ ПРОГРЕВ ВЫНЕСЕН СЮДА! (ПОСЛЕ ОБРАБОТКИ ЗОН)
+        if self.warmup_frames < self.WARMUP_NEEDED:
+            self.warmup_frames += 1
+            if self.warmup_frames % 5 == 0:
+                print(f"🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
+            return
 
         motion_pixels = np.count_nonzero(fgmask)
         motion_percent = motion_pixels / (320 * 240) * 100
         now = time.time()
 
         if motion_percent > self.threshold:
-            if not self.motion_active and (now - self.last_motion_time > self.cooldown):
+            # ✅ ДВИЖЕНИЕ ЕСТЬ
+            print(f"📊 [{self.camera['name']}] Движение: {motion_percent:.1f}% (порог: {self.threshold}%)")
+
+            # ✅ ОТМЕНЯЕМ ТАЙМЕР ОСТАНОВКИ (если был)
+            if self.motion_end_timer:
+                self.motion_end_timer.cancel()
+                self.motion_end_timer = None
+                print(f"⏸️ [{self.camera['name']}] Движение возобновилось, отмена остановки")
+
+            if not self.motion_active:
                 self.motion_active = True
-                self.last_motion_time = now
-                self._publish("start", motion_percent)
-                print(f"🔴 [{self.camera['name']}] ДВИЖЕНИЕ! {motion_percent:.1f}%")
+                self.motion_start_time = time.time()
+                self._publish("motion_start", motion_percent)
+                send_mqtt_command(self.camera['id'], 'start_recording')
+                print(f"🔴 [{self.camera['name']}] ДВИЖЕНИЕ! Старт записи")
         else:
+            # ✅ ДВИЖЕНИЯ НЕТ — ЗАПУСКАЕМ ТАЙМЕР ОСТАНОВКИ
             if self.motion_active:
-                self.motion_active = False
-                self._publish("end", 0)
-                print(f"🟢 [{self.camera['name']}] движение прекратилось")
+                if self.motion_end_timer is None:
+                    print(f"⏳ [{self.camera['name']}] Движение прекратилось, ждём {self.motion_end_delay} сек...")
+                    self.motion_end_timer = threading.Timer(
+                        self.motion_end_delay,
+                        self._stop_motion
+                    )
+                    self.motion_end_timer.daemon = True
+                    self.motion_end_timer.start()
+
+    def _stop_motion(self):
+        """Останавливает запись после задержки"""
+        if self.motion_active:
+            self.motion_active = False
+            self._publish("motion_end", 0)
+            send_mqtt_command(self.camera['id'], 'stop_recording')
+            print(f"🟢 [{self.camera['name']}] Движение прекратилось, запись остановлена")
+        self.motion_end_timer = None
 
     def _publish(self, event_type, percent):
         """Публикует MQTT событие"""

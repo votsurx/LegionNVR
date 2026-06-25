@@ -12,6 +12,7 @@ import time
 import glob
 import sys
 import signal
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -62,7 +63,6 @@ def stop_hls_stream(camera_id):
             stream_processes[cam_id].kill()
         del stream_processes[cam_id]
 
-        # Удаляем файлы стрима
         for f in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
             try:
                 os.remove(f)
@@ -78,10 +78,9 @@ def stop_hls_stream(camera_id):
 
 
 def start_hls_stream(camera):
-    """Запускает HLS стрим"""
+    """Запускает HLS стрим с большим буфером для предзаписи"""
     cam_id = str(camera["id"])
 
-    # Проверяем, включена ли камера
     if not camera.get("stream_enabled", True):
         print(f"⏸️ Камера {cam_id} отключена, стрим не запущен")
         return
@@ -93,7 +92,7 @@ def start_hls_stream(camera):
     # Останавливаем старый стрим
     stop_hls_stream(cam_id)
 
-    # Чистим старые сегменты
+    # Чистим старые сегменты (НО НЕ ВСЕ, ОСТАВЛЯЕМ ПОСЛЕДНИЕ!)
     for f in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
         try:
             os.remove(f)
@@ -114,17 +113,25 @@ def start_hls_stream(camera):
     cmd = [
         ffmpeg, "-loglevel", "error",
         "-rtsp_transport", "tcp",
+        "-rtsp_flags", "prefer_tcp",
+        "-max_delay", "5000000",
+        "-analyzeduration", "10000000",
+        "-probesize", "10000000",
+        "-fflags", "nobuffer",
+        "-flags", "low_delay",
         "-i", camera["rtsp_main"],
-        "-c:v", "copy", "-c:a", "aac",
-        "-hls_time", "1", "-hls_list_size", "3",
-        "-hls_flags", "delete_segments+omit_endlist",
+        "-c:v", "copy",
+        "-an",
+        "-hls_time", "0.2",
+        "-hls_list_size", "10",
+        "-hls_flags", "omit_endlist",
         os.path.join(HLS_DIR, f"camera{cam_id}.m3u8")
     ]
 
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         stream_processes[cam_id] = proc
-        print(f"🎥 HLS стрим '{camera['name']}' запущен (ID={cam_id})")
+        print(f"🎥 HLS стрим '{camera['name']}' запущен (ID={cam_id}")
     except Exception as e:
         print(f"❌ Ошибка запуска стрима для {camera['name']}: {e}")
 
@@ -136,65 +143,278 @@ def restart_hls_stream(camera):
     start_hls_stream(camera)
 
 
+def _simple_motion_recording(camera, output, pre_sec, post_sec):
+    """Обычная запись (без буфера) — fallback"""
+    ffmpeg = find_ffmpeg()
+    total_sec = pre_sec + post_sec
+
+    cmd = [
+        ffmpeg,
+        "-loglevel", "error",
+        "-rtsp_transport", "tcp",
+        "-i", camera["rtsp_main"],
+        # ✅ ДОБАВЛЯЕМ ВРЕМЯ НА ВИДЕО
+        "-vf", "drawtext=text='%Y-%m-%d %H:%M:%S':fontcolor=white:fontsize=24:x=10:y=10:box=1:boxcolor=black@0.5",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-t", str(total_sec),
+        "-y",
+        output
+    ]
+
+    try:
+        subprocess.run(cmd, timeout=total_sec + 10, capture_output=True)
+        print(f"🔴 Запись тревоги (обычная): {camera['name']} → {os.path.basename(output)}")
+    except subprocess.TimeoutExpired:
+        print(f"❌ Таймаут записи для {camera['name']}")
+    except Exception as e:
+        print(f"❌ Ошибка записи для {camera['name']}: {e}")
+
+
 def start_motion_recording(camera):
-    """Запускает запись по тревоге"""
+    """Запись по тревоге с перекодированием для плавного видео"""
     cam_id = str(camera["id"])
 
-    # Проверяем, включена ли камера и запись
     if not camera.get("enabled", True):
-        print(f"⏸️ Камера {cam_id} выключена, запись не запущена")
         return
 
     if not camera.get("record_enabled", False):
-        print(f"⏸️ Запись для камеры {cam_id} отключена")
+        return
+
+    pre_sec = camera.get('record_pre_sec', 4)
+    post_sec = camera.get('record_post_sec', 10)
+
+    if cam_id in recording_processes:
         return
 
     now = time.strftime("%Y-%m-%d_%H-%M-%S")
-
     recordings_path = get_recordings_path()
     date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
     os.makedirs(date_dir, exist_ok=True)
 
     output = os.path.join(date_dir, f"{now}_motion.mp4")
+    temp_output = os.path.join(date_dir, f"{now}_temp.mp4")
+
+    hls_dir = HLS_DIR
+    segments = sorted(glob.glob(os.path.join(hls_dir, f"camera{cam_id}*.ts")))
+
+    print(f"📼 HLS сегментов: {len(segments)}")
 
     ffmpeg = find_ffmpeg()
-    cmd = [
-        ffmpeg, "-loglevel", "error",
+
+    # ✅ ЗАПИСЫВАЕМ ПОСТ-ЗАПИСЬ
+    cmd_record = [
+        ffmpeg,
+        "-loglevel", "error",
         "-rtsp_transport", "tcp",
+        "-rtsp_flags", "prefer_tcp",
+        "-max_delay", "5000000",
+        "-analyzeduration", "10000000",
+        "-probesize", "10000000",
+        "-fflags", "nobuffer",
+        "-flags", "low_delay",
         "-i", camera["rtsp_main"],
-        "-c:v", "copy", "-c:a", "aac",
-        "-t", "15", "-y", output
+        "-c:v", "copy",
+        "-an",                          # ← БЕЗ АУДИО
+        "-t", str(post_sec),
+        "-y",
+        temp_output
     ]
 
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        recording_processes[cam_id] = proc
+        proc = subprocess.Popen(cmd_record, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc.wait(timeout=post_sec + 5)
+        print(f"✅ Постзапись завершена")
+    except Exception as e:
+        print(f"❌ Ошибка постзаписи: {e}")
+        return
 
-        # Логируем в БД
+    # ✅ ОБЪЕДИНЯЕМ С ПЕРЕКОДИРОВАНИЕМ
+    if len(segments) >= 2 and os.path.exists(temp_output):
+        segments_needed = max(2, pre_sec)
+        pre_segments = segments[-segments_needed:]
+
+        print(f"📼 Берём {len(pre_segments)} сегментов для предзаписи")
+
+        concat_file = os.path.join(tempfile.gettempdir(), f"concat_{cam_id}_{int(time.time())}.txt")
+        with open(concat_file, "w") as f:
+            for seg in pre_segments:
+                f.write(f"file '{os.path.abspath(seg)}'\n")
+            f.write(f"file '{os.path.abspath(temp_output)}'\n")
+
+        # ✅ С ПЕРЕКОДИРОВАНИЕМ (ЧТОБЫ НЕ БЫЛО РВАНЫХ РОЛИКОВ)
+        cmd_concat = [
+            ffmpeg,
+            "-loglevel", "error",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_file,
+            "-c:v", "libx264",        # ← ПЕРЕКОДИРУЕМ
+            "-preset", "veryfast",    # ← БЫСТРО
+            "-crf", "23",             # ← КАЧЕСТВО
+            "-pix_fmt", "yuv420p",    # ← СОВМЕСТИМОСТЬ
+            "-an",                    # ← БЕЗ АУДИО
+            "-y",
+            output
+        ]
+
+        result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
+
+        if result.returncode == 0 and os.path.exists(output):
+            print(f"✅ Запись сохранена: {os.path.basename(output)} (предзапись {len(pre_segments)} сегментов + {post_sec} сек)")
+
+            try:
+                conn = get_db()
+                conn.execute(
+                    "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
+                    (int(cam_id), output)
+                )
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"❌ Ошибка записи в БД: {e}")
+        else:
+            print(f"❌ Ошибка объединения: {result.stderr.decode() if result.stderr else 'Unknown'}")
+            # Fallback: просто сохраняем постзапись
+            if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+                os.rename(temp_output, output)
+                print(f"✅ Сохранена только постзапись (fallback)")
+
+        try:
+            os.remove(concat_file)
+        except:
+            pass
+    else:
+        if os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
+            os.rename(temp_output, output)
+            print(f"✅ Сохранена только постзапись")
+
+    try:
+        if os.path.exists(temp_output) and temp_output != output:
+            os.remove(temp_output)
+    except:
+        pass
+
+def stop_motion_recording(camera_id):
+    """Останавливает запись и собирает финальный ролик с буфером"""
+    cam_id = str(camera_id)
+
+    if cam_id not in recording_processes:
+        print(f"⚠️ Запись для камеры {cam_id} не найдена")
+        return
+
+    data = recording_processes[cam_id]
+    proc = data['proc']
+    temp_output = data['temp_output']
+    final_output = data['final_output']
+    max_duration = data['max_duration']
+    start_time = data['start_time']
+    segments = data.get('segments', [])
+
+    # ✅ ОСТАНАВЛИВАЕМ FFMPEG
+    try:  # ← ЭТОТ try НА ОДНОМ УРОВНЕ С КОДОМ ВЫШЕ
+        proc.terminate()
+        proc.wait(timeout=3)
+        print(f"⏹️ FFmpeg остановлен для камеры {cam_id}")
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        print(f"💀 FFmpeg принудительно убит для камеры {cam_id}")
+
+    # ✅ ДАЁМ ВРЕМЯ НА ЗАПИСЬ НА ДИСК
+    time.sleep(0.5)
+
+    # ✅ ОТМЕНЯЕМ ТАЙМЕР
+    if 'timer' in data:
+        data['timer'].cancel()
+
+    # ✅ ВЫЧИСЛЯЕМ РЕАЛЬНУЮ ДЛИТЕЛЬНОСТЬ
+    duration = time.time() - start_time
+    print(f"⏹️ Запись остановлена для камеры {cam_id} (длительность: {duration:.1f} сек)")
+
+    # ✅ ЕСЛИ ЗАПИСЬ КОРОТКАЯ — НЕ СОХРАНЯЕМ
+    if duration < 2.0:
+        print(f"🗑️ Запись слишком короткая ({duration:.1f} сек), удаляем")
+        try:
+            os.remove(temp_output)
+        except:
+            pass
+        del recording_processes[cam_id]
+        return
+
+    # ✅ ОБРЕЗАЕМ ПО МАКСИМАЛЬНОЙ ДЛИТЕЛЬНОСТИ (post_sec)
+    if duration > max_duration:
+        print(f"✂️ Обрезаем ролик до {max_duration} сек (было {duration:.1f} сек)")
+        duration = max_duration
+
+    # ✅ СОБИРАЕМ ФИНАЛЬНЫЙ РОЛИК (буфер + запись)
+    ffmpeg = find_ffmpeg()
+
+    if segments and len(segments) >= 3:
+        # ✅ ЕСТЬ СЕГМЕНТЫ — ДОБАВЛЯЕМ ПРЕДЗАПИСЬ
+        print(f"📼 Добавляем предзапись из {len(segments)} сегментов")
+
+        pre_sec = 5  # или из настроек
+        segments_needed = max(3, pre_sec // 2 + 1)
+        pre_segments = segments[-segments_needed:]
+
+        # Создаём файл конкатенации
+        concat_file = os.path.join(tempfile.gettempdir(), f"concat_final_{cam_id}_{int(time.time())}.txt")
+        with open(concat_file, "w") as f:
+            for seg in pre_segments:
+                f.write(f"file '{os.path.abspath(seg)}'\n")
+            f.write(f"file '{os.path.abspath(temp_output)}'\n")
+
+        cmd_concat = [
+            ffmpeg,
+            "-loglevel", "error",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_file,
+            "-c:v", "copy",
+            "-an",
+            "-y",
+            final_output
+        ]
+        print(f"📡 Команда FFmpeg: {' '.join(cmd_concat)}")
+
+        subprocess.run(cmd_concat, timeout=duration + 20, capture_output=True)
+        os.remove(concat_file)
+    else:
+        # ❌ НЕТ СЕГМЕНТОВ — ПРОСТО ПЕРЕИМЕНОВЫВАЕМ
+        os.rename(temp_output, final_output)
+
+    # ✅ УДАЛЯЕМ ВРЕМЕННЫЙ ФАЙЛ
+    try:
+        if os.path.exists(temp_output) and temp_output != final_output:
+            os.remove(temp_output)
+    except:
+        pass
+
+    print(f"💾 Запись сохранена: {os.path.basename(final_output)} (длительность: {duration:.1f} сек)")
+
+    # ✅ ПРОВЕРЯЕМ, ЧТО ФАЙЛ СОЗДАЛСЯ
+    if os.path.exists(final_output):
+        file_size = os.path.getsize(final_output)
+        print(f"✅ Файл создан: {os.path.basename(final_output)} (размер: {file_size} байт)")
+    else:
+        print(f"❌ ФАЙЛ НЕ СОЗДАН: {final_output}")
+
+    # ✅ ЛОГИРУЕМ В БД
+    if os.path.exists(final_output) and os.path.getsize(final_output) > 0:
         try:
             conn = get_db()
             conn.execute(
                 "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
-                (camera["id"], output)
+                (int(cam_id), final_output)
             )
             conn.commit()
             conn.close()
-        except:
-            pass
+            print(f"📝 Запись добавлена в БД")
+        except Exception as e:
+            print(f"❌ Ошибка записи в БД: {e}")
 
-        print(f"🔴 Запись тревоги: {camera['name']} → {now}_motion.mp4")
-
-        # Ждём окончания в фоне
-        def wait_and_log():
-            proc.wait()
-            print(f"💾 Запись завершена: {now}_motion.mp4")
-            if cam_id in recording_processes:
-                del recording_processes[cam_id]
-
-        threading.Thread(target=wait_and_log, daemon=True).start()
-    except Exception as e:
-        print(f"❌ Ошибка записи для {camera['name']}: {e}")
-
+    # ✅ УДАЛЯЕМ ИЗ ПРОЦЕССОВ
+    del recording_processes[cam_id]
 
 def on_motion(client, userdata, msg):
     """Callback при получении MQTT-сообщения о движении"""
@@ -218,7 +438,22 @@ def on_cmd(client, userdata, msg):
         action = data.get("action")
         cam_id = data.get("camera_id")
 
-        if action == "reload_config" and cam_id:
+        # ✅ СТАРТ ЗАПИСИ
+        if action == "start_recording" and cam_id:
+            print(f"📡 [CMD] Старт записи для камеры {cam_id}")
+            conn = get_db()
+            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
+            conn.close()
+            if cam:
+                start_motion_recording(dict(cam))
+
+        # ✅ ОСТАНОВКА ЗАПИСИ
+        elif action == "stop_recording" and cam_id:
+            print(f"📡 [CMD] Остановка записи для камеры {cam_id}")
+            stop_motion_recording(cam_id)
+
+        # ✅ ПЕРЕЗАГРУЗКА КОНФИГА
+        elif action == "reload_config" and cam_id:
             print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
             conn = get_db()
             cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
@@ -226,7 +461,6 @@ def on_cmd(client, userdata, msg):
 
             if cam:
                 cam_dict = dict(cam)
-                # Перезапускаем HLS-стрим
                 if cam_dict.get("enabled") and cam_dict.get("stream_enabled"):
                     start_hls_stream(cam_dict)
                     print(f"🔄 Стрим для '{cam_dict['name']}' перезапущен")
@@ -242,11 +476,11 @@ def on_cmd(client, userdata, msg):
                     start_hls_stream(cam)
             print(f"🔄 Перезапущено стримов: {len(stream_processes)}")
 
-        elif action == "stop_stream":
+        elif action == "stop_stream" and cam_id:
             print(f"⏹️ [CMD] Остановка стрима для камеры {cam_id}")
             stop_hls_stream(cam_id)
 
-        elif action == "start_stream":
+        elif action == "start_stream" and cam_id:
             print(f"▶️ [CMD] Запуск стрима для камеры {cam_id}")
             conn = get_db()
             cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
@@ -294,7 +528,6 @@ def main():
     print("[Legion NVR] Stream Engine")
     print(f"[MQTT] {MQTT_BROKER}:{MQTT_PORT}")
 
-    # Обработчик сигналов
     signal.signal(signal.SIGINT, signal_handler)
 
     os.makedirs(HLS_DIR, exist_ok=True)
