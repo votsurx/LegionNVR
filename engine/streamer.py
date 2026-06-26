@@ -33,7 +33,7 @@ stream_processes = {}
 recording_processes = {}
 recording_locks = {}  # Блокировка повторного запуска записи
 camera_status = {}
-
+motion_recordings = {}
 
 # ════════════════════════════════════════════════════════════
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -211,116 +211,160 @@ def capture_buffer(cam_id, pre_sec):
 
 
 def start_motion_recording(camera):
-    """
-    Запускает запись по тревоге.
-    1. Захватывает буфер предзаписи (последние record_pre_sec секунд).
-    2. Запускает постзапись на record_post_sec секунд.
-    3. В фоне ждёт завершения и склеивает.
-    """
+    """Запускает запись по тревоге (собирает HLS-сегменты)"""
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
         return
-
     if not camera.get("record_enabled", False):
-        print(f"⏸️ Запись отключена для камеры {cam_id}")
-        return
-
-    # Блокировка повторного запуска
-    if cam_id in recording_processes:
-        print(f"⚠️ Запись уже идёт для камеры {cam_id}, продлеваем")
-        extend_recording(cam_id)
         return
 
     record_pre_sec = camera.get('record_pre_sec', 5)
     record_post_sec = camera.get('record_post_sec', 10)
 
+    # ✅ НАХОДИМ ПОСЛЕДНИЙ HLS-СЕГМЕНТ
+    all_segments = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
+
+    if not all_segments:
+        print(f"❌ Нет HLS-сегментов для камеры {cam_id}")
+        return
+
+    last_segment = all_segments[-1]
+    print(f"📼 Тревога! Последний сегмент: {os.path.basename(last_segment)}")
+    print(f"🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек")
+
+    # ✅ СОХРАНЯЕМ ИНФОРМАЦИЮ О ЗАПИСИ
+    motion_recordings[cam_id] = {
+        'start_time': time.time(),
+        'first_segment': last_segment,
+        'pre_sec': record_pre_sec,
+        'post_sec': record_post_sec,
+        'camera': camera
+    }
+
+    # ✅ ЗАПУСКАЕМ ТАЙМЕР НА СБОР СЕГМЕНТОВ
+    timer = threading.Timer(record_post_sec + 2, _collect_motion_segments, args=[cam_id])
+    timer.daemon = True
+    motion_recordings[cam_id]['timer'] = timer
+    timer.start()
+
+    print(f"⏱️ Сбор сегментов через {record_post_sec} сек...")
+
+def _collect_motion_segments(cam_id):
+    """Собирает HLS-сегменты за период тревоги и склеивает в ролик"""
+    if cam_id not in motion_recordings:
+        return
+
+    data = motion_recordings.pop(cam_id)
+    first_segment = data['first_segment']
+    pre_sec = data['pre_sec']
+    post_sec = data['post_sec']
+    camera = data['camera']
+
+    # ✅ ПОЛУЧАЕМ ВСЕ СЕГМЕНТЫ
+    all_segments = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
+
+    if not all_segments:
+        print(f"❌ Нет сегментов для склейки")
+        return
+
+    # ✅ НАХОДИМ ИНДЕКС ПЕРВОГО СЕГМЕНТА
+    try:
+        first_idx = all_segments.index(first_segment)
+    except ValueError:
+        first_idx = max(0, len(all_segments) - pre_sec - post_sec)
+
+    # ✅ ОТБИРАЕМ НУЖНЫЕ СЕГМЕНТЫ
+    start_idx = max(0, first_idx - pre_sec)
+    end_idx = min(len(all_segments), first_idx + post_sec)
+
+    selected_segments = all_segments[start_idx:end_idx]
+
+    if len(selected_segments) < 2:
+        print(f"❌ Слишком мало сегментов: {len(selected_segments)}")
+        return
+
+    # ✅ СОЗДАЁМ ФИНАЛЬНЫЙ ФАЙЛ
     now = time.strftime("%Y-%m-%d_%H-%M-%S")
     recordings_path = get_recordings_path()
     date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
     os.makedirs(date_dir, exist_ok=True)
 
     final_output = os.path.join(date_dir, f"{now}_motion.mp4")
-    temp_post = os.path.join(date_dir, f"{now}_post.mp4")
 
-    # ✅ 1. ЗАХВАТЫВАЕМ БУФЕР ПРЕДЗАПИСИ
-    saved_segments, temp_dir = capture_buffer(cam_id, record_pre_sec)
-
-    # ✅ 2. ЗАПУСКАЕМ ПОСТЗАПИСЬ
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
         print("❌ ffmpeg не найден!")
         return
 
-    cmd_post = [
+    # ✅ СОЗДАЁМ ФАЙЛ КОНКАТЕНАЦИИ
+    temp_dir = tempfile.gettempdir()
+    concat_file = os.path.join(temp_dir, f"concat_{cam_id}_{int(time.time())}.txt")
+
+    with open(concat_file, "w") as f:
+        for seg in selected_segments:
+            f.write(f"file '{os.path.abspath(seg)}'\n")
+
+    print(f"🔧 Склейка {len(selected_segments)} сегментов ({len(selected_segments)} сек)")
+
+    # ✅ СКЛЕИВАЕМ БЕЗ ПЕРЕКОДИРОВАНИЯ
+    cmd_concat = [
         ffmpeg,
         "-loglevel", "error",
-        "-rtsp_transport", "tcp",
-        "-rtsp_flags", "prefer_tcp",
-        "-max_delay", "5000000",
-        "-analyzeduration", "10000000",
-        "-fflags", "nobuffer",
-        "-flags", "low_delay",
-        "-i", camera["rtsp_main"],
-        "-c:v", "copy",
-        "-an",
-        "-t", str(record_post_sec),
+        "-f", "concat",
+        "-safe", "0",
+        "-i", concat_file,
+        "-c", "copy",
         "-y",
-        temp_post
+        final_output
     ]
 
-    try:
-        proc = subprocess.Popen(cmd_post, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception as e:
-        print(f"❌ Ошибка запуска постзаписи: {e}")
-        return
+    result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
 
-    # Сохраняем информацию о записи
-    recording_processes[cam_id] = {
-        'proc': proc,
-        'temp_dir': temp_dir,
-        'saved_segments': saved_segments,
-        'temp_post': temp_post,
-        'final_output': final_output,
-        'post_sec': record_post_sec,
-        'start_time': time.time(),
-        'camera': camera,
-        'extended': False
-    }
+    if result.returncode == 0 and os.path.exists(final_output):
+        file_size = os.path.getsize(final_output)
+        print(f"✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
 
-    print(f"🔴 Запись: {camera['name']} | буфер {len(saved_segments)} сек + пост {record_post_sec} сек")
-
-    # ✅ 3. ЖДЁМ ЗАВЕРШЕНИЯ В ФОНЕ
-    def wait_and_finalize():
+        # ✅ ЛОГИРУЕМ В БД
         try:
-            proc.wait(timeout=record_post_sec + 15)
-        except subprocess.TimeoutExpired:
-            print(f"⚠️ Таймаут постзаписи для камеры {cam_id}")
-            try:
-                proc.kill()
-            except:
-                pass
-        _finalize_recording(cam_id)
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
+                    (int(cam_id), final_output)
+                )
+                conn.commit()
+            print(f"📝 Запись добавлена в БД")
+        except Exception as e:
+            print(f"❌ Ошибка БД: {e}")
+    else:
+        print(f"❌ Ошибка склейки")
 
-    threading.Thread(target=wait_and_finalize, daemon=True).start()
+    # ✅ ЧИСТИМ
+    try:
+        os.remove(concat_file)
+    except:
+        pass
 
 
 def extend_recording(cam_id):
-    """
-    Продлевает постзапись.
-    Вызывается, когда движение продолжается.
-    """
-    if cam_id not in recording_processes:
+    """Продлевает запись (сбрасывает таймер сбора)"""
+    if cam_id not in motion_recordings:
         return
 
-    data = recording_processes[cam_id]
+    data = motion_recordings[cam_id]
 
-    # ✅ ПРОДЛЕВАЕМ ПОСТЗАПИСЬ
-    # Увеличиваем ожидаемое время завершения
-    data['post_sec'] = data.get('post_sec', 10)  # Продлеваем на столько же
-    data['extended'] = True
+    # ✅ ОТМЕНЯЕМ СТАРЫЙ ТАЙМЕР
+    if 'timer' in data:
+        data['timer'].cancel()
 
-    print(f"⏱️ Продление записи для камеры {cam_id} (ещё {data['post_sec']} сек)")
+    # ✅ ЗАПУСКАЕМ НОВЫЙ ТАЙМЕР
+    post_sec = data['post_sec']
+    timer = threading.Timer(post_sec + 2, _collect_motion_segments, args=[cam_id])
+    timer.daemon = True
+    data['timer'] = timer
+    timer.start()
+
+    print(f"⏱️ Запись продлена ещё на {post_sec} сек")
 
 
 def _finalize_recording(cam_id):
@@ -457,24 +501,16 @@ def stop_motion_recording(camera_id):
     """Принудительно завершает запись"""
     cam_id = str(camera_id)
 
-    if cam_id not in recording_processes:
+    if cam_id not in motion_recordings:
         return
 
-    data = recording_processes[cam_id]
-    proc = data['proc']
+    # ✅ ОТМЕНЯЕМ ТАЙМЕР И СРАЗУ СКЛЕИВАЕМ
+    data = motion_recordings[cam_id]
+    if 'timer' in data:
+        data['timer'].cancel()
 
     print(f"⏹️ Принудительное завершение записи для камеры {cam_id}")
-
-    try:
-        proc.terminate()
-        proc.wait(timeout=5)
-    except:
-        try:
-            proc.kill()
-        except:
-            pass
-
-    _finalize_recording(cam_id)
+    _collect_motion_segments(cam_id)
 
 
 # ════════════════════════════════════════════════════════════

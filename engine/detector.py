@@ -434,44 +434,64 @@ def main():
     print(f"[MQTT] {MQTT_BROKER}:{MQTT_PORT}")
 
     # Подключаем MQTT
-    mqtt_client = mqtt.Client()
+    mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
-    # Загружаем камеры
-    cameras = load_cameras()
+    # Загружаем камеры (если нет - не падаем)
+    cameras = []
+    try:
+        cameras = load_cameras()
+    except Exception as e:
+        print(f"⚠️ Ошибка загрузки камер: {e}")
+
     print(f"[Cameras] with detector: {len(cameras)}")
 
+    # Создаём детекторы (если есть камеры)
     detectors = []
     for cam in cameras:
-        det = MotionDetector(cam, mqtt_client)
-        if det.start():
-            detectors.append(det)
-
-    # ✅ СОХРАНЯЕМ mqtt_client ДЛЯ on_cmd
-        mqtt_client.user_data_set({
-            "detectors": detectors,
-            "mqtt_client": mqtt_client
-        })
-        mqtt_client.on_message = on_cmd
-        mqtt_client.subscribe("spartan/+/cmd")
-        mqtt_client.loop_start()
-
-        print(f"[Detectors] Active: {len(detectors)}")
-        print(f"[Subscriptions] spartan/+/cmd")
-        print("[Running] Working... (Ctrl+C to exit)")
-
         try:
-            while True:
-                for det in detectors:
+            det = MotionDetector(cam, mqtt_client)
+            if det.start():
+                detectors.append(det)
+        except Exception as e:
+            print(f"⚠️ Ошибка создания детектора для {cam.get('name', '?')}: {e}")
+
+    # ✅ ВСЕГДА ПОДПИСЫВАЕМСЯ НА MQTT
+    mqtt_client.user_data_set({
+        "detectors": detectors,
+        "mqtt_client": mqtt_client
+    })
+    mqtt_client.on_message = on_cmd
+    mqtt_client.subscribe("spartan/+/cmd")
+    mqtt_client.loop_start()
+
+    print(f"[Detectors] Active: {len(detectors)}")
+    print(f"[Subscriptions] spartan/+/cmd")
+    print("[Running] Working... (Ctrl+C to exit)")
+
+    # ✅ БЕСКОНЕЧНЫЙ ЦИКЛ
+    try:
+        while True:
+            for det in detectors:
+                try:
                     if det.running and det.enabled:
                         det.loop()
-                time.sleep(0.05)
-        except KeyboardInterrupt:
-            print("\n[Stopping] Shutting down...")
-            for det in detectors:
+                except Exception as e:
+                    print(f"⚠️ Ошибка цикла детекции: {e}")
+            time.sleep(0.05)
+    except KeyboardInterrupt:
+        print("\n[Stopping] Shutting down...")
+    finally:
+        for det in detectors:
+            try:
                 det.stop()
+            except:
+                pass
+        try:
             mqtt_client.loop_stop()
             mqtt_client.disconnect()
+        except:
+            pass
 
 
 if __name__ == '__main__':
