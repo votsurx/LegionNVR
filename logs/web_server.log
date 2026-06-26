@@ -1,0 +1,115 @@
+08:00:27 Traceback (most recent call last):
+08:00:27   File "C:\legionNVR\web_server.py", line 197, in <module>
+08:00:27     init_db()
+08:00:27   File "C:\legionNVR\models\database.py", line 142, in init_db
+08:00:27     print("\u2705 ���� ������ ������")
+08:00:27   File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:00:27     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:00:27            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:00:27 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+08:04:22 Traceback (most recent call last):
+08:04:22   File "C:\legionNVR\web_server.py", line 197, in <module>
+08:04:22     init_db()
+08:04:22   File "C:\legionNVR\models\database.py", line 142, in init_db
+08:04:22     print("\u2705 ���� ������ ������")
+08:04:22   File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:04:22     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:04:22            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:04:22 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+08:08:55 ✅ База данных готова
+08:08:55 🛡️ Legion NVR - Web Server
+08:08:55 🌐 http://localhost:8080
+08:08:55  * Serving Flask app 'web_server'
+08:08:55  * Debug mode: off
+08:12:05 ✅ База данных готова
+08:12:05 🛡️ Legion NVR - Web Server
+08:12:05 🌐 http://localhost:8080
+08:12:05  * Serving Flask app 'web_server'
+08:12:05  * Debug mode: off
+08:15:46 ✅ База данных готова
+08:15:46 🛡️ Legion NVR - Web Server
+08:15:46 🌐 http://localhost:8080
+08:15:46  * Serving Flask app 'web_server'
+08:15:46  * Debug mode: off
+08:20:10 Traceback (most recent call last):
+08:20:10   File "C:\legionNVR\web_server.py", line 202, in <module>
+08:20:10     init_db()
+08:20:10   File "C:\legionNVR\models\database.py", line 142, in init_db
+08:20:10       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:20:10     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:20:10            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:20:10 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+08:22:28 Traceback (most recent call last):
+08:22:28   File "C:\legionNVR\web_server.py", line 202, in <module>
+08:22:28     init_db()
+08:22:28   File "C:\legionNVR\models\database.py", line 142, in init_db
+08:22:28       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:22:28     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:22:28            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:22:28 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+08:29:26 [OK] Database ready
+08:29:26 Traceback (most recent call last):
+08:29:26   File "C:\legionNVR\web_server.py", line 208, in <module>
+08:29:26       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:29:26     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:29:26            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:29:26 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:30:20 [OK] Database ready
+08:30:20 Traceback (most recent call last):
+08:30:20   File "C:\legionNVR\web_server.py", line 208, in <module>
+08:30:20       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:30:20     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:30:20            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:30:20 UnicodeEncodeError: 'charmap' codec can't encode character '\ufe0f' in position 0: character maps to <undefined>
+08:30:41 [OK] Database ready
+08:30:41 Traceback (most recent call last):
+08:30:41   File "C:\legionNVR\web_server.py", line 208, in <module>
+08:30:41       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:30:41     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:30:41            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:30:41 UnicodeEncodeError: 'charmap' codec can't encode character '\ufe0f' in position 0: character maps to <undefined>
+08:31:42 [OK] Database ready
+08:31:42 Legion NVR - Web Server
+08:31:42 http://localhost:8080
+08:31:42  * Serving Flask app 'web_server'
+08:31:42  * Debug mode: off
+08:32:41 [OK] Database ready
+08:32:41 Legion NVR - Web Server
+08:32:41 http://localhost:8080
+08:32:41  * Serving Flask app 'web_server'
+08:32:41  * Debug mode: off
+11:27:04 [OK] Database ready
+11:27:04 Legion NVR - Web Server
+11:27:04 http://localhost:8080
+11:27:04  * Serving Flask app 'web_server'
+11:27:04  * Debug mode: off
+11:40:14 [OK] Database ready
+11:40:14 Legion NVR - Web Server
+11:40:14 http://localhost:8080
+11:40:14  * Serving Flask app 'web_server'
+11:40:14  * Debug mode: off
+11:40:54 [OK] Database ready
+11:40:54 Legion NVR - Web Server
+11:40:54 http://localhost:8080
+11:40:54  * Serving Flask app 'web_server'
+11:40:54  * Debug mode: off
+11:42:20 [OK] Database ready
+11:42:20 Legion NVR - Web Server
+11:42:20 http://localhost:8080
+11:42:20  * Serving Flask app 'web_server'
+11:42:20  * Debug mode: off
+11:45:08 [OK] Database ready
+11:45:08 Legion NVR - Web Server
+11:45:08 http://localhost:8080
+11:45:08  * Serving Flask app 'web_server'
+11:45:08  * Debug mode: off
+11:46:32 Traceback (most recent call last):
+11:46:32   File "C:\legionNVR\web_server.py", line 28, in <module>
+11:46:32     app.config['LOGIN_DISABLED'] = True
+11:46:32     ^^^
+11:46:32 NameError: name 'app' is not defined
+11:47:33 [OK] Database ready
+11:47:33 Legion NVR - Web Server
+11:47:33 http://localhost:8080
+11:47:33  * Serving Flask app 'web_server'
+11:47:33  * Debug mode: off

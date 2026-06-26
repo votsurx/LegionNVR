@@ -20,30 +20,21 @@ function showToast(message, type = 'info') {
     }, 100);
 }
 
-// ============================================================
-// КАМЕРЫ
-// ============================================================
+// === Вкл/выкл камеру ===
+function toggleCamera(camId) {
+    var btn = document.getElementById('btn-cam-' + camId);
+    var isOn = btn.classList.contains('btn-green');
+    var newState = isOn ? 0 : 1;
 
-function toggleCamera(camId, enabled) {
-    fetch(`/api/cameras/${camId}`, {
+    fetch('/api/cameras/' + camId, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: enabled ? 1 : 0 })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            // Отправляем команду на применение
-            fetch(`/api/cameras/${camId}/apply`, {
-                method: 'POST'
-            });
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({enabled: newState})
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            fetch('/api/cameras/' + camId + '/apply', {method:'POST'}); // ← ВЕРНУЛИ
             location.reload();
-        } else {
-            showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
         }
-    })
-    .catch(err => {
-        showToast('Ошибка: ' + err, 'error');
     });
 }
 
@@ -55,17 +46,11 @@ function toggleDetector(camId) {
 
     fetch('/api/cameras/' + camId, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': 'sHomeSecretKey2026'
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({motion_enabled: newState})
     }).then(r => r.json()).then(d => {
         if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {
-                method: 'POST',
-                headers: {'X-API-Key': 'sHomeSecretKey2026'}
-            });
+            fetch('/api/cameras/' + camId + '/apply', {method:'POST'}); // ← ВЕРНУЛИ
             location.reload();
         }
     });
@@ -79,17 +64,11 @@ function toggleRecord(camId) {
 
     fetch('/api/cameras/' + camId, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': 'sHomeSecretKey2026'
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({record_enabled: newState})
     }).then(r => r.json()).then(d => {
         if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {
-                method: 'POST',
-                headers: {'X-API-Key': 'sHomeSecretKey2026'}
-            });
+            fetch('/api/cameras/' + camId + '/apply', {method:'POST'}); // ← ВЕРНУЛИ
             location.reload();
         }
     });

@@ -31,11 +31,9 @@ camera_status = {}  # {camera_id: {'enabled': bool, 'online': bool}}
 
 
 def get_recordings_path():
-    """Получает путь к папке записей из настроек"""
     try:
-        conn = get_db()
-        row = conn.execute("SELECT value FROM settings WHERE key='recordings_path'").fetchone()
-        conn.close()
+        with get_db() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key='recordings_path'").fetchone()
         if row:
             return row[0]
     except:
@@ -312,7 +310,7 @@ def stop_motion_recording(camera_id):
     segments = data.get('segments', [])
 
     # ✅ ОСТАНАВЛИВАЕМ FFMPEG
-    try:  # ← ЭТОТ try НА ОДНОМ УРОВНЕ С КОДОМ ВЫШЕ
+    try:
         proc.terminate()
         proc.wait(timeout=3)
         print(f"⏹️ FFmpeg остановлен для камеры {cam_id}")
@@ -321,7 +319,7 @@ def stop_motion_recording(camera_id):
         print(f"💀 FFmpeg принудительно убит для камеры {cam_id}")
 
     # ✅ ДАЁМ ВРЕМЯ НА ЗАПИСЬ НА ДИСК
-    time.sleep(0.5)
+    time.sleep(1)
 
     # ✅ ОТМЕНЯЕМ ТАЙМЕР
     if 'timer' in data:
@@ -417,13 +415,11 @@ def stop_motion_recording(camera_id):
     del recording_processes[cam_id]
 
 def on_motion(client, userdata, msg):
-    """Callback при получении MQTT-сообщения о движении"""
     try:
         data = json.loads(msg.payload.decode())
         if data.get("event") == "motion_start":
-            conn = get_db()
-            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (data["camera_id"],)).fetchone()
-            conn.close()
+            with get_db() as conn:
+                cam = conn.execute("SELECT * FROM cameras WHERE id=?", (data["camera_id"],)).fetchone()
             if cam:
                 cam_dict = dict(cam)
                 start_motion_recording(cam_dict)
@@ -441,9 +437,8 @@ def on_cmd(client, userdata, msg):
         # ✅ СТАРТ ЗАПИСИ
         if action == "start_recording" and cam_id:
             print(f"📡 [CMD] Старт записи для камеры {cam_id}")
-            conn = get_db()
-            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
-            conn.close()
+            with get_db() as conn:
+                cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
             if cam:
                 start_motion_recording(dict(cam))
 
@@ -452,51 +447,49 @@ def on_cmd(client, userdata, msg):
             print(f"📡 [CMD] Остановка записи для камеры {cam_id}")
             stop_motion_recording(cam_id)
 
-        # ✅ ПЕРЕЗАГРУЗКА КОНФИГА
+        # ✅ ЗАПУСК СТРИМА (НЕ reload_config!)
+        elif action == "start_stream" and cam_id:
+            print(f"▶️ [CMD] Запуск стрима для камеры {cam_id}")
+            with get_db() as conn:
+                cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
+            if cam:
+                cam_dict = dict(cam)
+                if cam_dict.get("enabled") and cam_dict.get("stream_enabled", True):
+                    start_hls_stream(cam_dict)
+
+        # ✅ ОСТАНОВКА СТРИМА
+        elif action == "stop_stream" and cam_id:
+            print(f"⏹️ [CMD] Остановка стрима для камеры {cam_id}")
+            stop_hls_stream(cam_id)
+
+        # ✅ ПЕРЕЗАГРУЗКА КОНФИГА (только при изменении настроек!)
         elif action == "reload_config" and cam_id:
             print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
-            conn = get_db()
-            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
-            conn.close()
+            with get_db() as conn:
+                cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
 
             if cam:
                 cam_dict = dict(cam)
-                if cam_dict.get("enabled") and cam_dict.get("stream_enabled"):
-                    start_hls_stream(cam_dict)
-                    print(f"🔄 Стрим для '{cam_dict['name']}' перезапущен")
+                if cam_dict.get("enabled") and cam_dict.get("stream_enabled", True):
+                    restart_hls_stream(cam_dict)  # ← ПЕРЕЗАПУСКАЕТ, а не останавливает
                 else:
                     stop_hls_stream(cam_id)
-                    print(f"⏹️ Стрим '{cam_dict['name']}' остановлен")
 
         elif action == "reload_all":
             print("📡 [CMD] Перезагрузка ВСЕХ стримов")
             cameras = load_cameras()
             for cam in cameras:
-                if cam.get("enabled") and cam.get("stream_enabled"):
+                if cam.get("enabled") and cam.get("stream_enabled", True):
                     start_hls_stream(cam)
             print(f"🔄 Перезапущено стримов: {len(stream_processes)}")
-
-        elif action == "stop_stream" and cam_id:
-            print(f"⏹️ [CMD] Остановка стрима для камеры {cam_id}")
-            stop_hls_stream(cam_id)
-
-        elif action == "start_stream" and cam_id:
-            print(f"▶️ [CMD] Запуск стрима для камеры {cam_id}")
-            conn = get_db()
-            cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
-            conn.close()
-            if cam:
-                start_hls_stream(dict(cam))
 
     except Exception as e:
         print(f"⚠️ [CMD] Ошибка: {e}")
 
 
 def load_cameras():
-    """Загружает все включённые камеры"""
-    conn = get_db()
-    rows = conn.execute("SELECT * FROM cameras WHERE enabled=1").fetchall()
-    conn.close()
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM cameras WHERE enabled=1").fetchall()
     return [dict(r) for r in rows]
 
 

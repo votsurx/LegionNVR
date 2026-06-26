@@ -48,6 +48,27 @@ HLS_DIR = "streams"
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ============================================================
 
+
+def send_mqtt_command(camera_id, action, params=None):
+    """Отправляет MQTT команду"""
+    try:
+        import paho.mqtt.client as mqtt
+        client = mqtt.Client()
+        client.connect("127.0.0.1", 1883, 5)
+        payload = {
+            'action': action,
+            'camera_id': camera_id,
+            'timestamp': int(time.time())
+        }
+        if params:
+            payload.update(params)
+        client.publish(f"spartan/{camera_id}/cmd", json.dumps(payload))
+        client.disconnect()
+        return True
+    except Exception as e:
+        print(f"❌ MQTT ошибка: {e}")
+        return False
+
 def send_mqtt_status(camera_id, status_type, value):
     """Отправляет статус камеры в MQTT"""
     try:
@@ -134,42 +155,43 @@ def api_update_camera(camera_id):
     # Обновляем камеру в БД
     Camera.update_full(camera_id, data)
 
-    # ════════════════════════════════════════════════════════════
+    # ════════════════════════════════════════════════════════
     # 1. ON/OFF камеры
-    # ════════════════════════════════════════════════════════════
+    # ════════════════════════════════════════════════════════
     if new_enabled != old_enabled:
         if new_enabled == 1:
             print(f"🟢 Камера {camera_id} ВКЛЮЧЕНА")
-            send_mqtt_command(camera_id, 'start_stream')
-            send_mqtt_command(camera_id, 'start_detector')
-            send_mqtt_command(camera_id, 'reload_config')
+           # send_mqtt_command(camera_id, 'start_stream')      # ← КОНКРЕТНАЯ КОМАНДА
+           # send_mqtt_command(camera_id, 'start_detector')    # ← КОНКРЕТНАЯ КОМАНДА
         else:
             print(f"🔴 Камера {camera_id} ВЫКЛЮЧЕНА")
-            send_mqtt_command(camera_id, 'stop_stream')
-            send_mqtt_command(camera_id, 'stop_detector')
+           # send_mqtt_command(camera_id, 'stop_stream')       # ← КОНКРЕТНАЯ КОМАНДА
+           # send_mqtt_command(camera_id, 'stop_detector')     # ← КОНКРЕТНАЯ КОМАНДА
 
-        # ✅ ОТПРАВЛЯЕМ СТАТУС
-        send_mqtt_status(camera_id, 'status', new_enabled)
-
-    # ════════════════════════════════════════════════════════════
-    # 2. ДЕТЕКТОР
-    # ════════════════════════════════════════════════════════════
-    if new_motion != old_motion:
-        print(f"🔍 Детектор камеры {camera_id}: {'ВКЛ' if new_motion else 'ВЫКЛ'}")
-        # ✅ ОТПРАВЛЯЕМ СТАТУС
-        send_mqtt_status(camera_id, 'motion_status', new_motion)
+    # ════════════════════════════════════════════════════════
+    # 2. ДЕТЕКТОР (если изменился отдельно)
+    # ════════════════════════════════════════════════════════
+    elif new_motion != old_motion:
         if new_motion == 1:
-            send_mqtt_command(camera_id, 'reload_config')
+            print(f"🔍 Детектор камеры {camera_id}: ВКЛ")
+           # send_mqtt_command(camera_id, 'start_detector')
+        else:
+            print(f"🔍 Детектор камеры {camera_id}: ВЫКЛ")
+           # send_mqtt_command(camera_id, 'stop_detector')
 
-    # ════════════════════════════════════════════════════════════
-    # 3. ЗАПИСЬ
-    # ════════════════════════════════════════════════════════════
-    if new_record != old_record:
-        print(f"📼 Запись камеры {camera_id}: {'ВКЛ' if new_record else 'ВЫКЛ'}")
-        # ✅ ОТПРАВЛЯЕМ СТАТУС
-        send_mqtt_status(camera_id, 'record_status', new_record)
+    # ════════════════════════════════════════════════════════
+    # 3. ЗАПИСЬ (если изменилась отдельно)
+    # ════════════════════════════════════════════════════════
+    elif new_record != old_record:
+        if new_record == 1:
+            print(f"📼 Запись камеры {camera_id}: ВКЛ")
+        else:
+            print(f"📼 Запись камеры {camera_id}: ВЫКЛ")
+        # Запись включается автоматически при детекции движения
 
     return jsonify({'success': True})
+
+
 @app.route('/api/cameras/<int:camera_id>/apply', methods=['POST'])
 def api_apply_camera(camera_id):
     """Применяет настройки камеры (перезагружает конфиг)"""
@@ -353,9 +375,8 @@ def camera_snapshot(camera_id):
 @app.route('/recordings/<int:recording_id>/play')
 @login_required
 def play_recording(recording_id):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM recordings WHERE id = ?", (recording_id,)).fetchone()
-    conn.close()
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM recordings WHERE id = ?", (recording_id,)).fetchone()
 
     if not row:
         return "Запись не найдена", 404
@@ -372,24 +393,22 @@ def play_recording(recording_id):
 @app.route('/api/recordings/<int:recording_id>', methods=['DELETE'])
 @login_required
 def delete_recording(recording_id):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM recordings WHERE id = ?", (recording_id,)).fetchone()
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM recordings WHERE id = ?", (recording_id,)).fetchone()
 
-    if not row:
-        conn.close()
-        return jsonify({'success': False, 'error': 'Запись не найдена'}), 404
+        if not row:
+            return jsonify({'success': False, 'error': 'Запись не найдена'}), 404
 
-    rec = dict(row)
+        rec = dict(row)
 
-    try:
-        if os.path.exists(rec['filename']):
-            os.remove(rec['filename'])
-    except:
-        pass
+        try:
+            if os.path.exists(rec['filename']):
+                os.remove(rec['filename'])
+        except:
+            pass
 
-    conn.execute("DELETE FROM recordings WHERE id = ?", (recording_id,))
-    conn.commit()
-    conn.close()
+        conn.execute("DELETE FROM recordings WHERE id = ?", (recording_id,))
+        conn.commit()
 
     return jsonify({'success': True, 'message': 'Запись удалена'})
 

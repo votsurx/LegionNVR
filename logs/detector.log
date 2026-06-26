@@ -1,0 +1,1883 @@
+08:00:28 🛡️ Legion NVR - Motion Detector
+08:00:28 📡 MQTT: 127.0.0.1:1883
+08:00:28 📷 Камер с детектором: 1
+08:00:28 🎯 [Home] Загружено зон: 1
+08:00:58 [ WARN:0@30.031] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30021.645000 ms
+08:01:59 ❌ [Home] Не могу открыть RTSP: rtsp://admin:admin@172.50.0.150:554/1
+08:01:59 🔍 Активных детекторов: 0
+08:01:59 👂 Подписка: spartan/+/cmd
+08:01:59 ⏳ Работаю... (Ctrl+C для выхода)
+08:03:42 ⏹️ Завершение...
+08:04:23 🛡️ Legion NVR - Motion Detector
+08:04:23 📡 MQTT: 127.0.0.1:1883
+08:04:23 📷 Камер с детектором: 1
+08:04:23 🎯 [Home] Загружено зон: 1
+08:04:53 [ WARN:0@30.020] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30019.500000 ms
+08:08:56 🛡️ Legion NVR - Motion Detector
+08:08:56 📡 MQTT: 127.0.0.1:1883
+08:08:56 📷 Камер с детектором: 1
+08:08:56 🎯 [Home] Загружено зон: 1
+08:12:06 🛡️ Legion NVR - Motion Detector
+08:12:06 📡 MQTT: 127.0.0.1:1883
+08:12:06 📷 Камер с детектором: 1
+08:12:06 🎯 [Home] Загружено зон: 1
+08:12:36 [ WARN:0@30.022] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30021.451000 ms
+08:15:47 🛡️ Legion NVR - Motion Detector
+08:15:47 📡 MQTT: 127.0.0.1:1883
+08:15:47 📷 Камер с детектором: 1
+08:15:47 🎯 [Home] Загружено зон: 1
+08:20:11 🛡️ Legion NVR - Motion Detector
+08:20:11 📡 MQTT: 127.0.0.1:1883
+08:20:11 📷 Камер с детектором: 1
+08:20:11 🎯 [Home] Загружено зон: 1
+08:22:29 🛡️ Legion NVR - Motion Detector
+08:22:29 📡 MQTT: 127.0.0.1:1883
+08:22:29 📷 Камер с детектором: 1
+08:22:29 🎯 [Home] Загружено зон: 1
+08:22:59 [ WARN:0@30.018] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30018.015000 ms
+08:24:00 ❌ [Home] Не могу открыть RTSP: rtsp://admin:admin@172.50.0.150:554/1
+08:24:00 🔍 Активных детекторов: 0
+08:24:00 👂 Подписка: spartan/+/cmd
+08:24:00 ⏳ Работаю... (Ctrl+C для выхода)
+08:27:41 ⏹️ Завершение...
+08:29:27 🛡️ Legion NVR - Motion Detector
+08:29:27 📡 MQTT: 127.0.0.1:1883
+08:29:27 📷 Камер с детектором: 1
+08:29:27 🎯 [Home] Загружено зон: 1
+08:29:57 [ WARN:0@30.013] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30012.258000 ms
+08:30:21 🛡️ Legion NVR - Motion Detector
+08:30:21 📡 MQTT: 127.0.0.1:1883
+08:30:21 📷 Камер с детектором: 1
+08:30:21 🎯 [Home] Загружено зон: 1
+08:30:42 🛡️ Legion NVR - Motion Detector
+08:30:42 📡 MQTT: 127.0.0.1:1883
+08:30:42 📷 Камер с детектором: 1
+08:30:42 🎯 [Home] Загружено зон: 1
+08:31:12 [ WARN:0@30.013] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30013.139000 ms
+08:31:43  Legion NVR - Motion Detector
+08:31:43  MQTT: 127.0.0.1:1883
+08:31:43    : 1
+08:31:43  [Home]  : 1
+08:32:42  Legion NVR - Motion Detector
+08:32:42  MQTT: 127.0.0.1:1883
+08:32:42    : 1
+08:32:42  [Home]  : 1
+08:33:12 [ WARN:0@30.016] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 30014.795000 ms
+08:34:13  [Home]    RTSP: rtsp://admin:admin@172.50.0.150:554/1
+08:34:13   : 0
+08:34:13  : spartan/+/cmd
+08:34:13  ... (Ctrl+C  )
+11:26:58  ...
+11:27:04  Legion NVR - Motion Detector
+11:27:04  MQTT: 127.0.0.1:1883
+11:27:04    : 1
+11:27:04  [JOB]  : 2
+11:27:06  [JOB]   (: 10.2%)
+11:27:06   : 1
+11:27:06  : spartan/+/cmd
+11:27:06  ... (Ctrl+C  )
+11:29:23 [rtsp @ 00000196209ae2c0] Too short data for FU-A H.264 RTP packet
+11:29:23 [h264 @ 00000196425c16c0] cabac decode of qscale diff failed at 6 32
+11:29:23 [h264 @ 00000196425c16c0] error while decoding MB 6 32, bytestream 2702
+11:29:23 [h264 @ 00000196420ba1c0] error while decoding MB 43 6, bytestream -10
+11:29:23 [h264 @ 000001964208dd40] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 000001964208dd40] error while decoding MB 0 41, bytestream 6016
+11:29:23 [h264 @ 0000019642088a00] cabac decode of qscale diff failed at 26 18
+11:29:23 [h264 @ 0000019642088a00] error while decoding MB 26 18, bytestream -3
+11:29:23 [h264 @ 000001964208dd40] left block unavailable for requested intra mode
+11:29:23 [h264 @ 000001964208dd40] error while decoding MB 0 22, bytestream 972
+11:29:23 [h264 @ 0000019642347940] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 0000019642347940] error while decoding MB 0 38, bytestream 1808
+11:29:23 [h264 @ 0000019642347040] error while decoding MB 26 13, bytestream -8
+11:29:23 [h264 @ 00000196420df680] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 00000196420df680] error while decoding MB 0 3, bytestream 55192
+11:29:23 [h264 @ 00000196425eda80] left block unavailable for requested intra mode
+11:29:23 [h264 @ 00000196425eda80] error while decoding MB 0 19, bytestream 4974
+11:29:23 [h264 @ 0000019642060700] error while decoding MB 75 0, bytestream -6
+11:29:23 [h264 @ 00000196425c16c0] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 00000196425c16c0] error while decoding MB 0 39, bytestream 215
+11:29:23 [h264 @ 0000019642060280] error while decoding MB 38 14, bytestream -8
+11:29:23 [h264 @ 000001964208dd40] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 000001964208dd40] error while decoding MB 0 29, bytestream 8678
+11:29:23 [h264 @ 00000196420ba1c0] error while decoding MB 76 44, bytestream -9
+11:29:23 [h264 @ 0000019642348280] left block unavailable for requested intra mode
+11:29:23 [h264 @ 0000019642348280] error while decoding MB 0 21, bytestream 5144
+11:29:23 [h264 @ 00000196425c16c0] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 00000196425c16c0] error while decoding MB 0 13, bytestream 30699
+11:29:23 [h264 @ 00000196425eda80] error while decoding MB 7 18, bytestream -9
+11:29:23 [h264 @ 0000019642088e80] error while decoding MB 77 11, bytestream -11
+11:29:23 [h264 @ 00000196425eda80] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 00000196425eda80] error while decoding MB 0 20, bytestream 403
+11:29:23 [h264 @ 0000019642060700] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 0000019642060700] error while decoding MB 0 35, bytestream 3137
+11:29:23 [h264 @ 0000019642347940] error while decoding MB 68 44, bytestream -6
+11:29:23 [h264 @ 00000196425eda80] left block unavailable for requested intra mode
+11:29:23 [h264 @ 00000196425eda80] error while decoding MB 0 16, bytestream 22483
+11:29:23 [h264 @ 0000019642006180] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 0000019642006180] error while decoding MB 0 35, bytestream 4515
+11:29:23 [h264 @ 0000019642088a00] error while decoding MB 68 42, bytestream -5
+11:29:23 [h264 @ 0000019642348280] left block unavailable for requested intra mode
+11:29:23 [h264 @ 0000019642348280] error while decoding MB 0 5, bytestream 5362
+11:29:23 [h264 @ 00000196425eda80] cabac decode of qscale diff failed at 73 14
+11:29:23 [h264 @ 00000196425eda80] error while decoding MB 73 14, bytestream 13
+11:29:23 [h264 @ 00000196425c16c0] error while decoding MB 61 18, bytestream -5
+11:29:23 [h264 @ 000001964208dd40] left block unavailable for requested intra4x4 mode -1
+11:29:23 [h264 @ 000001964208dd40] error while decoding MB 0 38, bytestream 5909
+11:29:23 [h264 @ 0000019642060280] left block unavailable for requested intra mode
+11:29:23 [h264 @ 0000019642060280] error while decoding MB 0 22, bytestream 5883
+11:29:23 [h264 @ 00000196420ba1c0] cabac decode of qscale diff failed at 14 17
+11:29:23 [h264 @ 00000196420ba1c0] error while decoding MB 14 17, bytestream -4
+11:29:23 [h264 @ 00000196425eda80] cabac decode of qscale diff failed at 17 2
+11:29:23 [h264 @ 00000196425eda80] error while decoding MB 17 2, bytestream 6588
+11:29:23 [h264 @ 0000019642348700] left block unavailable for requested intra mode
+11:29:23 [h264 @ 0000019642348700] error while decoding MB 0 18, bytestream 15972
+11:29:23 [h264 @ 0000019642088a00] cabac decode of qscale diff failed at 13 18
+11:31:13 [h264 @ 0000019642088a00] error while decoding MB 13 18, bytestream 66683
+11:31:13 [h264 @ 00000196420ba1c0] error while decoding MB 45 22, bytestream -10
+11:31:13 [h264 @ 0000019642348700] error while decoding MB 22 13, bytestream -6
+11:31:13 [h264 @ 0000019642060700] cabac decode of qscale diff failed at 72 1
+11:31:13 [h264 @ 0000019642060700] error while decoding MB 72 1, bytestream 8344
+11:31:13 [h264 @ 0000019642060700] cabac decode of qscale diff failed at 74 16
+11:31:13 [h264 @ 0000019642060700] error while decoding MB 74 16, bytestream 18852
+11:31:13 [h264 @ 0000019642006180] cabac decode of qscale diff failed at 21 26
+11:31:13 [h264 @ 0000019642006180] error while decoding MB 21 26, bytestream 3981
+11:31:13 [h264 @ 0000019642088e80] left block unavailable for requested intra mode
+11:31:13 [h264 @ 0000019642088e80] error while decoding MB 0 23, bytestream 2482
+11:31:13 [h264 @ 00000196420df680] cabac decode of qscale diff failed at 2 7
+11:31:13 [h264 @ 00000196420df680] error while decoding MB 2 7, bytestream 8399
+11:31:13 [h264 @ 0000019642006180] cabac decode of qscale diff failed at 51 20
+11:31:13 [h264 @ 0000019642006180] error while decoding MB 51 20, bytestream 7210
+11:31:13 [h264 @ 00000196425c16c0] error while decoding MB 37 3, bytestream -5
+11:31:13 [h264 @ 00000196425eda80] error while decoding MB 74 30, bytestream -27
+11:31:13 [h264 @ 0000019642088a00] error while decoding MB 15 16, bytestream -8
+11:31:13 [h264 @ 000001964208dd40] cabac decode of qscale diff failed at 59 14
+11:31:13 [h264 @ 000001964208dd40] error while decoding MB 59 14, bytestream 4052
+11:31:13 [h264 @ 0000019642348700] error while decoding MB 73 23, bytestream -12
+11:31:13 [h264 @ 0000019642006180] error while decoding MB 62 2, bytestream -5
+11:31:13 [h264 @ 0000019642060280] cabac decode of qscale diff failed at 71 39
+11:31:13 [h264 @ 0000019642060280] error while decoding MB 71 39, bytestream 952
+11:31:13 [h264 @ 0000019642060280] error while decoding MB 73 21, bytestream -9
+11:31:13 [h264 @ 00000196420df680] left block unavailable for requested intra4x4 mode -1
+11:31:13 [h264 @ 00000196420df680] error while decoding MB 0 3, bytestream 719
+11:31:13 [h264 @ 0000019642347040] left block unavailable for requested intra4x4 mode -1
+11:31:13 [h264 @ 0000019642347040] error while decoding MB 0 18, bytestream 368
+11:31:13 [h264 @ 00000196420ba1c0] error while decoding MB 14 25, bytestream -7
+11:31:13 [h264 @ 0000019642088a00] cabac decode of qscale diff failed at 42 7
+11:31:13 [h264 @ 0000019642088a00] error while decoding MB 42 7, bytestream 8287
+11:31:13 [h264 @ 0000019642006180] cabac decode of qscale diff failed at 65 6
+11:31:13 [h264 @ 0000019642006180] error while decoding MB 65 6, bytestream 3300
+11:31:13 [h264 @ 000001964208dd40] error while decoding MB 9 23, bytestream -13
+11:31:13 [h264 @ 0000019642347940] cabac decode of qscale diff failed at 29 5
+11:31:13 [h264 @ 0000019642347940] error while decoding MB 29 5, bytestream 4138
+11:31:13 [h264 @ 00000196420ba1c0] cabac decode of qscale diff failed at 54 20
+11:31:13 [h264 @ 00000196420ba1c0] error while decoding MB 54 20, bytestream 3201
+11:31:13 [h264 @ 0000019642348700] error while decoding MB 45 23, bytestream -5
+11:31:13 [h264 @ 0000019642347040] cabac decode of qscale diff failed at 65 1
+11:31:13 [h264 @ 0000019642347040] error while decoding MB 65 1, bytestream 3896
+11:31:13 [h264 @ 00000196425c1b40] left block unavailable for requested intra mode
+11:31:13 [h264 @ 00000196425c1b40] error while decoding MB 0 12, bytestream 3633
+11:31:13 [h264 @ 00000196420ba1c0] left block unavailable for requested intra mode
+11:31:13 [h264 @ 00000196420ba1c0] error while decoding MB 0 27, bytestream 4011
+11:31:13 [h264 @ 00000196420ba1c0] error while decoding MB 14 38, bytestream -20
+11:31:13 [h264 @ 00000196425c16c0] error while decoding MB 15 21, bytestream -5
+11:31:13 [h264 @ 0000019642347940] error while decoding MB 79 44, bytestream -16
+11:31:13 [h264 @ 00000196420ba640] cabac decode of qscale diff failed at 29 9
+11:31:13 [h264 @ 00000196420ba640] error while decoding MB 29 9, bytestream 5291
+11:31:13 [h264 @ 0000019642088a00] error while decoding MB 0 24, bytestream -11
+11:31:13 [h264 @ 00000196420ba640] error while decoding MB 45 0, bytestream -24
+11:31:13 [h264 @ 0000019642060280] left block unavailable for requested intra mode
+11:31:13 [h264 @ 0000019642060280] error while decoding MB 0 23, bytestream 2089
+11:31:13 [h264 @ 00000196425c1b40] cabac decode of qscale diff failed at 70 2
+11:31:13 [h264 @ 00000196425c1b40] error while decoding MB 70 2, bytestream 108103
+11:33:33 [h264 @ 0000019642006180] error while decoding MB 36 3, bytestream -39
+11:33:33 [h264 @ 0000019642347940] error while decoding MB 78 12, bytestream -7
+11:33:33 [h264 @ 0000019642006180] left block unavailable for requested intra mode
+11:33:33 [h264 @ 0000019642006180] error while decoding MB 0 36, bytestream 2048
+11:33:33 [h264 @ 0000019642347940] left block unavailable for requested intra4x4 mode -1
+11:33:33 [h264 @ 0000019642347940] error while decoding MB 0 5, bytestream 9535
+11:33:33 [h264 @ 0000019642088a00] cabac decode of qscale diff failed at 57 5
+11:33:33 [h264 @ 0000019642088a00] error while decoding MB 57 5, bytestream 8177
+11:33:33 [h264 @ 00000196420ba640] cabac decode of qscale diff failed at 52 21
+11:33:33 [h264 @ 00000196420ba640] error while decoding MB 52 21, bytestream 5788
+11:33:33 [h264 @ 0000019642348700] error while decoding MB 73 44, bytestream -10
+11:33:33 [h264 @ 00000196425c16c0] left block unavailable for requested intra4x4 mode -1
+11:33:33 [h264 @ 00000196425c16c0] error while decoding MB 0 4, bytestream 54180
+11:33:33 [h264 @ 0000019642347940] error while decoding MB 71 43, bytestream -5
+11:33:33 [h264 @ 000001964208dd40] error while decoding MB 24 16, bytestream -6
+11:33:33 [h264 @ 0000019642347940] left block unavailable for requested intra mode
+11:33:33 [h264 @ 0000019642347940] error while decoding MB 0 5, bytestream 50392
+11:33:33 [h264 @ 000001964208dd40] error while decoding MB 72 1, bytestream -8
+11:33:33 [h264 @ 000001964208dd40] cabac decode of qscale diff failed at 28 7
+11:33:33 [h264 @ 000001964208dd40] error while decoding MB 28 7, bytestream 7730
+11:33:33 [h264 @ 00000196425eda80] error while decoding MB 28 19, bytestream -9
+11:33:33 [h264 @ 00000196425c1b40] cabac decode of qscale diff failed at 79 13
+11:33:33 [h264 @ 00000196425c1b40] error while decoding MB 79 13, bytestream 6695
+11:33:33 [h264 @ 0000019642348280] error while decoding MB 74 44, bytestream -7
+11:33:33 [h264 @ 00000196420df680] left block unavailable for requested intra4x4 mode -1
+11:33:33 [h264 @ 00000196420df680] error while decoding MB 0 4, bytestream 1934
+11:33:33 [h264 @ 0000019642348280] top block unavailable for requested intra mode -1
+11:33:33 [h264 @ 0000019642348280] error while decoding MB 29 0, bytestream 2942
+11:33:33 [h264 @ 00000196420df680] top block unavailable for requested intra mode
+11:33:33 [h264 @ 00000196420df680] error while decoding MB 74 0, bytestream 62175
+11:33:33 [h264 @ 00000196420ba640] error while decoding MB 77 2, bytestream -6
+11:33:33 [h264 @ 0000019642088e80] cabac decode of qscale diff failed at 18 19
+11:33:33 [h264 @ 0000019642088e80] error while decoding MB 18 19, bytestream 5607
+11:33:33 [h264 @ 00000196425c16c0] left block unavailable for requested intra4x4 mode -1
+11:33:33 [h264 @ 00000196425c16c0] error while decoding MB 0 22, bytestream 3954
+11:33:33 [h264 @ 0000019642348280] error while decoding MB 28 4, bytestream -6
+11:33:33 [h264 @ 00000196425c16c0] cabac decode of qscale diff failed at 69 2
+11:33:33 [h264 @ 00000196425c16c0] error while decoding MB 69 2, bytestream 716
+11:33:33 [h264 @ 000001964208dd40] error while decoding MB 62 17, bytestream -6
+11:33:33 [h264 @ 0000019642060700] left block unavailable for requested intra mode
+11:33:33 [h264 @ 0000019642060700] error while decoding MB 0 24, bytestream 1274
+11:33:33 [h264 @ 00000196420ba1c0] left block unavailable for requested intra mode
+11:33:33 [h264 @ 00000196420ba1c0] error while decoding MB 0 24, bytestream 5786
+11:33:33 [h264 @ 0000019642347940] cabac decode of qscale diff failed at 50 26
+11:33:33 [h264 @ 0000019642347940] error while decoding MB 50 26, bytestream 3844
+11:33:33 [h264 @ 00000196425eda80] left block unavailable for requested intra4x4 mode -1
+11:33:33 [h264 @ 00000196425eda80] error while decoding MB 0 23, bytestream 1962
+11:33:33 [h264 @ 0000019642060280] illegal long ref in memory management control operation 6
+11:33:33 [NULL @ 0000019641fb6980] non-existing PPS 1 referenced
+11:33:33 [h264 @ 0000019642060700] number of reference frames (0+2) exceeds max (1; probably corrupt input), discarding one
+11:33:33 [h264 @ 0000019642060700] illegal memory management control operation 32
+11:33:33 [h264 @ 0000019642060700] top block unavailable for requested intra mode
+11:33:33 [h264 @ 0000019642060700] error while decoding MB 52 0, bytestream 1151
+11:33:33 [h264 @ 0000019642060700] slice type 32 too large at 2
+11:33:33 [h264 @ 0000019642060700] decode_slice_header error
+11:33:33 [h264 @ 0000019642060700] non-existing PPS 1 referenced
+11:33:33 [h264 @ 0000019642060700] decode_slice_header error
+11:35:50 [h264 @ 0000019642348700] non-existing PPS 1 referenced
+11:35:50 [h264 @ 0000019642348700] decode_slice_header error
+11:35:50 [h264 @ 0000019642348700] no frame!
+11:35:50 [h264 @ 0000019642347940] error while decoding MB 7 6, bytestream -5
+11:35:50 [h264 @ 0000019642348280] cabac_init_idc 4 overflow
+11:35:50 [h264 @ 0000019642348280] decode_slice_header error
+11:35:50 [h264 @ 0000019642348280] top block unavailable for requested intra mode -1
+11:35:50 [h264 @ 0000019642348280] error while decoding MB 48 0, bytestream 722
+11:35:50 [h264 @ 0000019642006180] error while decoding MB 57 23, bytestream -9
+11:35:50 [h264 @ 0000019642348280] cabac decode of qscale diff failed at 12 40
+11:35:50 [h264 @ 0000019642348280] error while decoding MB 12 40, bytestream 1217
+11:35:50 [h264 @ 00000196420ba1c0] error while decoding MB 74 16, bytestream -6
+11:35:50 [h264 @ 000001964208dd40] cabac decode of qscale diff failed at 9 27
+11:35:50 [h264 @ 000001964208dd40] error while decoding MB 9 27, bytestream 3943
+11:35:50 [h264 @ 00000196425eda80] left block unavailable for requested intra mode
+11:35:50 [h264 @ 00000196425eda80] error while decoding MB 0 40, bytestream 1129
+11:35:50 [h264 @ 0000019642347940] left block unavailable for requested intra4x4 mode -1
+11:35:50 [h264 @ 0000019642347940] error while decoding MB 0 25, bytestream 3921
+11:35:50 [h264 @ 0000019642006180] error while decoding MB 18 22, bytestream -9
+11:35:50 [h264 @ 0000019642348700] left block unavailable for requested intra mode
+11:35:50 [h264 @ 0000019642348700] error while decoding MB 0 6, bytestream 48392
+11:35:50 [h264 @ 00000196425eda80] error while decoding MB 51 19, bytestream -8
+11:35:50 [h264 @ 00000196420df680] error while decoding MB 49 28, bytestream -6
+11:35:50 [h264 @ 0000019642347940] cabac decode of qscale diff failed at 36 22
+11:35:50 [h264 @ 0000019642347940] error while decoding MB 36 22, bytestream 2860
+11:35:50 [h264 @ 000001964208dd40] error while decoding MB 76 0, bytestream -15
+11:35:50 [h264 @ 0000019642347940] left block unavailable for requested intra4x4 mode -1
+11:35:50 [h264 @ 0000019642347940] error while decoding MB 0 3, bytestream 844
+11:35:50 [h264 @ 00000196425c16c0] error while decoding MB 12 14, bytestream -7
+11:35:50 [h264 @ 0000019642088e80] error while decoding MB 53 3, bytestream -6
+11:35:50 [h264 @ 0000019642006180] left block unavailable for requested intra4x4 mode -1
+11:35:50 [h264 @ 0000019642006180] error while decoding MB 0 24, bytestream 6634
+11:35:50 [h264 @ 0000019642088e80] left block unavailable for requested intra mode
+11:35:50 [h264 @ 0000019642088e80] error while decoding MB 0 22, bytestream 5325
+11:35:50 [h264 @ 0000019642088a00] error while decoding MB 60 3, bytestream -21
+11:35:50 [h264 @ 0000019642347040] error while decoding MB 48 22, bytestream -9
+11:35:50 [h264 @ 0000019642348280] left block unavailable for requested intra mode
+11:35:50 [h264 @ 0000019642348280] error while decoding MB 0 22, bytestream 5072
+11:35:50 [h264 @ 0000019642060700] cabac decode of qscale diff failed at 26 28
+11:35:50 [h264 @ 0000019642060700] error while decoding MB 26 28, bytestream 3606
+11:35:50 [h264 @ 0000019642088a00] cabac decode of qscale diff failed at 14 27
+11:35:50 [h264 @ 0000019642088a00] error while decoding MB 14 27, bytestream 4023
+11:35:50 [h264 @ 00000196420ba640] left block unavailable for requested intra4x4 mode -1
+11:35:50 [h264 @ 00000196420ba640] error while decoding MB 0 23, bytestream 2142
+11:35:50 [h264 @ 00000196425c16c0] cabac decode of qscale diff failed at 65 24
+11:35:50 [h264 @ 00000196425c16c0] error while decoding MB 65 24, bytestream 8224
+11:35:50 [h264 @ 00000196425c16c0] left block unavailable for requested intra mode
+11:35:50 [h264 @ 00000196425c16c0] error while decoding MB 0 7, bytestream 46839
+11:35:50 [h264 @ 0000019642347040] cabac decode of qscale diff failed at 14 23
+11:35:50 [h264 @ 0000019642347040] error while decoding MB 14 23, bytestream 7752
+11:35:50 [h264 @ 0000019642348280] cabac decode of qscale diff failed at 56 20
+11:35:50 [h264 @ 0000019642348280] error while decoding MB 56 20, bytestream 7693
+11:35:50 [h264 @ 0000019642347040] cabac decode of qscale diff failed at 71 20
+11:35:50 [h264 @ 0000019642347040] error while decoding MB 71 20, bytestream 5426
+11:35:50 [h264 @ 00000196425c1b40] cabac decode of qscale diff failed at 53 21
+11:35:50 [h264 @ 00000196425c1b40] error while decoding MB 53 21, bytestream 1282
+11:35:50 [h264 @ 0000019642347040] error while decoding MB 13 17, bytestream -10
+11:35:50 [h264 @ 00000196420ba640] left block unavailable for requested intra mode
+11:37:18 [h264 @ 00000196420ba640] error while decoding MB 0 22, bytestream 56566
+11:37:18 [h264 @ 0000019642006180] error while decoding MB 39 13, bytestream -5
+11:37:18 [h264 @ 0000019642006180] error while decoding MB 10 29, bytestream -10
+11:37:18 [h264 @ 000001964208dd40] error while decoding MB 16 15, bytestream -5
+11:37:18 [h264 @ 000001964208dd40] cabac decode of qscale diff failed at 15 13
+11:37:18 [h264 @ 000001964208dd40] error while decoding MB 15 13, bytestream 6410
+11:37:18 [h264 @ 0000019642088a00] error while decoding MB 0 1, bytestream -18
+11:37:18 [h264 @ 0000019642348280] left block unavailable for requested intra4x4 mode -1
+11:37:18 [h264 @ 0000019642348280] error while decoding MB 0 21, bytestream 7530
+11:37:18 [h264 @ 000001964208dd40] error while decoding MB 58 44, bytestream -6
+11:37:18 [h264 @ 0000019642347040] cabac decode of qscale diff failed at 31 2
+11:37:18 [h264 @ 0000019642347040] error while decoding MB 31 2, bytestream 57588
+11:37:18 [h264 @ 0000019642348700] error while decoding MB 51 26, bytestream -16
+11:37:18 [h264 @ 00000196420df680] error while decoding MB 7 19, bytestream -7
+11:37:18 [h264 @ 00000196420ba1c0] left block unavailable for requested intra mode
+11:37:18 [h264 @ 00000196420ba1c0] error while decoding MB 0 33, bytestream 2563
+11:37:18 [h264 @ 00000196425c1b40] left block unavailable for requested intra4x4 mode -1
+11:37:18 [h264 @ 00000196425c1b40] error while decoding MB 0 24, bytestream 7492
+11:37:18 [h264 @ 0000019642088e80] deblocking_filter_idc 4 out of range
+11:37:18 [h264 @ 0000019642088e80] decode_slice_header error
+11:37:18 [h264 @ 0000019642088e80] no frame!
+11:37:18 [NULL @ 0000019641fb6980] non-existing PPS 4 referenced
+11:37:18 [h264 @ 00000196420ba1c0] non-existing PPS 4 referenced
+11:37:18 [h264 @ 00000196420ba1c0] decode_slice_header error
+11:37:18 [h264 @ 00000196420ba1c0] slice type 32 too large at 2
+11:37:18 [h264 @ 00000196420ba1c0] decode_slice_header error
+11:37:18 [h264 @ 00000196420ba1c0] no frame!
+11:37:18 [NULL @ 0000019641fb6980] non-existing PPS 2 referenced
+11:37:18 [h264 @ 00000196420ba640] non-existing PPS 2 referenced
+11:37:18 [h264 @ 00000196420ba640] decode_slice_header error
+11:37:18 [h264 @ 00000196420ba640] reference count overflow
+11:37:18 [h264 @ 00000196420ba640] decode_slice_header error
+11:37:18 [h264 @ 00000196420ba640] no frame!
+11:37:18 [NULL @ 0000019641fb6980] non-existing PPS 9 referenced
+11:37:18 [NULL @ 0000019641fb6980] non-existing PPS 6 referenced
+11:37:18 [h264 @ 00000196425c16c0] non-existing PPS 9 referenced
+11:37:18 [h264 @ 00000196425c16c0] decode_slice_header error
+11:37:18 [h264 @ 00000196425c16c0] no frame!
+11:37:18 [h264 @ 00000196425c1b40] non-existing PPS 6 referenced
+11:37:18 [h264 @ 00000196425c1b40] decode_slice_header error
+11:37:18 [h264 @ 00000196425c1b40] no frame!
+11:37:18 [h264 @ 0000019642060280] error while decoding MB 61 0, bytestream -11
+11:37:18 [h264 @ 0000019642060700] error while decoding MB 20 24, bytestream -52
+11:37:18 [h264 @ 00000196425eda80] error while decoding MB 58 43, bytestream -8
+11:37:18 [h264 @ 000001964208dd40] left block unavailable for requested intra4x4 mode -1
+11:37:18 [h264 @ 000001964208dd40] error while decoding MB 0 6, bytestream 6999
+11:37:18 [h264 @ 0000019642088a00] cabac decode of qscale diff failed at 51 5
+11:37:18 [h264 @ 0000019642088a00] error while decoding MB 51 5, bytestream 49480
+11:37:18 [h264 @ 00000196425c1b40] error while decoding MB 59 44, bytestream -8
+11:37:18 [h264 @ 0000019642347040] cabac decode of qscale diff failed at 57 20
+11:37:18 [h264 @ 0000019642347040] error while decoding MB 57 20, bytestream 5411
+11:37:18 [h264 @ 00000196425c16c0] cabac decode of qscale diff failed at 53 23
+11:37:18 [h264 @ 00000196425c16c0] error while decoding MB 53 23, bytestream 898
+11:37:18 [h264 @ 0000019642347940] error while decoding MB 61 44, bytestream -10
+11:37:18 [h264 @ 00000196425c1b40] left block unavailable for requested intra4x4 mode -1
+11:37:18 [h264 @ 00000196425c1b40] error while decoding MB 0 5, bytestream 51339
+11:37:18 [h264 @ 0000019642060280] error while decoding MB 35 20, bytestream -6
+11:37:18 [h264 @ 00000196425eda80] cabac decode of qscale diff failed at 31 19
+11:37:18 [h264 @ 00000196425eda80] error while decoding MB 31 19, bytestream 5554
+11:37:18 [h264 @ 000001964208dd40] left block unavailable for requested intra4x4 mode -1
+11:37:18 [h264 @ 000001964208dd40] error while decoding MB 0 22, bytestream 353
+11:37:18 [h264 @ 00000196420ba640] error while decoding MB 33 44, bytestream -5
+11:37:18 [h264 @ 00000196420df680] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 00000196420df680] error while decoding MB 0 3, bytestream 927
+11:39:20 [h264 @ 00000196425eda80] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 00000196425eda80] error while decoding MB 0 4, bytestream 8196
+11:39:20 [h264 @ 0000019642060280] error while decoding MB 33 20, bytestream -10
+11:39:20 [h264 @ 0000019642006180] error while decoding MB 24 16, bytestream -8
+11:39:20 [h264 @ 0000019642348700] left block unavailable for requested intra mode
+11:39:20 [h264 @ 0000019642348700] error while decoding MB 0 6, bytestream 6621
+11:39:20 [h264 @ 0000019642348700] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 0000019642348700] error while decoding MB 0 6, bytestream 48312
+11:39:20 [h264 @ 00000196425eda80] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 00000196425eda80] error while decoding MB 0 24, bytestream 505
+11:39:20 [h264 @ 0000019642060280] error while decoding MB 41 16, bytestream -6
+11:39:20 [h264 @ 00000196420df680] error while decoding MB 4 7, bytestream 322
+11:39:20 [h264 @ 0000019642348280] cabac decode of qscale diff failed at 38 6
+11:39:20 [h264 @ 0000019642348280] error while decoding MB 38 6, bytestream 98448
+11:39:20 [h264 @ 00000196420ba640] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 00000196420ba640] error while decoding MB 0 32, bytestream 1610
+11:39:20 [h264 @ 0000019642060280] error while decoding MB 66 44, bytestream -6
+11:39:20 [h264 @ 0000019642347940] cabac decode of qscale diff failed at 45 12
+11:39:20 [h264 @ 0000019642347940] error while decoding MB 45 12, bytestream 31173
+11:39:20 [h264 @ 000001964208dd40] cabac decode of qscale diff failed at 52 14
+11:39:20 [h264 @ 000001964208dd40] error while decoding MB 52 14, bytestream 125
+11:39:20 [h264 @ 0000019642088a00] error while decoding MB 1 27, bytestream -6
+11:39:20 [h264 @ 0000019642088e80] error while decoding MB 56 44, bytestream -7
+11:39:20 [h264 @ 0000019642347940] error while decoding MB 16 19, bytestream -10
+11:39:20 [h264 @ 0000019642348700] error while decoding MB 37 2, bytestream -8
+11:39:20 [h264 @ 0000019642088a00] error while decoding MB 56 34, bytestream -17
+11:39:20 [h264 @ 00000196420ba640] error while decoding MB 28 17, bytestream -7
+11:39:20 [h264 @ 0000019642347940] left block unavailable for requested intra mode
+11:39:20 [h264 @ 0000019642347940] error while decoding MB 0 37, bytestream 8169
+11:39:20 [h264 @ 0000019642347040] error while decoding MB 12 3, bytestream -6
+11:39:20 [h264 @ 0000019642006180] cabac decode of qscale diff failed at 60 16
+11:39:20 [h264 @ 0000019642006180] error while decoding MB 60 16, bytestream 19907
+11:39:20 [h264 @ 00000196425c16c0] error while decoding MB 0 0, bytestream -7
+11:39:20 [h264 @ 00000196420df680] cabac decode of qscale diff failed at 27 34
+11:39:20 [h264 @ 00000196420df680] error while decoding MB 27 34, bytestream 2468
+11:39:20 [h264 @ 0000019642006180] cabac decode of qscale diff failed at 41 33
+11:39:20 [h264 @ 0000019642006180] error while decoding MB 41 33, bytestream 2540
+11:39:20 [h264 @ 0000019642088e80] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 0000019642088e80] error while decoding MB 0 23, bytestream 53444
+11:39:20 [h264 @ 0000019642348280] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 0000019642348280] error while decoding MB 0 23, bytestream 2013
+11:39:20 [h264 @ 0000019642088a00] error while decoding MB 60 0, bytestream -18
+11:39:20 [h264 @ 0000019642348280] left block unavailable for requested intra4x4 mode -1
+11:39:20 [h264 @ 0000019642348280] error while decoding MB 0 4, bytestream 8195
+11:39:20 [h264 @ 00000196425c16c0] error while decoding MB 36 17, bytestream -9
+11:39:20 [h264 @ 00000196420ba640] cabac decode of qscale diff failed at 73 32
+11:39:20 [h264 @ 00000196420ba640] error while decoding MB 73 32, bytestream 2699
+11:39:20 [h264 @ 00000196420ba640] error while decoding MB 14 4, bytestream -9
+11:39:20 [h264 @ 0000019642060280] left block unavailable for requested intra mode
+11:39:20 [h264 @ 0000019642060280] error while decoding MB 0 23, bytestream 3300
+11:39:20 [h264 @ 00000196425eda80] error while decoding MB 45 0, bytestream -8
+11:39:20 [h264 @ 0000019642060280] error while decoding MB 20 3, bytestream -57
+11:39:20 [h264 @ 0000019642088e80] error while decoding MB 60 3, bytestream -15
+11:39:20 [h264 @ 00000196425eda80] error while decoding MB 9 11, bytestream -8
+11:39:20 [h264 @ 00000196425c16c0] cabac decode of qscale diff failed at 67 24
+11:39:20 [h264 @ 00000196425c16c0] error while decoding MB 67 24, bytestream 8580
+11:39:58 [h264 @ 00000196425c1b40
+11:39:58  ...
+11:40:15  Legion NVR - Motion Detector
+11:40:15  MQTT: 127.0.0.1:1883
+11:40:15    : 1
+11:40:15  [JOB]  : 2
+11:40:55  Legion NVR - Motion Detector
+11:40:55  MQTT: 127.0.0.1:1883
+11:40:55    : 1
+11:40:55  [JOB]  : 2
+11:40:56  [JOB]   (: 10.2%)
+11:40:56   : 1
+11:40:56  : spartan/+/cmd
+11:40:56  ... (Ctrl+C  )
+11:41:33  ...
+11:42:21  Legion NVR - Motion Detector
+11:42:21  MQTT: 127.0.0.1:1883
+11:42:21    : 1
+11:42:21  [JOB]  : 2
+11:42:22  [JOB]   (: 10.2%)
+11:42:22   : 1
+11:42:22  : spartan/+/cmd
+11:42:22  ... (Ctrl+C  )
+11:44:57  ...
+11:45:09  Legion NVR - Motion Detector
+11:45:09  MQTT: 127.0.0.1:1883
+11:45:09    : 1
+11:45:09  [JOB]  : 2
+11:45:10  [JOB]   (: 10.2%)
+11:45:10   : 1
+11:45:10  : spartan/+/cmd
+11:45:10  ... (Ctrl+C  )
+11:46:29  ...
+11:46:33  Legion NVR - Motion Detector
+11:46:33  MQTT: 127.0.0.1:1883
+11:46:33    : 1
+11:46:33  [JOB]  : 2
+11:46:35  [JOB]   (: 10.2%)
+11:46:35   : 1
+11:46:35  : spartan/+/cmd
+11:46:35  ... (Ctrl+C  )
+11:47:28  ...
+11:47:34  Legion NVR - Motion Detector
+11:47:34  MQTT: 127.0.0.1:1883
+11:47:34    : 1
+11:47:34  [JOB]  : 2
+11:47:35  [JOB]   (: 10.2%)
+11:47:35   : 1
+11:47:35  : spartan/+/cmd
+11:47:35  ... (Ctrl+C  )
+11:49:16 [h264 @ 000002a837aeda40] left block unavailable for requested intra mode
+11:49:16 [h264 @ 000002a837aeda40] error while decoding MB 0 12, bytestream 53
+11:49:16 [h264 @ 000002a83758a500] error while decoding MB 18 13, bytestream -12
+11:49:16 [rtsp @ 000002a81611e480] Too short data for FU-A H.264 RTP packet
+11:49:16 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+11:49:16 [h264 @ 000002a83779ce80] error while decoding MB 0 31, bytestream 1529
+11:49:16 [h264 @ 000002a83758a080] error while decoding MB 26 0, bytestream -7
+11:49:16 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 65 17
+11:49:16 [h264 @ 000002a837ab3580] error while decoding MB 65 17, bytestream 16433
+11:49:16 [h264 @ 000002a8375ba640] error while decoding MB 43 0, bytestream -5
+11:49:16 [h264 @ 000002a83758a500] error while decoding MB 41 40, bytestream -20
+11:49:16 [h264 @ 000002a83779c140] error while decoding MB 62 43, bytestream -13
+11:49:16 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 3 9
+11:49:16 [h264 @ 000002a8377d5200] error while decoding MB 3 9, bytestream 4012
+11:49:16 [h264 @ 000002a837ab3580] error while decoding MB 0 16, bytestream -8
+11:49:16 [h264 @ 000002a8375ba640] error while decoding MB 70 44, bytestream -8
+11:49:16 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 74 7
+11:49:16 [h264 @ 000002a83779ca00] error while decoding MB 74 7, bytestream 43705
+11:49:16 [h264 @ 000002a8377d6440] error while decoding MB 9 44, bytestream -8
+11:49:16 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+11:49:16 [h264 @ 000002a837506380] error while decoding MB 0 18, bytestream 7057
+11:49:16 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 71 21
+11:49:16 [h264 @ 000002a837589c00] error while decoding MB 71 21, bytestream 5709
+11:49:16 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 75 32
+11:49:16 [h264 @ 000002a8375ba640] error while decoding MB 75 32, bytestream 2292
+11:49:16 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 13 1
+11:49:16 [h264 @ 000002a83779d780] error while decoding MB 13 1, bytestream 61545
+11:49:16 [h264 @ 000002a8377d5b40] Frame num change from 2 to 788
+11:49:16 [h264 @ 000002a8377d5b40] decode_slice_header error
+11:49:16 [NULL @ 000002a8374b6b00] non-existing PPS 6 referenced
+11:49:16 [h264 @ 000002a8377d6440] non-existing PPS 6 referenced
+11:49:16 [h264 @ 000002a8377d6440] decode_slice_header error
+11:49:16 [h264 @ 000002a8377d6440] left block unavailable for requested intra4x4 mode -1
+11:49:16 [h264 @ 000002a8377d6440] error while decoding MB 30 1, bytestream 1425
+11:49:16 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+11:49:16 [h264 @ 000002a8377d5200] number of reference frames (0+2) exceeds max (1; probably corrupt input), discarding one
+11:49:16 [h264 @ 000002a8377d5200] slice type 32 too large at 3
+11:49:16 [h264 @ 000002a8377d5200] decode_slice_header error
+11:49:16 [h264 @ 000002a8377d5200] no frame!
+11:49:16 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 32
+11:49:16 [h264 @ 000002a837ab3580] illegal modification_of_pic_nums_idc 32
+11:49:16 [h264 @ 000002a837ab3580] decode_slice_header error
+11:49:16 [h264 @ 000002a837ab3580] no frame!
+11:49:16 [h264 @ 000002a837506380] deblocking_filter_idc 5 out of range
+11:49:16 [h264 @ 000002a837506380] decode_slice_header error
+11:49:16 [h264 @ 000002a837506380] no frame!
+11:49:16 [h264 @ 000002a837aeda40] slice type 14 too large at 0
+11:49:16 [h264 @ 000002a837aeda40] decode_slice_header error
+11:49:16 [h264 @ 000002a837aeda40] no frame!
+11:49:16 [h264 @ 000002a83758a500] cabac decode of qscale diff failed at 45 19
+11:49:16 [h264 @ 000002a83758a500] error while decoding MB 45 19, bytestream 11246
+11:49:16 [h264 @ 000002a83758a080] left block unavailable for requested intra4x4 mode -1
+11:49:16 [h264 @ 000002a83758a080] error while decoding MB 0 2, bytestream 59613
+11:49:16 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 66 33
+11:49:16 [h264 @ 000002a8375ba1c0] error while decoding MB 66 33, bytestream 2581
+11:49:16 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 77 25
+11:49:16 [h264 @ 000002a8377d5b40] error while decoding MB 77 25, bytestream 5469
+11:49:16 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 71 1
+11:49:16 [h264 @ 000002a8375ba1c0] error while decoding MB 71 1, bytestream 59757
+11:49:16 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+11:49:16 [h264 @ 000002a83779ce80] error while decoding MB 0 6, bytestream 2606
+11:51:21 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+11:51:21 [h264 @ 000002a837589c00] error while decoding MB 0 12, bytestream 7793
+11:51:21 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 0 39
+11:51:21 [h264 @ 000002a837589c00] error while decoding MB 0 39, bytestream 1260
+11:51:21 [h264 @ 000002a83779c140] left block unavailable for requested intra4x4 mode -1
+11:51:21 [h264 @ 000002a83779c140] error while decoding MB 0 40, bytestream 320
+11:51:21 [h264 @ 000002a83779ce80] error while decoding MB 76 0, bytestream -7
+11:51:21 [h264 @ 000002a837ab3580] error while decoding MB 70 7, bytestream -8
+11:51:21 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 59 13
+11:51:21 [h264 @ 000002a8377d5200] error while decoding MB 59 13, bytestream 6795
+11:51:21 [h264 @ 000002a83779d300] left block unavailable for requested intra4x4 mode -1
+11:51:21 [h264 @ 000002a83779d300] error while decoding MB 0 4, bytestream 8444
+11:51:21 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 66 38
+11:51:21 [h264 @ 000002a837506380] error while decoding MB 66 38, bytestream 8851
+11:51:21 [h264 @ 000002a837aeda40] error while decoding MB 10 21, bytestream -9
+11:51:21 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 62 33
+11:51:21 [h264 @ 000002a8377d6440] error while decoding MB 62 33, bytestream 2396
+11:51:21 [h264 @ 000002a83779d300] error while decoding MB 19 38, bytestream -20
+11:51:21 [h264 @ 000002a8377d5b40] error while decoding MB 20 23, bytestream -11
+11:51:21 [h264 @ 000002a83779ce80] error while decoding MB 8 25, bytestream -6
+11:51:21 [h264 @ 000002a8377d5b40] left block unavailable for requested intra4x4 mode -1
+11:51:21 [h264 @ 000002a8377d5b40] error while decoding MB 0 38, bytestream 1829
+11:51:21 [h264 @ 000002a8377d5200] error while decoding MB 22 11, bytestream -8
+11:51:21 [h264 @ 000002a837ab3580] left block unavailable for requested intra mode
+11:51:21 [h264 @ 000002a837ab3580] error while decoding MB 0 18, bytestream 5581
+11:51:21 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 67 40
+11:51:21 [h264 @ 000002a8375ba1c0] error while decoding MB 67 40, bytestream 9415
+11:51:21 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 6 34
+11:51:21 [h264 @ 000002a8377d6440] error while decoding MB 6 34, bytestream 1870
+11:51:21 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 75 37
+11:51:21 [h264 @ 000002a837506380] error while decoding MB 75 37, bytestream 6800
+11:51:21 [h264 @ 000002a83779d300] error while decoding MB 69 6, bytestream -22
+11:51:21 [h264 @ 000002a83758a080] error while decoding MB 23 7, bytestream -6
+11:51:21 [h264 @ 000002a83779ca00] top block unavailable for requested intra mode -1
+11:51:21 [h264 @ 000002a83779ca00] error while decoding MB 75 0, bytestream 6739
+11:51:21 [h264 @ 000002a8375ba640] error while decoding MB 1 31, bytestream -13
+11:51:21 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 6 7
+11:51:21 [h264 @ 000002a837506380] error while decoding MB 6 7, bytestream 8221
+11:51:21 [h264 @ 000002a83758a080] left block unavailable for requested intra4x4 mode -1
+11:51:21 [h264 @ 000002a83758a080] error while decoding MB 0 40, bytestream 1297
+11:51:21 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 69 5
+11:51:21 [h264 @ 000002a8377d5200] error while decoding MB 69 5, bytestream 49114
+11:51:21 [h264 @ 000002a8375ba640] error while decoding MB 34 42, bytestream -5
+11:51:21 [h264 @ 000002a83758a500] left block unavailable for requested intra mode
+11:51:21 [h264 @ 000002a83758a500] error while decoding MB 0 3, bytestream 55451
+11:51:21 [h264 @ 000002a83779d780] error while decoding MB 60 42, bytestream -8
+11:51:21 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+11:51:21 [h264 @ 000002a83779ce80] error while decoding MB 0 6, bytestream 7909
+11:51:21 [h264 @ 000002a8375ba1c0] error while decoding MB 2 42, bytestream -9
+11:51:21 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 74 32
+11:51:21 [h264 @ 000002a83779ce80] error while decoding MB 74 32, bytestream 1916
+11:51:21 [h264 @ 000002a83779d300] error while decoding MB 45 2, bytestream -7
+11:51:21 [h264 @ 000002a8377d6440] left block unavailable for requested intra mode
+11:51:21 [h264 @ 000002a8377d6440] error while decoding MB 0 39, bytestream 2523
+11:51:21 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 7 18
+11:51:21 [h264 @ 000002a837ab3580] error while decoding MB 7 18, bytestream 67194
+11:51:21 [h264 @ 000002a83779d300] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a83779d300] error while decoding MB 0 40, bytestream 1194
+11:52:49 [h264 @ 000002a83779d780] error while decoding MB 20 44, bytestream -14
+11:52:49 [h264 @ 000002a8377d5b40] error while decoding MB 61 2, bytestream -9
+11:52:49 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 5 40
+11:52:49 [h264 @ 000002a83779ce80] error while decoding MB 5 40, bytestream 1264
+11:52:49 [h264 @ 000002a83758a080] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a83758a080] error while decoding MB 0 7, bytestream 997
+11:52:49 [h264 @ 000002a837ab3580] error while decoding MB 75 13, bytestream -5
+11:52:49 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra mode
+11:52:49 [h264 @ 000002a8375ba1c0] error while decoding MB 0 40, bytestream 1075
+11:52:49 [h264 @ 000002a83779ca00] error while decoding MB 26 16, bytestream -10
+11:52:49 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra mode
+11:52:49 [h264 @ 000002a8375ba1c0] error while decoding MB 0 35, bytestream 3759
+11:52:49 [h264 @ 000002a837589c00] error while decoding MB 2 44, bytestream -17
+11:52:49 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 57 32
+11:52:49 [h264 @ 000002a837506380] error while decoding MB 57 32, bytestream 2731
+11:52:49 [h264 @ 000002a8377d5b40] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a8377d5b40] error while decoding MB 0 8, bytestream 3518
+11:52:49 [h264 @ 000002a83758a080] error while decoding MB 76 37, bytestream -10
+11:52:49 [h264 @ 000002a837ab3580] error while decoding MB 9 40, bytestream -19
+11:52:49 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 25 4
+11:52:49 [h264 @ 000002a8377d5b40] error while decoding MB 25 4, bytestream 52520
+11:52:49 [h264 @ 000002a83779d780] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a83779d780] error while decoding MB 0 33, bytestream 4955
+11:52:49 [h264 @ 000002a8377d5200] error while decoding MB 43 15, bytestream -8
+11:52:49 [h264 @ 000002a837aeda40] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a837aeda40] error while decoding MB 0 28, bytestream 6233
+11:52:49 [h264 @ 000002a83758a080] error while decoding MB 15 20, bytestream -6
+11:52:49 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 64 42
+11:52:49 [h264 @ 000002a8375ba1c0] error while decoding MB 64 42, bytestream 214
+11:52:49 [h264 @ 000002a8377d5b40] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a8377d5b40] error while decoding MB 0 6, bytestream 48118
+11:52:49 [h264 @ 000002a837506380] error while decoding MB 29 1, bytestream -19
+11:52:49 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a8375ba640] error while decoding MB 0 32, bytestream 2345
+11:52:49 [h264 @ 000002a8377d5200] left block unavailable for requested intra4x4 mode -1
+11:52:49 [h264 @ 000002a8377d5200] error while decoding MB 0 8, bytestream 2420
+11:52:49 [h264 @ 000002a83779ca00] error while decoding MB 0 1, bytestream -9
+11:52:49 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+11:52:49 [h264 @ 000002a837506380] non-existing PPS 1 referenced
+11:52:49 [h264 @ 000002a837506380] decode_slice_header error
+11:52:49 [h264 @ 000002a837506380] no frame!
+11:52:49 [h264 @ 000002a837aeda40] top block unavailable for requested intra mode -1
+11:52:49 [h264 @ 000002a837aeda40] error while decoding MB 0 0, bytestream 1425
+11:52:49 [h264 @ 000002a837aeda40] slice type 32 too large at 1285
+11:52:49 [h264 @ 000002a837aeda40] decode_slice_header error
+11:52:49 [h264 @ 000002a8375ba1c0] top block unavailable for requested intra mode -1
+11:52:49 [h264 @ 000002a8375ba1c0] error while decoding MB 0 0, bytestream 1427
+11:52:49 [NULL @ 000002a8374b6b00] non-existing PPS 62 referenced
+11:52:49 [h264 @ 000002a8375ba640] non-existing PPS 62 referenced
+11:52:49 [h264 @ 000002a8375ba640] decode_slice_header error
+11:52:49 [h264 @ 000002a8375ba640] no frame!
+11:52:49 [NULL @ 000002a8374b6b00] pps_id 4049 out of range
+11:52:49 [h264 @ 000002a837589c00] pps_id 4049 out of range
+11:52:49 [h264 @ 000002a837589c00] decode_slice_header error
+11:52:49 [h264 @ 000002a837589c00] no frame!
+11:52:49 [NULL @ 000002a8374b6b00] non-existing PPS 14 referenced
+11:52:49 [h264 @ 000002a83758a080] non-existing PPS 14 referenced
+11:52:49 [h264 @ 000002a83758a080] decode_slice_header error
+11:52:49 [h264 @ 000002a83758a080] no frame!
+11:52:49 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 60 36
+11:55:04 [h264 @ 000002a837589c00] error while decoding MB 60 36, bytestream 4727
+11:55:04 [h264 @ 000002a83758a500] error while decoding MB 72 16, bytestream -9
+11:55:04 [NULL @ 000002a8374b6b00] non-existing PPS 10 referenced
+11:55:04 [h264 @ 000002a8375ba1c0] non-existing PPS 10 referenced
+11:55:04 [h264 @ 000002a8375ba1c0] decode_slice_header error
+11:55:04 [h264 @ 000002a8375ba1c0] no frame!
+11:55:04 [NULL @ 000002a8374b6b00] non-existing PPS 14 referenced
+11:55:04 [h264 @ 000002a8375ba640] non-existing PPS 14 referenced
+11:55:04 [h264 @ 000002a8375ba640] decode_slice_header error
+11:55:04 [h264 @ 000002a8375ba640] no frame!
+11:55:04 [h264 @ 000002a837589c00] top block unavailable for requested intra mode -1
+11:55:04 [h264 @ 000002a837589c00] error while decoding MB 0 0, bytestream 1084
+11:55:04 [h264 @ 000002a837589c00] Frame num change from 120 to 931
+11:55:04 [h264 @ 000002a837589c00] decode_slice_header error
+11:55:04 [h264 @ 000002a83758a080] error while decoding MB 79 8, bytestream -7
+11:55:04 [h264 @ 000002a83758a080] slice type 32 too large at 2
+11:55:04 [h264 @ 000002a83758a080] decode_slice_header error
+11:55:04 [NULL @ 000002a8374b6b00] non-existing PPS 2 referenced
+11:55:04 [h264 @ 000002a83758a500] non-existing PPS 2 referenced
+11:55:04 [h264 @ 000002a83758a500] decode_slice_header error
+11:55:04 [h264 @ 000002a83758a500] no frame!
+11:55:04 [NULL @ 000002a8374b6b00] non-existing PPS 2 referenced
+11:55:04 [h264 @ 000002a83779c140] non-existing PPS 2 referenced
+11:55:04 [h264 @ 000002a83779c140] decode_slice_header error
+11:55:04 [h264 @ 000002a83779c140] no frame!
+11:55:04 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+11:55:04 [h264 @ 000002a8375ba640] error while decoding MB 0 4, bytestream 2351
+11:55:04 [h264 @ 000002a83779d300] error while decoding MB 68 43, bytestream -6
+11:55:04 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 25 4
+11:55:04 [h264 @ 000002a83779d780] error while decoding MB 25 4, bytestream 7031
+11:55:04 [h264 @ 000002a837506380] error while decoding MB 70 19, bytestream -5
+11:55:04 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 9 7
+11:55:04 [h264 @ 000002a83779d780] error while decoding MB 9 7, bytestream 7755
+11:55:04 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 12 7
+11:55:04 [h264 @ 000002a83779ca00] error while decoding MB 12 7, bytestream 7914
+11:55:04 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+11:55:04 [h264 @ 000002a837506380] error while decoding MB 0 7, bytestream 108977
+11:55:04 [h264 @ 000002a8377d5200] error while decoding MB 49 3, bytestream -33
+11:55:04 [h264 @ 000002a83779d300] error while decoding MB 10 44, bytestream -6
+11:55:04 [h264 @ 000002a837589c00] left block unavailable for requested intra mode
+11:55:04 [h264 @ 000002a837589c00] error while decoding MB 0 25, bytestream 4280
+11:55:04 [h264 @ 000002a83779d300] error while decoding MB 8 11, bytestream -5
+11:55:04 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 44 13
+11:55:04 [h264 @ 000002a8377d6440] error while decoding MB 44 13, bytestream 5751
+11:55:04 [h264 @ 000002a83779c140] error while decoding MB 79 35, bytestream -8
+11:55:04 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 3 7
+11:55:04 [h264 @ 000002a83779ca00] error while decoding MB 3 7, bytestream 7995
+11:55:04 [h264 @ 000002a837aeda40] error while decoding MB 29 2, bytestream -18
+11:55:04 [h264 @ 000002a8377d5b40] error while decoding MB 64 38, bytestream -9
+11:55:04 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+11:55:04 [h264 @ 000002a8375ba640] error while decoding MB 0 28, bytestream 1186
+11:55:04 [h264 @ 000002a83779ca00] error while decoding MB 38 0, bytestream -6
+11:55:04 [rtsp @ 000002a81611e480] Too short data for FU-A H.264 RTP packet
+11:55:04 [rtsp @ 000002a81611e480] Too short data for FU-A H.264 RTP packet
+11:55:04 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 50 25
+11:55:04 [h264 @ 000002a837aeda40] error while decoding MB 50 25, bytestream 4465
+11:55:04 [h264 @ 000002a837aeda40] error while decoding MB 29 1, bytestream -7
+11:55:04 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+11:55:04 [h264 @ 000002a83779ce80] error while decoding MB 0 32, bytestream 6225
+11:55:04 [h264 @ 000002a8377d5b40] error while decoding MB 45 24, bytestream -6
+11:55:04 [h264 @ 000002a83758a500] left block unavailable for requested intra4x4 mode -1
+11:55:04 [h264 @ 000002a83758a500] error while decoding MB 0 32, bytestream 7420
+11:55:04 [h264 @ 000002a83779ce80] error while decoding MB 14 17, bytestream -6
+11:58:06 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 31 7
+11:58:06 [h264 @ 000002a8375ba640] error while decoding MB 31 7, bytestream 45770
+11:58:06 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 51 35
+11:58:06 [h264 @ 000002a8375ba1c0] error while decoding MB 51 35, bytestream 8006
+11:58:06 [h264 @ 000002a837589c00] error while decoding MB 16 16, bytestream -6
+11:58:06 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+11:58:06 [h264 @ 000002a837ab3580] error while decoding MB 0 8, bytestream 43589
+11:58:06 [h264 @ 000002a837589c00] error while decoding MB 24 44, bytestream -6
+11:58:06 [h264 @ 000002a83758a500] error while decoding MB 51 42, bytestream -8
+11:58:06 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+11:58:06 [h264 @ 000002a837506380] error while decoding MB 0 11, bytestream 4859
+11:58:06 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+11:58:06 [h264 @ 000002a8375ba1c0] error while decoding MB 0 39, bytestream 8844
+11:58:06 [h264 @ 000002a8375ba640] error while decoding MB 34 16, bytestream -8
+11:58:06 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 16 40
+11:58:06 [h264 @ 000002a837506380] error while decoding MB 16 40, bytestream 1171
+11:58:06 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+11:58:06 [h264 @ 000002a83779ce80] error while decoding MB 0 7, bytestream 44826
+11:58:06 [h264 @ 000002a837ab3580] error while decoding MB 12 1, bytestream -22
+11:58:06 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 19 35
+11:58:06 [h264 @ 000002a83779ce80] error while decoding MB 19 35, bytestream 8108
+11:58:06 [h264 @ 000002a83779d780] error while decoding MB 15 17, bytestream -9
+11:58:06 [h264 @ 000002a8377d5b40] error while decoding MB 43 2, bytestream -9
+11:58:06 [h264 @ 000002a83779ca00] error while decoding MB 18 15, bytestream -6
+11:58:06 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 61 9
+11:58:06 [h264 @ 000002a83779ca00] error while decoding MB 61 9, bytestream 6862
+11:58:06 [h264 @ 000002a83779ce80] error while decoding MB 58 0, bytestream -8
+11:58:06 [h264 @ 000002a83779d300] error while decoding MB 62 44, bytestream -7
+11:58:06 [h264 @ 000002a837589c00] left block unavailable for requested intra mode
+11:58:06 [h264 @ 000002a837589c00] error while decoding MB 0 33, bytestream 4971
+11:58:06 [h264 @ 000002a83758a500] left block unavailable for requested intra4x4 mode -1
+11:58:06 [h264 @ 000002a83758a500] error while decoding MB 0 8, bytestream 2526
+11:58:06 [h264 @ 000002a83758a500] cabac decode of qscale diff failed at 28 18
+11:58:06 [h264 @ 000002a83758a500] error while decoding MB 28 18, bytestream 5530
+11:58:06 [h264 @ 000002a837589c00] error while decoding MB 5 0, bytestream -7
+11:58:06 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+11:58:06 [h264 @ 000002a837506380] error while decoding MB 0 5, bytestream 50811
+11:58:06 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 71 33
+11:58:06 [h264 @ 000002a837ab3580] error while decoding MB 71 33, bytestream 2307
+11:58:06 [h264 @ 000002a8375ba1c0] error while decoding MB 74 17, bytestream -9
+11:58:06 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 43 13
+11:58:06 [h264 @ 000002a83779c140] error while decoding MB 43 13, bytestream 6938
+11:58:06 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+11:58:06 [h264 @ 000002a837506380] error while decoding MB 0 4, bytestream 54086
+11:58:06 [h264 @ 000002a83758a080] error while decoding MB 57 44, bytestream -8
+11:58:06 [h264 @ 000002a837ab3580] left block unavailable for requested intra mode
+11:58:06 [h264 @ 000002a837ab3580] error while decoding MB 0 33, bytestream 5688
+11:58:06 [h264 @ 000002a8375ba1c0] error while decoding MB 14 15, bytestream -10
+11:58:06 [rtsp @ 000002a81611e480] Too short data for FU-A H.264 RTP packet
+11:58:06 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 64 5
+11:58:06 [h264 @ 000002a8377d5200] error while decoding MB 64 5, bytestream 8329
+11:58:06 [h264 @ 000002a8377d6440] error while decoding MB 15 43, bytestream -10
+11:58:06 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 39 4
+11:58:06 [h264 @ 000002a83779ca00] error while decoding MB 39 4, bytestream 1003
+11:58:06 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 34 19
+11:58:06 [h264 @ 000002a8377d5b40] error while decoding MB 34 19, bytestream 5608
+11:58:06 [h264 @ 000002a83779ca00] left block unavailable for requested intra4x4 mode -1
+12:00:18 [h264 @ 000002a83779ca00] error while decoding MB 0 5, bytestream 102752
+12:00:18 [h264 @ 000002a8375ba640] left block unavailable for requested intra mode
+12:00:18 [h264 @ 000002a8375ba640] error while decoding MB 0 5, bytestream 102510
+12:00:18 [h264 @ 000002a83758a080] cabac decode of qscale diff failed at 68 32
+12:00:18 [h264 @ 000002a83758a080] error while decoding MB 68 32, bytestream 2722
+12:00:18 [h264 @ 000002a837aeda40] left block unavailable for requested intra4x4 mode -1
+12:00:18 [h264 @ 000002a837aeda40] error while decoding MB 0 7, bytestream 5264
+12:00:18 [h264 @ 000002a837589c00] error while decoding MB 47 34, bytestream -32
+12:00:18 [h264 @ 000002a83779c140] error while decoding MB 11 21, bytestream -5
+12:00:18 [h264 @ 000002a83758a500] cabac decode of qscale diff failed at 57 40
+12:00:18 [h264 @ 000002a83758a500] error while decoding MB 57 40, bytestream 837
+12:00:18 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 31 10
+12:00:18 [h264 @ 000002a8377d6440] error while decoding MB 31 10, bytestream 2011
+12:00:18 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 77 12
+12:00:18 [h264 @ 000002a837ab3580] error while decoding MB 77 12, bytestream 6753
+12:00:18 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 37 5
+12:00:18 [h264 @ 000002a83779d780] error while decoding MB 37 5, bytestream 8553
+12:00:18 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra mode
+12:00:18 [h264 @ 000002a8375ba1c0] error while decoding MB 0 33, bytestream 2451
+12:00:18 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+12:00:18 [h264 @ 000002a837ab3580] error while decoding MB 0 31, bytestream 2766
+12:00:18 [h264 @ 000002a83779d780] left block unavailable for requested intra mode
+12:00:18 [h264 @ 000002a83779d780] error while decoding MB 0 7, bytestream 342
+12:00:18 [h264 @ 000002a83758a500] left block unavailable for requested intra4x4 mode -1
+12:00:18 [h264 @ 000002a83758a500] error while decoding MB 0 7, bytestream 46124
+12:00:18 [h264 @ 000002a83758a080] left block unavailable for requested intra4x4 mode -1
+12:00:18 [h264 @ 000002a83758a080] error while decoding MB 0 35, bytestream 7892
+12:00:18 [h264 @ 000002a83779c140] error while decoding MB 29 23, bytestream -5
+12:00:18 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 38 19
+12:00:18 [h264 @ 000002a8377d5200] error while decoding MB 38 19, bytestream 5491
+12:00:18 [h264 @ 000002a83779c140] left block unavailable for requested intra mode
+12:00:18 [h264 @ 000002a83779c140] error while decoding MB 0 9, bytestream 695
+12:00:18 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 66 32
+12:00:18 [h264 @ 000002a8375ba1c0] error while decoding MB 66 32, bytestream 1846
+12:00:18 [NULL @ 000002a8374b6b00] reference count 1 overflow
+12:00:18 [h264 @ 000002a837506380] reference count overflow
+12:00:18 [h264 @ 000002a837506380] decode_slice_header error
+12:00:18 [h264 @ 000002a837506380] non-existing PPS 5 referenced
+12:00:18 [h264 @ 000002a837506380] decode_slice_header error
+12:00:18 [h264 @ 000002a837506380] no frame!
+12:00:18 [NULL @ 000002a8374b6b00] non-existing PPS 3 referenced
+12:00:18 [h264 @ 000002a837aeda40] non-existing PPS 3 referenced
+12:00:18 [h264 @ 000002a837aeda40] decode_slice_header error
+12:00:18 [h264 @ 000002a837aeda40] no frame!
+12:00:18 [NULL @ 000002a8374b6b00] non-existing PPS 4 referenced
+12:00:18 [h264 @ 000002a8375ba1c0] non-existing PPS 4 referenced
+12:00:18 [h264 @ 000002a8375ba1c0] decode_slice_header error
+12:00:18 [h264 @ 000002a8375ba1c0] no frame!
+12:00:18 [NULL @ 000002a8374b6b00] non-existing PPS 3 referenced
+12:00:18 [h264 @ 000002a8375ba640] non-existing PPS 3 referenced
+12:00:18 [h264 @ 000002a8375ba640] decode_slice_header error
+12:00:18 [h264 @ 000002a8375ba640] no frame!
+12:00:18 [h264 @ 000002a837589c00] Missing reference picture, default is 20
+12:00:18 [h264 @ 000002a837589c00] Missing reference picture, default is 20
+12:00:18 [h264 @ 000002a837589c00] co located POCs unavailable
+12:00:18 [h264 @ 000002a837589c00] Reference 3 >= 3
+12:00:18 [h264 @ 000002a837589c00] error while decoding MB 12 0, bytestream 1093
+12:00:18 [NULL @ 000002a8374b6b00] non-existing PPS 5 referenced
+12:00:18 [h264 @ 000002a83758a080] non-existing PPS 5 referenced
+12:00:18 [h264 @ 000002a83758a080] decode_slice_header error
+12:00:18 [h264 @ 000002a83758a080] no frame!
+12:00:18 [h264 @ 000002a83779d780] left block unavailable for requested intra4x4 mode -1
+12:00:18 [h264 @ 000002a83779d780] error while decoding MB 0 4, bytestream 8080
+12:00:18 [h264 @ 000002a83779d300] left block unavailable for requested intra4x4 mode -1
+12:02:12 [h264 @ 000002a83779d300] error while decoding MB 0 7, bytestream 97275
+12:02:12 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 0 26
+12:02:12 [h264 @ 000002a8377d5b40] error while decoding MB 0 26, bytestream 3624
+12:02:12 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 8 27
+12:02:12 [h264 @ 000002a83779ce80] error while decoding MB 8 27, bytestream 4005
+12:02:12 [h264 @ 000002a83758a080] left block unavailable for requested intra mode
+12:02:12 [h264 @ 000002a83758a080] error while decoding MB 0 6, bytestream 48873
+12:02:12 [h264 @ 000002a83779d300] error while decoding MB 69 42, bytestream -11
+12:02:12 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 8 34
+12:02:12 [h264 @ 000002a837589c00] error while decoding MB 8 34, bytestream 1241
+12:02:12 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 20 21
+12:02:12 [h264 @ 000002a83779c140] error while decoding MB 20 21, bytestream -5
+12:02:12 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 36 18
+12:02:12 [h264 @ 000002a8375ba640] error while decoding MB 36 18, bytestream 5423
+12:02:12 [h264 @ 000002a83779ca00] left block unavailable for requested intra mode
+12:02:12 [h264 @ 000002a83779ca00] error while decoding MB 0 13, bytestream 30454
+12:02:12 [h264 @ 000002a8377d6440] error while decoding MB 47 43, bytestream -7
+12:02:12 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 21 13
+12:02:12 [h264 @ 000002a837589c00] error while decoding MB 21 13, bytestream 6966
+12:02:12 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 40 19
+12:02:12 [h264 @ 000002a837aeda40] error while decoding MB 40 19, bytestream 5523
+12:02:12 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 62 32
+12:02:12 [h264 @ 000002a8377d5b40] error while decoding MB 62 32, bytestream 2570
+12:02:12 [h264 @ 000002a83779ca00] left block unavailable for requested intra4x4 mode -1
+12:02:12 [h264 @ 000002a83779ca00] error while decoding MB 0 7, bytestream 45754
+12:02:12 [h264 @ 000002a8377d6440] error while decoding MB 56 44, bytestream -6
+12:02:12 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 45 34
+12:02:12 [h264 @ 000002a83779c140] error while decoding MB 45 34, bytestream 6
+12:02:12 [h264 @ 000002a83779d300] error while decoding MB 10 19, bytestream -5
+12:02:12 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 49 7
+12:02:12 [h264 @ 000002a837aeda40] error while decoding MB 49 7, bytestream 4822
+12:02:12 [h264 @ 000002a8377d5b40] error while decoding MB 16 42, bytestream -5
+12:02:12 [h264 @ 000002a83758a500] left block unavailable for requested intra mode
+12:02:12 [h264 @ 000002a83758a500] error while decoding MB 0 36, bytestream 5925
+12:02:12 [h264 @ 000002a83779ca00] error while decoding MB 16 19, bytestream -10
+12:02:12 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 34 19
+12:02:12 [h264 @ 000002a837ab3580] error while decoding MB 34 19, bytestream 5616
+12:02:12 [h264 @ 000002a8377d5200] error while decoding MB 37 0, bytestream -9
+12:02:12 [h264 @ 000002a83779d300] cabac decode of qscale diff failed at 42 6
+12:02:12 [h264 @ 000002a83779d300] error while decoding MB 42 6, bytestream 46523
+12:02:12 [h264 @ 000002a8377d5200] Frame num change from 23 to 383
+12:02:12 [h264 @ 000002a8377d5200] decode_slice_header error
+12:02:12 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:02:12 [h264 @ 000002a837ab3580] non-existing PPS 1 referenced
+12:02:12 [h264 @ 000002a837ab3580] decode_slice_header error
+12:02:12 [h264 @ 000002a837ab3580] non-existing PPS 2 referenced
+12:02:12 [h264 @ 000002a837ab3580] decode_slice_header error
+12:02:12 [h264 @ 000002a837ab3580] no frame!
+12:02:12 [h264 @ 000002a837506380] error while decoding MB 19 3, bytestream -5
+12:02:12 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:02:12 [h264 @ 000002a837aeda40] non-existing PPS 1 referenced
+12:02:12 [h264 @ 000002a837aeda40] decode_slice_header error
+12:02:12 [h264 @ 000002a837aeda40] slice type 20 too large at 2
+12:02:12 [h264 @ 000002a837aeda40] decode_slice_header error
+12:02:12 [h264 @ 000002a837aeda40] no frame!
+12:02:12 [NULL @ 000002a8374b6b00] illegal memory management control operation 24
+12:02:12 [h264 @ 000002a8375ba1c0] slice type 32 too large at 2
+12:02:12 [h264 @ 000002a8375ba1c0] decode_slice_header error
+12:02:12 [h264 @ 000002a8375ba1c0] no frame!
+12:02:12 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:02:12 [h264 @ 000002a8375ba640] non-existing PPS 1 referenced
+12:02:12 [h264 @ 000002a8375ba640] decode_slice_header error
+12:02:12 [h264 @ 000002a8375ba640] no frame!
+12:04:53 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a837ab3580] error while decoding MB 0 5, bytestream 657
+12:04:53 [h264 @ 000002a83779ce80] error while decoding MB 56 38, bytestream -5
+12:04:53 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a837589c00] error while decoding MB 0 12, bytestream 33026
+12:04:53 [h264 @ 000002a83779ce80] error while decoding MB 79 43, bytestream -6
+12:04:53 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a8375ba640] error while decoding MB 0 40, bytestream 6168
+12:04:53 [h264 @ 000002a837589c00] error while decoding MB 1 22, bytestream -5
+12:04:53 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a83779ce80] error while decoding MB 0 14, bytestream 3696
+12:04:53 [h264 @ 000002a837aeda40] error while decoding MB 23 21, bytestream -6
+12:04:53 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 34 43
+12:04:53 [h264 @ 000002a83779d780] error while decoding MB 34 43, bytestream 3805
+12:04:53 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a837589c00] error while decoding MB 0 5, bytestream 50618
+12:04:53 [h264 @ 000002a8375ba640] left block unavailable for requested intra mode
+12:04:53 [h264 @ 000002a8375ba640] error while decoding MB 0 34, bytestream 1607
+12:04:53 [h264 @ 000002a83758a500] cabac decode of qscale diff failed at 17 19
+12:04:53 [h264 @ 000002a83758a500] error while decoding MB 17 19, bytestream -6
+12:04:53 [h264 @ 000002a8377d6440] error while decoding MB 67 4, bytestream -27
+12:04:53 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 36 28
+12:04:53 [h264 @ 000002a8375ba1c0] error while decoding MB 36 28, bytestream 1080
+12:04:53 [h264 @ 000002a83779c140] error while decoding MB 30 1, bytestream -5
+12:04:53 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 68 3
+12:04:53 [h264 @ 000002a8377d5b40] error while decoding MB 68 3, bytestream 54165
+12:04:53 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 43 32
+12:04:53 [h264 @ 000002a83779d780] error while decoding MB 43 32, bytestream 4997
+12:04:53 [h264 @ 000002a8377d5200] error while decoding MB 13 24, bytestream -5
+12:04:53 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 0 40
+12:04:53 [h264 @ 000002a83779ca00] error while decoding MB 0 40, bytestream 1169
+12:04:53 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 45 6
+12:04:53 [h264 @ 000002a83779c140] error while decoding MB 45 6, bytestream 8373
+12:04:53 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+12:04:53 [h264 @ 000002a83779ce80] error while decoding MB 0 27, bytestream 5013
+12:04:53 [h264 @ 000002a8377d6440] error while decoding MB 71 44, bytestream -9
+12:04:53 [h264 @ 000002a83779d780] error while decoding MB 20 17, bytestream -10
+12:04:53 [h264 @ 000002a83779c140] error while decoding MB 57 1, bytestream -17
+12:04:53 [h264 @ 000002a8375ba640] left block unavailable for requested intra mode
+12:04:53 [h264 @ 000002a8375ba640] error while decoding MB 0 6, bytestream 48300
+12:04:53 [h264 @ 000002a83779ca00] error while decoding MB 0 44, bytestream -6
+12:04:53 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a8375ba1c0] error while decoding MB 0 34, bytestream 1121
+12:04:53 [h264 @ 000002a83758a080] error while decoding MB 49 19, bytestream -7
+12:04:53 [h264 @ 000002a83758a500] cabac decode of qscale diff failed at 15 41
+12:04:53 [h264 @ 000002a83758a500] error while decoding MB 15 41, bytestream 1021
+12:04:53 [h264 @ 000002a8375ba640] error while decoding MB 77 2, bytestream -12
+12:04:53 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 76 19
+12:04:53 [h264 @ 000002a837aeda40] error while decoding MB 76 19, bytestream 5260
+12:04:53 [h264 @ 000002a8377d6440] left block unavailable for requested intra4x4 mode -1
+12:04:53 [h264 @ 000002a8377d6440] error while decoding MB 0 6, bytestream 7311
+12:04:53 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 2 39
+12:04:53 [h264 @ 000002a83779c140] error while decoding MB 2 39, bytestream 1193
+12:04:53 [h264 @ 000002a83758a500] left block unavailable for requested intra mode
+12:04:53 [h264 @ 000002a83758a500] error while decoding MB 0 40, bytestream 1077
+12:04:53 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 31 4
+12:04:53 [h264 @ 000002a8375ba1c0] error while decoding MB 31 4, bytestream 52813
+12:06:11 [h264 @ 000002a83779c140] error while decoding MB 68 44, bytestream -5
+12:06:11 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 69 33
+12:06:11 [h264 @ 000002a837aeda40] error while decoding MB 69 33, bytestream 1598
+12:06:11 [h264 @ 000002a837589c00] error while decoding MB 50 21, bytestream -8
+12:06:11 [h264 @ 000002a8377d5200] Frame num change from 22 to 202
+12:06:11 [h264 @ 000002a8377d5200] decode_slice_header error
+12:06:11 [h264 @ 000002a8377d5200] non-existing PPS 4 referenced
+12:06:11 [h264 @ 000002a8377d5200] decode_slice_header error
+12:06:11 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 8
+12:06:11 [h264 @ 000002a837ab3580] illegal modification_of_pic_nums_idc 8
+12:06:11 [h264 @ 000002a837ab3580] decode_slice_header error
+12:06:11 [h264 @ 000002a837ab3580] non-existing PPS 1 referenced
+12:06:11 [h264 @ 000002a837ab3580] decode_slice_header error
+12:06:11 [h264 @ 000002a837ab3580] no frame!
+12:06:11 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:06:11 [h264 @ 000002a837506380] non-existing PPS 1 referenced
+12:06:11 [h264 @ 000002a837506380] decode_slice_header error
+12:06:11 [h264 @ 000002a837506380] no frame!
+12:06:11 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 6
+12:06:11 [h264 @ 000002a837aeda40] reference count overflow
+12:06:11 [h264 @ 000002a837aeda40] decode_slice_header error
+12:06:11 [h264 @ 000002a837aeda40] illegal modification_of_pic_nums_idc 13
+12:06:11 [h264 @ 000002a837aeda40] decode_slice_header error
+12:06:11 [h264 @ 000002a837aeda40] no frame!
+12:06:11 [h264 @ 000002a8377d5200] left block unavailable for requested intra mode
+12:06:11 [h264 @ 000002a8377d5200] error while decoding MB 0 5, bytestream 5637
+12:06:11 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 69 6
+12:06:11 [h264 @ 000002a8377d5200] error while decoding MB 69 6, bytestream 5084
+12:06:11 [h264 @ 000002a8375ba640] error while decoding MB 24 17, bytestream -6
+12:06:11 [h264 @ 000002a8377d5200] left block unavailable for requested intra4x4 mode -1
+12:06:11 [h264 @ 000002a8377d5200] error while decoding MB 0 8, bytestream 44757
+12:06:11 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra mode
+12:06:11 [h264 @ 000002a8375ba1c0] error while decoding MB 0 7, bytestream 47090
+12:06:11 [h264 @ 000002a83779c140] error while decoding MB 29 44, bytestream -5
+12:06:11 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 8 34
+12:06:11 [h264 @ 000002a837aeda40] error while decoding MB 8 34, bytestream 2007
+12:06:11 [h264 @ 000002a837589c00] error while decoding MB 71 13, bytestream -10
+12:06:11 [h264 @ 000002a837ab3580] error while decoding MB 34 19, bytestream -5
+12:06:11 [h264 @ 000002a837506380] error while decoding MB 72 25, bytestream -6
+12:06:11 [h264 @ 000002a8377d5b40] left block unavailable for requested intra mode
+12:06:11 [h264 @ 000002a8377d5b40] error while decoding MB 0 5, bytestream -6
+12:06:11 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+12:06:11 [h264 @ 000002a837506380] error while decoding MB 0 33, bytestream 2184
+12:06:11 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 38 26
+12:06:11 [h264 @ 000002a8377d6440] error while decoding MB 38 26, bytestream 4129
+12:06:11 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+12:06:11 [h264 @ 000002a83779ce80] error while decoding MB 0 6, bytestream 2076
+12:06:11 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 10 40
+12:06:11 [h264 @ 000002a83779d780] error while decoding MB 10 40, bytestream 1157
+12:06:11 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 2 40
+12:06:11 [h264 @ 000002a83779ca00] error while decoding MB 2 40, bytestream 1150
+12:06:11 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 50 6
+12:06:11 [h264 @ 000002a837589c00] error while decoding MB 50 6, bytestream 937
+12:06:11 [h264 @ 000002a83779d780] error while decoding MB 45 43, bytestream -8
+12:06:11 [h264 @ 000002a83758a080] left block unavailable for requested intra mode
+12:06:11 [h264 @ 000002a83758a080] error while decoding MB 0 36, bytestream 6437
+12:06:11 [h264 @ 000002a83779c140] error while decoding MB 76 21, bytestream -10
+12:06:11 [NULL @ 000002a8374b6b00] non-existing PPS 7 referenced
+12:06:11 [h264 @ 000002a83779c140] non-existing PPS 7 referenced
+12:06:11 [h264 @ 000002a83779c140] decode_slice_header error
+12:06:11 [h264 @ 000002a83779c140] no frame!
+12:06:11 [h264 @ 000002a83779ca00] error while decoding MB 76 3, bytestream -5
+12:06:11 [NULL @ 000002a8374b6b00] non-existing PPS 13 referenced
+12:06:11 [h264 @ 000002a83779ce80] non-existing PPS 13 referenced
+12:08:32 [h264 @ 000002a83779ce80] decode_slice_header error
+12:08:32 [h264 @ 000002a83779ce80] no frame!
+12:08:32 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:08:32 [h264 @ 000002a83779d300] non-existing PPS 1 referenced
+12:08:32 [h264 @ 000002a83779d300] decode_slice_header error
+12:08:32 [h264 @ 000002a83779d300] non-existing PPS 1 referenced
+12:08:32 [h264 @ 000002a83779d300] decode_slice_header error
+12:08:32 [h264 @ 000002a83779d300] no frame!
+12:08:32 [NULL @ 000002a8374b6b00] reference overflow 135 > 15 or 0 > 15
+12:08:32 [h264 @ 000002a83779d780] reference overflow 135 > 15 or 0 > 15
+12:08:32 [h264 @ 000002a83779d780] decode_slice_header error
+12:08:32 [h264 @ 000002a83779d780] top block unavailable for requested intra mode
+12:08:32 [h264 @ 000002a83779d780] error while decoding MB 2 0, bytestream 1427
+12:08:32 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:08:32 [h264 @ 000002a8377d5b40] non-existing PPS 1 referenced
+12:08:32 [h264 @ 000002a8377d5b40] decode_slice_header error
+12:08:32 [h264 @ 000002a8377d5b40] no frame!
+12:08:32 [h264 @ 000002a837ab3580] left block unavailable for requested intra mode
+12:08:32 [h264 @ 000002a837ab3580] error while decoding MB 0 22, bytestream 909
+12:08:32 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 43 13
+12:08:32 [h264 @ 000002a837589c00] error while decoding MB 43 13, bytestream 7041
+12:08:32 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+12:08:32 [h264 @ 000002a837506380] error while decoding MB 0 5, bytestream 97
+12:08:32 [h264 @ 000002a83779d300] error while decoding MB 58 44, bytestream -8
+12:08:32 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+12:08:32 [h264 @ 000002a837589c00] error while decoding MB 0 34, bytestream 2118
+12:08:32 [h264 @ 000002a83779c140] error while decoding MB 27 17, bytestream -7
+12:08:32 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 6 6
+12:08:32 [h264 @ 000002a8375ba1c0] error while decoding MB 6 6, bytestream 48356
+12:08:32 [h264 @ 000002a83779ca00] error while decoding MB 19 3, bytestream -6
+12:08:32 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra mode
+12:08:32 [h264 @ 000002a8375ba1c0] error while decoding MB 0 38, bytestream 16009
+12:08:32 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 52 7
+12:08:32 [h264 @ 000002a83779ce80] error while decoding MB 52 7, bytestream 8154
+12:08:32 [h264 @ 000002a8377d5b40] error while decoding MB 73 2, bytestream -8
+12:08:32 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 48 26
+12:08:32 [h264 @ 000002a8375ba640] error while decoding MB 48 26, bytestream 3881
+12:08:32 [h264 @ 000002a83779c140] non-existing PPS 5 referenced
+12:08:32 [h264 @ 000002a83779c140] decode_slice_header error
+12:08:32 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 27 7
+12:08:32 [h264 @ 000002a83779c140] error while decoding MB 27 7, bytestream 8315
+12:08:32 [h264 @ 000002a8377d5b40] left block unavailable for requested intra mode
+12:08:32 [h264 @ 000002a8377d5b40] error while decoding MB 0 38, bytestream 4857
+12:08:32 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 14 33
+12:08:32 [h264 @ 000002a8377d6440] error while decoding MB 14 33, bytestream 2571
+12:08:32 [h264 @ 000002a837506380] error while decoding MB 64 1, bytestream -6
+12:08:32 [h264 @ 000002a83779d300] left block unavailable for requested intra4x4 mode -1
+12:08:32 [h264 @ 000002a83779d300] error while decoding MB 0 35, bytestream 8329
+12:08:32 [h264 @ 000002a8377d5b40] error while decoding MB 74 19, bytestream -5
+12:08:32 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 67 40
+12:08:32 [h264 @ 000002a83779c140] error while decoding MB 67 40, bytestream 948
+12:08:32 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 6 39
+12:08:32 [h264 @ 000002a837589c00] error while decoding MB 6 39, bytestream 1274
+12:08:32 [h264 @ 000002a8377d6440] left block unavailable for requested intra mode
+12:08:32 [h264 @ 000002a8377d6440] error while decoding MB 0 7, bytestream 32
+12:08:32 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 36 35
+12:08:32 [h264 @ 000002a8377d6440] error while decoding MB 36 35, bytestream 1539
+12:08:32 [h264 @ 000002a8377d5200] error while decoding MB 59 44, bytestream -10
+12:08:32 [h264 @ 000002a8375ba640] error while decoding MB 76 1, bytestream -12
+12:08:32 [h264 @ 000002a83779c140] left block unavailable for requested intra4x4 mode -1
+12:08:32 [h264 @ 000002a83779c140] error while decoding MB 0 20, bytestream 442
+12:10:26 [h264 @ 000002a8377d6440] error while decoding MB 73 43, bytestream -5
+12:10:26 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+12:10:26 [h264 @ 000002a837506380] error while decoding MB 0 6, bytestream 49229
+12:10:26 [h264 @ 000002a83758a080] error while decoding MB 59 43, bytestream -10
+12:10:26 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+12:10:26 [h264 @ 000002a837ab3580] error while decoding MB 0 33, bytestream 4333
+12:10:26 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 41 18
+12:10:26 [h264 @ 000002a8375ba1c0] error while decoding MB 41 18, bytestream -3
+12:10:26 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 31 40
+12:10:26 [h264 @ 000002a83779ca00] error while decoding MB 31 40, bytestream 514
+12:10:26 [h264 @ 000002a83779ce80] error while decoding MB 50 0, bytestream -5
+12:10:26 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:10:26 [h264 @ 000002a8375ba1c0] non-existing PPS 1 referenced
+12:10:26 [h264 @ 000002a8375ba1c0] decode_slice_header error
+12:10:26 [h264 @ 000002a8375ba1c0] no frame!
+12:10:26 [h264 @ 000002a8375ba640] error while decoding MB 21 5, bytestream -5
+12:10:26 [h264 @ 000002a8375ba640] non-existing PPS 2 referenced
+12:10:26 [h264 @ 000002a8375ba640] decode_slice_header error
+12:10:26 [NULL @ 000002a8374b6b00] non-existing PPS 2 referenced
+12:10:26 [h264 @ 000002a837589c00] non-existing PPS 2 referenced
+12:10:26 [h264 @ 000002a837589c00] decode_slice_header error
+12:10:26 [h264 @ 000002a837589c00] non-existing PPS 2 referenced
+12:10:26 [h264 @ 000002a837589c00] decode_slice_header error
+12:10:26 [h264 @ 000002a837589c00] no frame!
+12:10:26 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 6
+12:10:26 [h264 @ 000002a83758a080] slice type 11 too large at 0
+12:10:26 [h264 @ 000002a83758a080] decode_slice_header error
+12:10:26 [h264 @ 000002a83758a080] no frame!
+12:10:26 [NULL @ 000002a8374b6b00] non-existing PPS 2 referenced
+12:10:26 [h264 @ 000002a83758a500] non-existing PPS 2 referenced
+12:10:26 [h264 @ 000002a83758a500] decode_slice_header error
+12:10:26 [h264 @ 000002a83758a500] non-existing PPS 1 referenced
+12:10:26 [h264 @ 000002a83758a500] decode_slice_header error
+12:10:26 [h264 @ 000002a83758a500] no frame!
+12:10:26 [h264 @ 000002a83779ca00] error while decoding MB 47 0, bytestream -7
+12:10:26 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+12:10:26 [h264 @ 000002a8375ba1c0] error while decoding MB 0 32, bytestream 7153
+12:10:26 [h264 @ 000002a83758a080] error while decoding MB 16 19, bytestream -9
+12:10:26 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 54 19
+12:10:26 [h264 @ 000002a83779d780] error while decoding MB 54 19, bytestream 5507
+12:10:26 [h264 @ 000002a83779d300] error while decoding MB 73 1, bytestream -5
+12:10:26 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 76 27
+12:10:26 [h264 @ 000002a83779c140] error while decoding MB 76 27, bytestream 3261
+12:10:26 [h264 @ 000002a83779ce80] error while decoding MB 19 1, bytestream -22
+12:10:26 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+12:10:26 [h264 @ 000002a8375ba640] error while decoding MB 0 36, bytestream 7280
+12:10:26 [h264 @ 000002a83758a080] error while decoding MB 31 15, bytestream -5
+12:10:26 [h264 @ 000002a83758a080] error while decoding MB 34 44, bytestream -9
+12:10:26 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+12:10:26 [h264 @ 000002a837ab3580] error while decoding MB 0 36, bytestream 5879
+12:10:26 [h264 @ 000002a837aeda40] error while decoding MB 51 21, bytestream -7
+12:10:26 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 20 7
+12:10:26 [h264 @ 000002a837aeda40] error while decoding MB 20 7, bytestream 8323
+12:10:26 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 44 4
+12:10:26 [h264 @ 000002a8377d6440] error while decoding MB 44 4, bytestream 51791
+12:10:26 [h264 @ 000002a8377d5b40] left block unavailable for requested intra4x4 mode -1
+12:10:26 [h264 @ 000002a8377d5b40] error while decoding MB 0 33, bytestream 3819
+12:10:26 [h264 @ 000002a837ab3580] error while decoding MB 15 21, bytestream -10
+12:10:26 [h264 @ 000002a83779ca00] error while decoding MB 29 44, bytestream -10
+12:10:26 [h264 @ 000002a83758a080] error while decoding MB 5 19, bytestream -10
+12:10:26 [h264 @ 000002a837aeda40] left block unavailable for requested intra mode
+12:10:26 [h264 @ 000002a837aeda40] error while decoding MB 0 5, bytestream 51247
+12:10:26 [h264 @ 000002a83779c140] error while decoding MB 43 0, bytestream -22
+12:13:24 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 67 33
+12:13:24 [h264 @ 000002a837aeda40] error while decoding MB 67 33, bytestream 921
+12:13:24 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 22 22
+12:13:24 [h264 @ 000002a837589c00] error while decoding MB 22 22, bytestream -3
+12:13:24 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 41 4
+12:13:24 [h264 @ 000002a837ab3580] error while decoding MB 41 4, bytestream 51965
+12:13:24 [h264 @ 000002a8377d5200] left block unavailable for requested intra mode
+12:13:24 [h264 @ 000002a8377d5200] error while decoding MB 0 33, bytestream 4177
+12:13:24 [h264 @ 000002a837aeda40] error while decoding MB 46 18, bytestream -8
+12:13:24 [h264 @ 000002a837aeda40] error while decoding MB 79 44, bytestream -7
+12:13:24 [h264 @ 000002a83779d780] left block unavailable for requested intra4x4 mode -1
+12:13:24 [h264 @ 000002a83779d780] error while decoding MB 0 33, bytestream 4760
+12:13:24 [h264 @ 000002a8377d5200] error while decoding MB 23 16, bytestream -11
+12:13:24 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 12 40
+12:13:24 [h264 @ 000002a837aeda40] error while decoding MB 12 40, bytestream 458
+12:13:24 [h264 @ 000002a8375ba1c0] error while decoding MB 9 3, bytestream -7
+12:13:24 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 0 7
+12:13:24 [h264 @ 000002a837589c00] error while decoding MB 0 7, bytestream 8475
+12:13:24 [h264 @ 000002a837aeda40] top block unavailable for requested intra mode -1
+12:13:24 [h264 @ 000002a837aeda40] error while decoding MB 30 0, bytestream 64177
+12:13:24 [h264 @ 000002a837589c00] error while decoding MB 71 24, bytestream -8
+12:13:24 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+12:13:24 [h264 @ 000002a837506380] error while decoding MB 0 41, bytestream 942
+12:13:24 [h264 @ 000002a837ab3580] error while decoding MB 8 3, bytestream -13
+12:13:24 [rtsp @ 000002a81611e480] Too short data for FU-A H.264 RTP packet
+12:13:24 [h264 @ 000002a83779d780] left block unavailable for requested intra mode
+12:13:24 [h264 @ 000002a83779d780] error while decoding MB 0 42, bytestream 807
+12:13:24 [h264 @ 000002a83779c140] left block unavailable for requested intra4x4 mode -1
+12:13:24 [h264 @ 000002a83779c140] error while decoding MB 0 7, bytestream 45961
+12:13:24 [h264 @ 000002a8377d5b40] error while decoding MB 67 44, bytestream -8
+12:13:24 [h264 @ 000002a83758a500] left block unavailable for requested intra4x4 mode -1
+12:13:24 [h264 @ 000002a83758a500] error while decoding MB 0 35, bytestream 8653
+12:13:24 [h264 @ 000002a83779ca00] error while decoding MB 25 19, bytestream -6
+12:13:24 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 33 33
+12:13:24 [h264 @ 000002a837ab3580] error while decoding MB 33 33, bytestream 2576
+12:13:24 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 29 7
+12:13:24 [h264 @ 000002a83779ca00] error while decoding MB 29 7, bytestream 9077
+12:13:24 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 56 26
+12:13:24 [h264 @ 000002a83779ca00] error while decoding MB 56 26, bytestream 3968
+12:13:24 [h264 @ 000002a837589c00] left block unavailable for requested intra mode
+12:13:24 [h264 @ 000002a837589c00] error while decoding MB 0 6, bytestream 7263
+12:13:24 [h264 @ 000002a8377d6440] error while decoding MB 72 44, bytestream -8
+12:13:24 [h264 @ 000002a83779c140] left block unavailable for requested intra4x4 mode -1
+12:13:24 [h264 @ 000002a83779c140] error while decoding MB 0 34, bytestream 1026
+12:13:24 [h264 @ 000002a83779d300] error while decoding MB 79 17, bytestream -8
+12:13:24 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 66 33
+12:13:24 [h264 @ 000002a83779ce80] error while decoding MB 66 33, bytestream 2010
+12:13:24 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 18 39
+12:13:24 [h264 @ 000002a8377d5200] error while decoding MB 18 39, bytestream 1165
+12:13:24 [h264 @ 000002a83779d300] left block unavailable for requested intra mode
+12:13:24 [h264 @ 000002a83779d300] error while decoding MB 0 8, bytestream 3296
+12:13:24 [h264 @ 000002a8375ba640] error while decoding MB 50 44, bytestream -12
+12:13:24 [h264 @ 000002a8377d6440] left block unavailable for requested intra mode
+12:13:24 [h264 @ 000002a8377d6440] error while decoding MB 0 35, bytestream 8291
+12:13:24 [h264 @ 000002a837ab3580] error while decoding MB 75 20, bytestream -5
+12:13:24 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 11
+12:13:24 [h264 @ 000002a83758a500] reference count overflow
+12:15:16 [h264 @ 000002a83758a500] decode_slice_header error
+12:15:16 [h264 @ 000002a83758a500] reference picture missing during reorder
+12:15:16 [h264 @ 000002a83758a500] Missing reference picture, default is 38
+12:15:16 [h264 @ 000002a83758a500] Missing reference picture, default is 38
+12:15:16 [h264 @ 000002a83758a500] Missing reference picture, default is 38
+12:15:16 [h264 @ 000002a83758a500] Missing reference picture, default is 38
+12:15:16 [h264 @ 000002a83758a500] Reference 10 >= 5
+12:15:16 [h264 @ 000002a83758a500] error while decoding MB 65 0, bytestream 703
+12:15:16 [h264 @ 000002a83758a500] Frame num change from 596 to 156
+12:15:16 [h264 @ 000002a83758a500] decode_slice_header error
+12:15:16 [h264 @ 000002a83779c140] deblocking_filter_idc 10 out of range
+12:15:16 [h264 @ 000002a83779c140] decode_slice_header error
+12:15:16 [h264 @ 000002a83779c140] no frame!
+12:15:16 [NULL @ 000002a8374b6b00] reference count 1 overflow
+12:15:16 [h264 @ 000002a83779ca00] reference count overflow
+12:15:16 [h264 @ 000002a83779ca00] decode_slice_header error
+12:15:16 [h264 @ 000002a83779ca00] no frame!
+12:15:16 [NULL @ 000002a8374b6b00] illegal memory management control operation 32
+12:15:16 [h264 @ 000002a83779ce80] illegal memory management control operation 32
+12:15:16 [h264 @ 000002a83779ce80] cabac_init_idc 10 overflow
+12:15:16 [h264 @ 000002a83779ce80] decode_slice_header error
+12:15:16 [h264 @ 000002a83779ce80] non-existing PPS 3 referenced
+12:15:16 [h264 @ 000002a83779ce80] decode_slice_header error
+12:15:16 [h264 @ 000002a83779ce80] no frame!
+12:15:16 [h264 @ 000002a83758a500] left block unavailable for requested intra4x4 mode -1
+12:15:16 [h264 @ 000002a83758a500] error while decoding MB 0 6, bytestream 8136
+12:15:16 [h264 @ 000002a837ab3580] error while decoding MB 63 43, bytestream -6
+12:15:16 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+12:15:16 [h264 @ 000002a83779ce80] error while decoding MB 0 34, bytestream 1035
+12:15:16 [h264 @ 000002a8377d5b40] error while decoding MB 5 18, bytestream -8
+12:15:16 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 36 26
+12:15:16 [h264 @ 000002a83779d780] error while decoding MB 36 26, bytestream 3194
+12:15:16 [h264 @ 000002a8377d5b40] error while decoding MB 79 2, bytestream -7
+12:15:16 [h264 @ 000002a8377d6440] left block unavailable for requested intra4x4 mode -1
+12:15:16 [h264 @ 000002a8377d6440] error while decoding MB 0 8, bytestream 4508
+12:15:16 [h264 @ 000002a8377d5b40] left block unavailable for requested intra mode
+12:15:16 [h264 @ 000002a8377d5b40] error while decoding MB 0 7, bytestream 621
+12:15:16 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 21 7
+12:15:16 [h264 @ 000002a837aeda40] error while decoding MB 21 7, bytestream 8187
+12:15:16 [h264 @ 000002a83779ce80] error while decoding MB 7 44, bytestream -10
+12:15:16 [h264 @ 000002a83758a080] cabac decode of qscale diff failed at 75 32
+12:15:16 [h264 @ 000002a83758a080] error while decoding MB 75 32, bytestream 2620
+12:15:16 [h264 @ 000002a83779ca00] error while decoding MB 72 2, bytestream -6
+12:15:16 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 55 37
+12:15:16 [h264 @ 000002a8375ba1c0] error while decoding MB 55 37, bytestream 661
+12:15:16 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 10 28
+12:15:16 [h264 @ 000002a83779ce80] error while decoding MB 10 28, bytestream 3708
+12:15:16 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 58 20
+12:15:16 [h264 @ 000002a8375ba640] error while decoding MB 58 20, bytestream 5054
+12:15:16 [h264 @ 000002a837ab3580] left block unavailable for requested intra mode
+12:15:16 [h264 @ 000002a837ab3580] error while decoding MB 0 5, bytestream 5542
+12:15:16 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 1 33
+12:15:16 [h264 @ 000002a837589c00] error while decoding MB 1 33, bytestream 2616
+12:15:16 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+12:15:16 [h264 @ 000002a837506380] error while decoding MB 0 7, bytestream 741
+12:15:16 [h264 @ 000002a837589c00] left block unavailable for requested intra mode
+12:15:16 [h264 @ 000002a837589c00] error while decoding MB 0 0, bytestream 104
+12:15:16 [NULL @ 000002a8374b6b00] reference count 1 overflow
+12:15:16 [h264 @ 000002a83758a080] reference count overflow
+12:15:16 [h264 @ 000002a83758a080] decode_slice_header error
+12:15:16 [h264 @ 000002a83758a080] no frame!
+12:15:16 [NULL @ 000002a8374b6b00] non-existing PPS 2 referenced
+12:15:16 [h264 @ 000002a83758a500] non-existing PPS 2 referenced
+12:15:16 [h264 @ 000002a83758a500] decode_slice_header error
+12:15:16 [h264 @ 000002a83758a500] non-existing PPS 2 referenced
+12:16:38 [h264 @ 000002a83758a500] decode_slice_header error
+12:16:38 [h264 @ 000002a83758a500] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] reference overflow 163 > 15 or 0 > 15
+12:16:38 [h264 @ 000002a83779c140] reference overflow 163 > 15 or 0 > 15
+12:16:38 [h264 @ 000002a83779c140] decode_slice_header error
+12:16:38 [h264 @ 000002a83779c140] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 8
+12:16:38 [h264 @ 000002a83779ca00] illegal modification_of_pic_nums_idc 8
+12:16:38 [h264 @ 000002a83779ca00] decode_slice_header error
+12:16:38 [h264 @ 000002a83779ca00] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] illegal memory management control operation 32
+12:16:38 [h264 @ 000002a83779ce80] slice type 32 too large at 0
+12:16:38 [h264 @ 000002a83779ce80] decode_slice_header error
+12:16:38 [h264 @ 000002a83779ce80] no frame!
+12:16:38 [h264 @ 000002a83779d300] left block unavailable for requested intra mode
+12:16:38 [h264 @ 000002a83779d300] error while decoding MB 0 18, bytestream 6798
+12:16:38 [h264 @ 000002a837506380] error while decoding MB 52 42, bytestream -6
+12:16:38 [h264 @ 000002a83779d780] cabac decode of qscale diff failed at 73 26
+12:16:38 [h264 @ 000002a83779d780] error while decoding MB 73 26, bytestream 4084
+12:16:38 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+12:16:38 [h264 @ 000002a83779ce80] error while decoding MB 0 40, bytestream 1178
+12:16:38 [h264 @ 000002a83758a500] cabac decode of qscale diff failed at 24 40
+12:16:38 [h264 @ 000002a83758a500] error while decoding MB 24 40, bytestream 1054
+12:16:38 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+12:16:38 [h264 @ 000002a8375ba1c0] error while decoding MB 0 8, bytestream 44890
+12:16:38 [h264 @ 000002a83779c140] error while decoding MB 58 42, bytestream -7
+12:16:38 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 62 34
+12:16:38 [h264 @ 000002a837aeda40] error while decoding MB 62 34, bytestream 7908
+12:16:38 [h264 @ 000002a8375ba640] error while decoding MB 45 26, bytestream -7
+12:16:38 [h264 @ 000002a83758a080] left block unavailable for requested intra mode
+12:16:38 [h264 @ 000002a83758a080] error while decoding MB 0 13, bytestream 6079
+12:16:38 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+12:16:38 [h264 @ 000002a837506380] error while decoding MB 0 22, bytestream 5198
+12:16:38 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 2 33
+12:16:38 [h264 @ 000002a8377d6440] error while decoding MB 2 33, bytestream 2685
+12:16:38 [h264 @ 000002a8375ba1c0] error while decoding MB 32 1, bytestream -5
+12:16:38 [h264 @ 000002a8377d5b40] left block unavailable for requested intra4x4 mode -1
+12:16:38 [h264 @ 000002a8377d5b40] error while decoding MB 0 40, bytestream 6666
+12:16:38 [h264 @ 000002a8377d6440] error while decoding MB 15 23, bytestream -5
+12:16:38 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+12:16:38 [h264 @ 000002a837506380] error while decoding MB 0 5, bytestream 7425
+12:16:38 [h264 @ 000002a83758a080] slice type 14 too large at 0
+12:16:38 [h264 @ 000002a83758a080] decode_slice_header error
+12:16:38 [h264 @ 000002a83758a080] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] reference count 1 overflow
+12:16:38 [h264 @ 000002a83758a500] reference count overflow
+12:16:38 [h264 @ 000002a83758a500] decode_slice_header error
+12:16:38 [h264 @ 000002a83758a500] top block unavailable for requested intra mode -1
+12:16:38 [h264 @ 000002a83758a500] error while decoding MB 5 0, bytestream 1427
+12:16:38 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 5
+12:16:38 [h264 @ 000002a83779c140] reference count overflow
+12:16:38 [h264 @ 000002a83779c140] decode_slice_header error
+12:16:38 [h264 @ 000002a83779c140] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 11
+12:16:38 [h264 @ 000002a83779ca00] illegal modification_of_pic_nums_idc 11
+12:16:38 [h264 @ 000002a83779ca00] decode_slice_header error
+12:16:38 [h264 @ 000002a83779ca00] non-existing PPS 5 referenced
+12:16:38 [h264 @ 000002a83779ca00] decode_slice_header error
+12:16:38 [h264 @ 000002a83779ca00] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:16:38 [h264 @ 000002a83779ce80] non-existing PPS 1 referenced
+12:16:38 [h264 @ 000002a83779ce80] decode_slice_header error
+12:16:38 [h264 @ 000002a83779ce80] no frame!
+12:16:38 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:16:38 [h264 @ 000002a83779d300] non-existing PPS 1 referenced
+12:16:38 [h264 @ 000002a83779d300] decode_slice_header error
+12:16:38 [h264 @ 000002a83779d300] no frame!
+12:20:16 [h264 @ 000002a83758a500] error while decoding MB 65 44, bytestream -9
+12:20:16 [h264 @ 000002a83779d300] error while decoding MB 75 43, bytestream -5
+12:20:16 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a837506380] error while decoding MB 0 7, bytestream 3684
+12:20:16 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 24 19
+12:20:16 [h264 @ 000002a8375ba640] error while decoding MB 24 19, bytestream 5982
+12:20:16 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a8375ba1c0] error while decoding MB 0 41, bytestream 6447
+12:20:16 [h264 @ 000002a8375ba640] error while decoding MB 62 2, bytestream -5
+12:20:16 [h264 @ 000002a83758a080] cabac decode of qscale diff failed at 52 13
+12:20:16 [h264 @ 000002a83758a080] error while decoding MB 52 13, bytestream 6590
+12:20:16 [h264 @ 000002a83779d780] top block unavailable for requested intra mode -1
+12:20:16 [h264 @ 000002a83779d780] error while decoding MB 35 0, bytestream 9292
+12:20:16 [h264 @ 000002a837589c00] error while decoding MB 74 42, bytestream -10
+12:20:16 [h264 @ 000002a8377d5200] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a8377d5200] error while decoding MB 0 36, bytestream 8778
+12:20:16 [h264 @ 000002a83758a080] error while decoding MB 23 44, bytestream -8
+12:20:16 [h264 @ 000002a83779c140] error while decoding MB 76 0, bytestream -17
+12:20:16 [h264 @ 000002a8377d5200] error while decoding MB 66 44, bytestream -11
+12:20:16 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 73 36
+12:20:16 [h264 @ 000002a8377d6440] error while decoding MB 73 36, bytestream 1663
+12:20:16 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 67 28
+12:20:16 [h264 @ 000002a8377d5200] error while decoding MB 67 28, bytestream 4077
+12:20:16 [h264 @ 000002a8375ba1c0] error while decoding MB 38 0, bytestream -9
+12:20:16 [h264 @ 000002a837ab3580] left block unavailable for requested intra mode
+12:20:16 [h264 @ 000002a837ab3580] error while decoding MB 0 26, bytestream 4391
+12:20:16 [h264 @ 000002a83758a500] left block unavailable for requested intra mode
+12:20:16 [h264 @ 000002a83758a500] error while decoding MB 0 7, bytestream 3416
+12:20:16 [h264 @ 000002a837ab3580] error while decoding MB 0 1, bytestream -8
+12:20:16 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a83779ce80] error while decoding MB 0 41, bytestream 7217
+12:20:16 [h264 @ 000002a83779d300] error while decoding MB 72 43, bytestream -7
+12:20:16 [h264 @ 000002a83779d780] error while decoding MB 4 0, bytestream -55
+12:20:16 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 53 44
+12:20:16 [h264 @ 000002a83779ca00] error while decoding MB 53 44, bytestream -6
+12:20:16 [h264 @ 000002a837589c00] left block unavailable for requested intra mode
+12:20:16 [h264 @ 000002a837589c00] error while decoding MB 0 8, bytestream 86524
+12:20:16 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 73 43
+12:20:16 [h264 @ 000002a83779c140] error while decoding MB 73 43, bytestream 178
+12:20:16 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a83779ce80] error while decoding MB 0 30, bytestream 2680
+12:20:16 [h264 @ 000002a83779c140] error while decoding MB 30 44, bytestream -6
+12:20:16 [h264 @ 000002a837aeda40] left block unavailable for requested intra mode
+12:20:16 [h264 @ 000002a837aeda40] error while decoding MB 0 41, bytestream 6577
+12:20:16 [h264 @ 000002a8375ba1c0] error while decoding MB 30 2, bytestream -8
+12:20:16 [h264 @ 000002a83758a080] error while decoding MB 23 2, bytestream -15
+12:20:16 [h264 @ 000002a8377d5b40] error while decoding MB 77 44, bytestream -7
+12:20:16 [h264 @ 000002a83779ca00] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a83779ca00] error while decoding MB 0 8, bytestream 1048
+12:20:16 [h264 @ 000002a837506380] error while decoding MB 73 43, bytestream -6
+12:20:16 [h264 @ 000002a83779d780] error while decoding MB 2 4, bytestream -10
+12:20:16 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 78 31
+12:20:16 [h264 @ 000002a8377d6440] error while decoding MB 78 31, bytestream 2718
+12:20:16 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+12:20:16 [h264 @ 000002a837589c00] error while decoding MB 0 15, bytestream 5081
+12:20:16 [h264 @ 000002a83758a080] left block unavailable for requested intra4x4 mode -1
+12:22:00 [h264 @ 000002a83758a080] error while decoding MB 0 23, bytestream 6616
+12:22:00 [h264 @ 000002a83779d300] error while decoding MB 50 1, bytestream -5
+12:22:00 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 51 31
+12:22:00 [h264 @ 000002a8375ba640] error while decoding MB 51 31, bytestream 2990
+12:22:00 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+12:22:00 [h264 @ 000002a8375ba640] error while decoding MB 0 33, bytestream 5684
+12:22:00 [h264 @ 000002a837aeda40] left block unavailable for requested intra4x4 mode -1
+12:22:00 [h264 @ 000002a837aeda40] error while decoding MB 0 5, bytestream 8712
+12:22:00 [h264 @ 000002a837589c00] Frame num change from 9 to 4
+12:22:00 [h264 @ 000002a837589c00] decode_slice_header error
+12:22:00 [h264 @ 000002a837589c00] Frame num change from 9 to 349
+12:22:00 [h264 @ 000002a837589c00] decode_slice_header error
+12:22:00 [h264 @ 000002a837589c00] non-existing PPS 1 referenced
+12:22:00 [h264 @ 000002a837589c00] decode_slice_header error
+12:22:00 [h264 @ 000002a837589c00] non-existing PPS 53 referenced
+12:22:00 [h264 @ 000002a837589c00] decode_slice_header error
+12:22:00 [NULL @ 000002a8374b6b00] non-existing PPS 13 referenced
+12:22:00 [h264 @ 000002a83758a080] slice type 10 too large at 0
+12:22:00 [h264 @ 000002a83758a080] decode_slice_header error
+12:22:00 [h264 @ 000002a83758a080] no frame!
+12:22:00 [NULL @ 000002a8374b6b00] non-existing PPS 2 referenced
+12:22:00 [h264 @ 000002a83758a500] non-existing PPS 2 referenced
+12:22:00 [h264 @ 000002a83758a500] decode_slice_header error
+12:22:00 [h264 @ 000002a83758a500] no frame!
+12:22:00 [NULL @ 000002a8374b6b00] illegal reordering_of_pic_nums_idc 4
+12:22:00 [h264 @ 000002a83779c140] illegal modification_of_pic_nums_idc 4
+12:22:00 [h264 @ 000002a83779c140] decode_slice_header error
+12:22:00 [h264 @ 000002a83779c140] no frame!
+12:22:00 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+12:22:00 [h264 @ 000002a83779ca00] non-existing PPS 1 referenced
+12:22:00 [h264 @ 000002a83779ca00] decode_slice_header error
+12:22:00 [h264 @ 000002a83779ca00] no frame!
+12:22:00 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 62 3
+12:22:00 [h264 @ 000002a837589c00] error while decoding MB 62 3, bytestream 350
+12:22:00 [h264 @ 000002a8377d6440] error while decoding MB 1 44, bytestream -10
+12:22:00 [h264 @ 000002a8377d5b40] cabac decode of qscale diff failed at 58 31
+12:22:00 [h264 @ 000002a8377d5b40] error while decoding MB 58 31, bytestream 3160
+12:22:00 [h264 @ 000002a83779ca00] error while decoding MB 63 8, bytestream -23
+12:22:00 [h264 @ 000002a837506380] error while decoding MB 60 43, bytestream -12
+12:22:00 [h264 @ 000002a83779d300] cabac decode of qscale diff failed at 53 43
+12:22:00 [h264 @ 000002a83779d300] error while decoding MB 53 43, bytestream 3088
+12:22:00 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+12:22:00 [h264 @ 000002a837506380] error while decoding MB 0 10, bytestream 6294
+12:22:00 [h264 @ 000002a83779ca00] error while decoding MB 73 5, bytestream -8
+12:22:00 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 45 18
+12:22:00 [h264 @ 000002a8375ba640] error while decoding MB 45 18, bytestream 6623
+12:22:00 [h264 @ 000002a83758a500] error while decoding MB 35 0, bytestream -9
+12:22:00 [h264 @ 000002a83758a080] cabac decode of qscale diff failed at 9 7
+12:22:00 [h264 @ 000002a83758a080] error while decoding MB 9 7, bytestream 8940
+12:22:00 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 65 19
+12:22:00 [h264 @ 000002a83779c140] error while decoding MB 65 19, bytestream 2717
+12:22:00 [NULL @ 000002a8374b6b00] SEI type 67 size 1664 truncated at 120
+12:22:00 [h264 @ 000002a83779d300] error while decoding MB 71 12, bytestream -24
+12:22:00 [h264 @ 000002a83758a500] left block unavailable for requested intra mode
+12:22:00 [h264 @ 000002a83758a500] error while decoding MB 0 21, bytestream 8037
+12:22:00 [h264 @ 000002a8377d6440] error while decoding MB 73 5, bytestream -9
+12:22:00 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 63 43
+12:22:00 [h264 @ 000002a83779c140] error while decoding MB 63 43, bytestream 3117
+12:22:00 [h264 @ 000002a83779ca00] error while decoding MB 59 0, bytestream -9
+12:22:00 [h264 @ 000002a83779ce80] cabac decode of qscale diff failed at 8 23
+12:22:00 [h264 @ 000002a83779ce80] error while decoding MB 8 23, bytestream 4530
+12:22:00 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 24 16
+12:22:00 [h264 @ 000002a83779ca00] error while decoding MB 24 16, bytestream 5029
+12:22:00 [h264 @ 000002a83779ce80] error while decoding MB 8 3, bytestream -5
+12:25:11 [h264 @ 000002a83779ca00] error while decoding MB 17 42, bytestream -8
+12:25:11 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a8375ba1c0] error while decoding MB 0 8, bytestream 2286
+12:25:11 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 40 13
+12:25:11 [h264 @ 000002a8377d6440] error while decoding MB 40 13, bytestream 6907
+12:25:11 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+12:25:11 [h264 @ 000002a837ab3580] error while decoding MB 0 38, bytestream 15410
+12:25:11 [h264 @ 000002a83758a500] left block unavailable for requested intra4x4 mode -1
+12:25:11 [h264 @ 000002a83758a500] error while decoding MB 0 5, bytestream 4959
+12:25:11 [h264 @ 000002a837506380] error while decoding MB 37 26, bytestream -10
+12:25:11 [h264 @ 000002a83779d300] cabac decode of qscale diff failed at 38 33
+12:25:11 [h264 @ 000002a83779d300] error while decoding MB 38 33, bytestream 8203
+12:25:11 [h264 @ 000002a83779d300] error while decoding MB 41 2, bytestream -5
+12:25:11 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+12:25:11 [h264 @ 000002a8375ba1c0] error while decoding MB 0 29, bytestream 1382
+12:25:11 [h264 @ 000002a83779d780] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a83779d780] error while decoding MB 0 20, bytestream 3996
+12:25:11 [h264 @ 000002a83779c140] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a83779c140] error while decoding MB 0 6, bytestream 1213
+12:25:11 [h264 @ 000002a8375ba1c0] error while decoding MB 52 40, bytestream -6
+12:25:11 [h264 @ 000002a83779d780] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a83779d780] error while decoding MB 0 19, bytestream 17811
+12:25:11 [h264 @ 000002a837aeda40] error while decoding MB 54 1, bytestream -5
+12:25:11 [h264 @ 000002a83758a080] cabac decode of qscale diff failed at 38 13
+12:25:11 [h264 @ 000002a83758a080] error while decoding MB 38 13, bytestream 6779
+12:25:11 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 57 14
+12:25:11 [h264 @ 000002a8375ba1c0] error while decoding MB 57 14, bytestream 6601
+12:25:11 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+12:25:11 [h264 @ 000002a83779ce80] error while decoding MB 0 6, bytestream 47979
+12:25:11 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 76 33
+12:25:11 [h264 @ 000002a83779ca00] error while decoding MB 76 33, bytestream 1408
+12:25:11 [h264 @ 000002a83779d780] error while decoding MB 44 18, bytestream -5
+12:25:11 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 17 6
+12:25:11 [h264 @ 000002a8375ba1c0] error while decoding MB 17 6, bytestream 8368
+12:25:11 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 15 20
+12:25:11 [h264 @ 000002a837aeda40] error while decoding MB 15 20, bytestream 4568
+12:25:11 [h264 @ 000002a83758a500] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a83758a500] error while decoding MB 0 4, bytestream 2739
+12:25:11 [h264 @ 000002a837506380] error while decoding MB 69 44, bytestream -6
+12:25:11 [h264 @ 000002a8377d6440] error while decoding MB 1 18, bytestream -5
+12:25:11 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 68 3
+12:25:11 [h264 @ 000002a83779ca00] error while decoding MB 68 3, bytestream 54184
+12:25:11 [h264 @ 000002a8377d6440] error while decoding MB 33 44, bytestream -7
+12:25:11 [h264 @ 000002a83779ce80] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a83779ce80] error while decoding MB 0 9, bytestream 42424
+12:25:11 [h264 @ 000002a8377d5200] error while decoding MB 68 43, bytestream -9
+12:25:11 [h264 @ 000002a83779ca00] left block unavailable for requested intra mode
+12:25:11 [h264 @ 000002a83779ca00] error while decoding MB 0 35, bytestream 8891
+12:25:11 [h264 @ 000002a83779d300] error while decoding MB 11 23, bytestream -6
+12:25:11 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 76 5
+12:25:11 [h264 @ 000002a837aeda40] error while decoding MB 76 5, bytestream 8493
+12:25:11 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+12:25:11 [h264 @ 000002a837589c00] error while decoding MB 0 34, bytestream 722
+12:25:11 [h264 @ 000002a83779c140] error while decoding MB 79 20, bytestream -6
+12:25:11 [h264 @ 000002a8375ba640] error while decoding MB 9 20, bytestream -23
+12:25:11 [h264 @ 000002a83779ce80] error while decoding MB 36 44, bytestream -6
+12:25:11 [h264 @ 000002a83758a500] error while decoding MB 44 18, bytestream -5
+12:28:03 [h264 @ 000002a837589c00] cabac decode of qscale diff failed at 12 20
+12:28:03 [h264 @ 000002a837589c00] error while decoding MB 12 20, bytestream 5533
+12:28:03 [h264 @ 000002a8377d6440] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a8377d6440] error while decoding MB 0 5, bytestream 51308
+12:28:03 [h264 @ 000002a8377d5b40] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a8377d5b40] error while decoding MB 0 34, bytestream 1483
+12:28:03 [h264 @ 000002a837ab3580] error while decoding MB 28 23, bytestream -10
+12:28:03 [h264 @ 000002a83779d780] error while decoding MB 6 29, bytestream -5
+12:28:03 [h264 @ 000002a8375ba640] left block unavailable for requested intra mode
+12:28:03 [h264 @ 000002a8375ba640] error while decoding MB 0 39, bytestream 2693
+12:28:03 [h264 @ 000002a837506380] left block unavailable for requested intra mode
+12:28:03 [h264 @ 000002a837506380] error while decoding MB 0 2, bytestream 60044
+12:28:03 [h264 @ 000002a83758a080] error while decoding MB 67 44, bytestream -13
+12:28:03 [h264 @ 000002a83779d300] error while decoding MB 58 0, bytestream -12
+12:28:03 [h264 @ 000002a837506380] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a837506380] error while decoding MB 0 12, bytestream 1515
+12:28:03 [h264 @ 000002a83779ce80] error while decoding MB 24 3, bytestream -6
+12:28:03 [h264 @ 000002a83779d300] left block unavailable for requested intra mode
+12:28:03 [h264 @ 000002a83779d300] error while decoding MB 0 8, bytestream 44052
+12:28:03 [h264 @ 000002a8375ba640] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a8375ba640] error while decoding MB 0 40, bytestream 5800
+12:28:03 [h264 @ 000002a837589c00] error while decoding MB 20 19, bytestream -9
+12:28:03 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 58 4
+12:28:03 [h264 @ 000002a837aeda40] error while decoding MB 58 4, bytestream 52755
+12:28:03 [h264 @ 000002a83779c140] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a83779c140] error while decoding MB 0 44, bytestream 1945
+12:28:03 [h264 @ 000002a8375ba1c0] cabac decode of qscale diff failed at 76 32
+12:28:03 [h264 @ 000002a8375ba1c0] error while decoding MB 76 32, bytestream 2511
+12:28:03 [h264 @ 000002a83758a500] error while decoding MB 22 20, bytestream -19
+12:28:03 [h264 @ 000002a8377d5b40] error while decoding MB 55 41, bytestream -6
+12:28:03 [h264 @ 000002a83779ca00] cabac decode of qscale diff failed at 68 6
+12:28:03 [h264 @ 000002a83779ca00] error while decoding MB 68 6, bytestream 3648
+12:28:03 [h264 @ 000002a83779ce80] error while decoding MB 15 19, bytestream -11
+12:28:03 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 12 6
+12:28:03 [h264 @ 000002a83779c140] error while decoding MB 12 6, bytestream 8433
+12:28:03 [h264 @ 000002a837ab3580] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a837ab3580] error while decoding MB 0 7, bytestream 45765
+12:28:03 [h264 @ 000002a837589c00] error while decoding MB 9 44, bytestream -8
+12:28:03 [h264 @ 000002a8377d5200] cabac decode of qscale diff failed at 46 34
+12:28:03 [h264 @ 000002a8377d5200] error while decoding MB 46 34, bytestream 4
+12:28:03 [h264 @ 000002a837aeda40] error while decoding MB 74 18, bytestream -6
+12:28:03 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 14 20
+12:28:03 [h264 @ 000002a8375ba640] error while decoding MB 14 20, bytestream 5444
+12:28:03 [h264 @ 000002a837ab3580] cabac decode of qscale diff failed at 41 5
+12:28:03 [h264 @ 000002a837ab3580] error while decoding MB 41 5, bytestream 49954
+12:28:03 [h264 @ 000002a8377d5200] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a8377d5200] error while decoding MB 0 34, bytestream 2703
+12:28:03 [h264 @ 000002a83779ca00] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a83779ca00] error while decoding MB 0 5, bytestream 1091
+12:28:03 [h264 @ 000002a8375ba1c0] error while decoding MB 70 42, bytestream -5
+12:28:03 [h264 @ 000002a83779d300] cabac decode of qscale diff failed at 35 23
+12:28:03 [h264 @ 000002a83779d300] error while decoding MB 35 23, bytestream 1129
+12:28:03 [h264 @ 000002a8375ba1c0] left block unavailable for requested intra4x4 mode -1
+12:28:03 [h264 @ 000002a8375ba1c0] error while decoding MB 0 10, bytestream 2942
+12:28:03 [h264 @ 000002a83779d780] error while decoding MB 1 20, bytestream -5
+12:28:03 [h264 @ 000002a83758a080] left block unavailable for requested intra4x4 mode -1
+12:30:20 [h264 @ 000002a83758a080] error while decoding MB 0 38, bytestream 5626
+12:30:20 [h264 @ 000002a83779c140] error while decoding MB 34 0, bytestream -15
+12:30:20 [h264 @ 000002a83779c140] cabac decode of qscale diff failed at 5 19
+12:30:20 [h264 @ 000002a83779c140] error while decoding MB 5 19, bytestream 202
+12:30:20 [h264 @ 000002a83779ca00] error while decoding MB 21 23, bytestream -5
+12:30:20 [h264 @ 000002a83758a500] error while decoding MB 28 42, bytestream -6
+12:30:20 [h264 @ 000002a83779c140] top block unavailable for requested intra mode
+12:30:20 [h264 @ 000002a83779c140] error while decoding MB 32 0, bytestream 64693
+12:30:20 [h264 @ 000002a8377d6440] error while decoding MB 75 4, bytestream -12
+12:30:20 [h264 @ 000002a83779ca00] error while decoding MB 19 1, bytestream -6
+12:30:20 [h264 @ 000002a83758a080] error while decoding MB 17 43, bytestream -5
+12:30:20 [h264 @ 000002a837ab3580] error while decoding MB 74 15, bytestream -5
+12:30:20 [h264 @ 000002a83779c140] left block unavailable for requested intra4x4 mode -1
+12:30:20 [h264 @ 000002a83779c140] error while decoding MB 0 43, bytestream 378
+12:30:20 [h264 @ 000002a83779ca00] error while decoding MB 17 16, bytestream -9
+12:30:20 [h264 @ 000002a8377d5b40] error while decoding MB 78 25, bytestream -12
+12:30:20 [h264 @ 000002a8377d6440] cabac decode of qscale diff failed at 30 25
+12:30:20 [h264 @ 000002a8377d6440] error while decoding MB 30 25, bytestream 4530
+12:30:20 [h264 @ 000002a83779ce80] left block unavailable for requested intra4x4 mode -1
+12:30:20 [h264 @ 000002a83779ce80] error while decoding MB 0 6, bytestream 38712
+12:30:20 [h264 @ 000002a837ab3580] error while decoding MB 5 0, bytestream -6
+12:30:20 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 41 3
+12:30:20 [h264 @ 000002a837506380] error while decoding MB 41 3, bytestream -8
+12:30:20 [h264 @ 000002a83779d300] error while decoding MB 24 7, bytestream -12
+12:30:20 [h264 @ 000002a8375ba1c0] error while decoding MB 58 44, bytestream -8
+12:30:20 [h264 @ 000002a837aeda40] Frame num change from 17 to 795
+12:30:20 [h264 @ 000002a837aeda40] decode_slice_header error
+12:30:20 [h264 @ 000002a837aeda40] non-existing PPS 1 referenced
+12:30:20 [h264 @ 000002a837aeda40] decode_slice_header error
+12:30:20 [h264 @ 000002a837aeda40] non-existing PPS 1 referenced
+12:30:20 [h264 @ 000002a837aeda40] decode_slice_header error
+12:30:20 [h264 @ 000002a8375ba1c0] deblocking_filter_idc 3 out of range
+12:30:20 [h264 @ 000002a8375ba1c0] decode_slice_header error
+12:30:20 [h264 @ 000002a8375ba1c0] non-existing PPS 1 referenced
+12:30:20 [h264 @ 000002a8375ba1c0] decode_slice_header error
+12:30:20 [h264 @ 000002a8375ba1c0] no frame!
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [h264 @ 000002a8375ba640] Missing reference picture, default is 36
+12:30:20 [NULL @ 000002a8374b6b00] reference count 3 overflow
+12:30:20 [h264 @ 000002a837589c00] reference count overflow
+12:30:20 [h264 @ 000002a837589c00] decode_slice_header error
+12:30:20 [h264 @ 000002a837589c00] no frame!
+12:30:20 [NULL @ 000002a8374b6b00] non-existing PPS 11 referenced
+12:30:20 [h264 @ 000002a83758a080] non-existing PPS 11 referenced
+12:30:20 [h264 @ 000002a83758a080] decode_slice_header error
+12:30:20 [h264 @ 000002a83758a080] no frame!
+12:30:20 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 70 8
+12:30:20 [h264 @ 000002a837506380] error while decoding MB 70 8, bytestream 8238
+12:30:20 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 22 28
+12:30:20 [h264 @ 000002a8375ba640] error while decoding MB 22 28, bytestream 4063
+12:30:20 [h264 @ 000002a8375ba1c0] deblocking_filter_idc 11 out of range
+12:30:20 [h264 @ 000002a8375ba1c0] decode_slice_header error
+12:30:20 [h264 @ 000002a8375ba1c0] no frame!
+12:30:20 [h264 @ 000002a8375ba640] deblocking filter parameters -77 3 out of range
+12:30:20 [h264 @ 000002a8375ba640] decode_slice_header error
+12:30:20 [h264 @ 000002a8375ba640] no frame!
+12:30:20 [h264 @ 000002a837589c00] Missing reference picture, default is 18
+12:53:17 [h264 @ 000002 [CMD]     5
+12:53:17  [JOB]   (: 10.2%)
+12:53:21  [CMD]     5
+12:53:21  [JOB]   (: 10.2%)
+12:53:24  [CMD]     5
+12:53:24  [JOB]   (: 10.2%)
+12:53:29  [CMD]     5
+12:53:29  [JOB]    
+12:53:29  [JOB]   (: 10.2%)
+12:53:48  [CMD]     5
+12:53:48  [JOB]    
+12:53:48  [JOB]   (: 10.2%)
+12:53:59  [CMD]     4
+13:03:38  [CMD]     5
+13:03:38  [JOB]    
+13:03:38  [JOB]   (: 10.2%)
+13:14:33  [CMD]     5
+13:14:33  [JOB]    
+13:14:33  [JOB]   (: 10.2%)
+13:14:36  [CMD]     5
+13:14:36  [JOB]    
+13:14:36  [JOB]  : 2
+13:14:39  [JOB]   (: 10.2%)
+13:14:39  [JOB]   (: 10.2%)
+13:14:43  [CMD]     5
+13:14:43  [JOB]   (: 10.2%)
+13:14:49  [CMD]     5
+13:14:49  [JOB]    
+13:14:49  [JOB]   (: 10.2%)
+13:14:53  [CMD]     5
+13:14:53  [JOB]    
+13:14:53  [JOB]   (: 10.2%)
+13:14:55  [CMD]     5
+13:14:55  [JOB]    
+13:14:55  [JOB]   (: 10.2%)
+13:27:10  [CMD]     5
+13:27:10  [JOB]    
+13:27:10  [JOB]   (: 10.2%)
+13:27:13  [CMD]     5
+13:27:13  [JOB]    
+13:27:13  [JOB]  : 2
+13:27:15  [JOB]   (: 10.2%)
+13:27:15  [JOB]   (: 10.2%)
+13:27:16  [CMD]     5
+13:27:16  [JOB]   (: 10.2%)
+13:27:19  [CMD]     5
+13:27:19  [JOB]   (: 10.2%)
+13:31:01  [CMD]     5
+13:31:01  [JOB]    
+13:31:01  [JOB]   (: 10.2%)
+13:40:51  [CMD]     5
+13:40:51  [JOB]    
+13:40:51  [JOB]   (: 10.2%)
+13:40:57  [CMD]     5
+13:40:57  [JOB]    
+13:40:57  [JOB]   (: 10.2%)
+13:41:00  [CMD]     5
+13:41:00  [JOB]    
+13:41:00  [JOB]   (: 10.2%)
+13:41:12  [CMD]     5
+13:41:12  [JOB]    
+13:41:12  [JOB]  : 2
+13:41:15  [JOB]   (: 10.2%)
+13:41:15  [JOB]   (: 10.2%)
+13:41:31  [CMD]     4
+13:41:39  [CMD]     4
+13:48:46 a837589c00] Missing reference picture, default is 18
+13:48:46 [h264 @ 000002a837589c00] Missing reference picture, default is 18
+13:48:46 [h264 @ 000002a837589c00] Missing reference picture, default is 18
+13:48:46 [h264 @ 000002a837589c00] Missing reference picture, default is 18
+13:48:46 [h264 @ 000002a837589c00] Missing reference picture, default is 18
+13:48:46 [h264 @ 000002a837589c00] left block unavailable for requested intra4x4 mode -1
+13:48:46 [h264 @ 000002a837589c00] error while decoding MB 0 2, bytestream 981
+13:48:46 [h264 @ 000002a837589c00] non-existing PPS 3 referenced
+13:48:46 [h264 @ 000002a837589c00] decode_slice_header error
+13:48:46 [h264 @ 000002a837589c00] non-existing PPS 8 referenced
+13:48:46 [h264 @ 000002a837589c00] decode_slice_header error
+13:48:46 [h264 @ 000002a83758a080] deblocking_filter_idc 12 out of range
+13:48:46 [h264 @ 000002a83758a080] decode_slice_header error
+13:48:46 [h264 @ 000002a83758a080] no frame!
+13:48:46 [h264 @ 000002a83758a500] slice type 10 too large at 1
+13:48:46 [h264 @ 000002a83758a500] decode_slice_header error
+13:48:46 [h264 @ 000002a83758a500] no frame!
+13:48:46 [NULL @ 000002a8374b6b00] non-existing PPS 1 referenced
+13:48:46 [h264 @ 000002a83779c140] non-existing PPS 1 referenced
+13:48:46 [h264 @ 000002a83779c140] decode_slice_header error
+13:48:46 [h264 @ 000002a83779c140] no frame!
+13:48:46 [h264 @ 000002a8375ba640] cabac decode of qscale diff failed at 56 38
+13:48:46 [h264 @ 000002a8375ba640] error while decoding MB 56 38, bytestream 1362
+13:48:46 [h264 @ 000002a83758a080] error while decoding MB 12 3, bytestream -7
+13:48:46 [h264 @ 000002a837aeda40] cabac decode of qscale diff failed at 33 15
+13:48:46 [h264 @ 000002a837aeda40] error while decoding MB 33 15, bytestream 5214
+13:48:46 [h264 @ 000002a8377d5200] error while decoding MB 1 29, bytestream -50
+13:48:46 [h264 @ 000002a837506380] cabac decode of qscale diff failed at 15 7
+13:48:46 [h264 @ 000002a837506380] error while decoding MB 15 7, bytestream 6889
+13:48:46 [h264 @ 000002a837aeda40] error while decoding MB 73 2, bytestream -9
+13:48:46 [rtsp @ 000002a83967bd40] Too short data for FU-A H.264 RTP packet
+13:48:46 [rtsp @ 000002a83967ca00] Too short data for FU-A H.264 RTP packet
+13:48:46 [rtsp @ 000002a83967ca00] Too short data for FU-A H.264 RTP packet
+13:48:46 [rtsp @ 000002a83967ca00] Too short data for FU-A H.264 RTP packet
+13:48:46 [rtsp @ 000002a83967ca00] Too short data for FU-A H.264 RTP packet
+13:48:46 [rtsp @ 000002a83967ca00] Too short data for FU-A H.264 RTP packet
+13:48:46 [h264 @ 000002a83d26ba40] error while decoding MB 72 15, bytestream -20
+13:48:46 [h264 @ 000002a83d269ec0] cabac decode of qscale diff failed at 76 23
+13:48:46 [h264 @ 000002a83d269ec0] error while decoding MB 76 23, bytestream 4381
+13:48:46 [h264 @ 000002a8377d7680] error while decoding MB 23 1, bytestream -9
+13:48:46 [h264 @ 000002a8377d4480] cabac decode of qscale diff failed at 21 16
+13:48:46 [h264 @ 000002a8377d4480] error while decoding MB 21 16, bytestream 7866
+13:48:46 [h264 @ 000002a8377d7680] cabac decode of qscale diff failed at 42 24
+13:48:46 [h264 @ 000002a8377d7680] error while decoding MB 42 24, bytestream 2277
+13:48:46 [h264 @ 000002a83d269ec0] error while decoding MB 73 1, bytestream -8
+13:48:46 [h264 @ 000002a83d26ba40] error while decoding MB 20 14, bytestream -12
+13:48:46 [h264 @ 000002a83d26cc80] cabac decode of qscale diff failed at 37 21
+13:48:46 [h264 @ 000002a83d26cc80] error while decoding MB 37 21, bytestream 7462
+13:48:46 [h264 @ 000002a83d269140] error while decoding MB 50 43, bytestream -5
+13:48:46 [h264 @ 000002a8377d6900] left block unavailable for requested intra mode
+13:48:46 [h264 @ 000002a8377d6900] error while decoding MB 0 34, bytestream 1942
+13:48:46 [h264 @ 000002a83d269140] left block unavailable for requested intra4x4 mode -1
+13:48:46 [h264 @ 000002a83d269140] error while decoding MB 0 16, bytestream 3036
+13:48:46 [h264 @ 000002a83d26c800] error while decoding MB 41 23, bytestream -5
+13:48:46 [h264 @ 000002a8377d7680] error while decoding MB 10 9, bytestream -7
+13:48:46 [h264 @ 000002a8377d4480] error while decoding MB 39 35, bytestream -5
+13:48:46 [h264 @ 000002a8377d4480] cabac decode of qscale diff failed at 26 19
+13:48:46 [h264 @ 000002a8377d4480] error while decoding MB 26 19, bytestream 5329
+13:48:46 [h264 @ 000002a83d269140] cabac decode of qscale diff failed at 49 24
+13:48:46 [h264 @ 000002a83d269140] error while decoding MB 49 24, bytestream 3578
+13:48:46 [h264 @ 000002a83d26c800] left block unavailable for requested intra4x4 mode -1
+13:50:26 [h264 @ 000002a83d26c800] error while decoding MB 0 8, bytestream 133149
+13:50:26 [h264 @ 000002a8377d7680] left block unavailable for requested intra mode
+13:50:26 [h264 @ 000002a8377d7680] error while decoding MB 0 17, bytestream 410
+13:50:26 [h264 @ 000002a83d268c80] left block unavailable for requested intra mode
+13:50:26 [h264 @ 000002a83d268c80] error while decoding MB 0 23, bytestream 35090
+13:50:26 [h264 @ 000002a83d26ba40] error while decoding MB 39 1, bytestream -10
+13:50:26 [h264 @ 000002a83d26c340] cabac decode of qscale diff failed at 54 17
+13:50:26 [h264 @ 000002a83d26c340] error while decoding MB 54 17, bytestream 5008
+13:50:26 [h264 @ 000002a83d26c800] error while decoding MB 40 21, bytestream -20
+13:50:26 [h264 @ 000002a83d26b5c0] left block unavailable for requested intra4x4 mode -1
+13:50:26 [h264 @ 000002a83d26b5c0] error while decoding MB 0 29, bytestream 14989
+13:50:26 [h264 @ 000002a8377d7b40] error while decoding MB 77 4, bytestream -6
+13:50:26 [h264 @ 000002a8377d4480] left block unavailable for requested intra mode
+13:50:26 [h264 @ 000002a8377d4480] error while decoding MB 0 26, bytestream 25299
+13:50:26 [h264 @ 000002a8377d4900] error while decoding MB 0 1, bytestream -9
+13:50:26 [h264 @ 000002a8377d6900] left block unavailable for requested intra4x4 mode -1
+13:50:26 [h264 @ 000002a8377d6900] error while decoding MB 0 16, bytestream 1332
+13:50:26 [h264 @ 000002a83d269140] cabac decode of qscale diff failed at 39 22
+13:50:26 [h264 @ 000002a83d269140] error while decoding MB 39 22, bytestream 3794
+13:50:26 [h264 @ 000002a8377d4900] error while decoding MB 15 40, bytestream -11
+13:50:26 [h264 @ 000002a837a787c0] Frame num change from 4 to 188
+13:50:26 [h264 @ 000002a837a787c0] decode_slice_header error
+13:50:26 [h264 @ 000002a8377d4900] error while decoding MB 17 5, bytestream -9
+13:50:26 [NULL @ 000002a8377d6d80] reference count 1 overflow
+13:50:26 [h264 @ 000002a8377d7b40] reference count overflow
+13:50:26 [h264 @ 000002a8377d7b40] decode_slice_header error
+13:50:26 [h264 @ 000002a8377d7b40] no frame!
+13:50:26 [NULL @ 000002a8377d6d80] non-existing PPS 2 referenced
+13:50:26 [h264 @ 000002a8377d7680] non-existing PPS 2 referenced
+13:50:26 [h264 @ 000002a8377d7680] decode_slice_header error
+13:50:26 [h264 @ 000002a8377d7680] no frame!
+13:50:26 [NULL @ 000002a8377d6d80] non-existing PPS 2 referenced
+13:50:26 [h264 @ 000002a8377d4480] non-existing PPS 2 referenced
+13:50:26 [h264 @ 000002a8377d4480] decode_slice_header error
+13:50:26 [h264 @ 000002a8377d4480] no frame!
+13:50:26 [h264 @ 000002a8377d6900] deblocking_filter_idc 8 out of range
+13:50:26 [h264 @ 000002a8377d6900] decode_slice_header error
+13:50:26 [h264 @ 000002a8377d6900] reference picture missing during reorder
+13:50:26 [h264 @ 000002a8377d6900] Missing reference picture, default is 50
+13:50:26 [h264 @ 000002a8377d6900] error while decoding MB 8 2, bytestream -11
+13:50:26 [h264 @ 000002a83d2695c0] error while decoding MB 27 0, bytestream -14
+13:50:26 [h264 @ 000002a83d26ba40] cabac decode of qscale diff failed at 77 23
+13:50:26 [h264 @ 000002a83d26ba40] error while decoding MB 77 23, bytestream 3691
+13:50:26 [h264 @ 000002a8377d4480] cabac decode of qscale diff failed at 69 32
+13:50:26 [h264 @ 000002a8377d4480] error while decoding MB 69 32, bytestream 2248
+13:50:26 [h264 @ 000002a8377d7b40] error while decoding MB 50 34, bytestream -33
+13:50:26 [h264 @ 000002a83d268c80] error while decoding MB 31 6, bytestream -5
+13:50:26 [h264 @ 000002a83d26cc80] error while decoding MB 0 0, bytestream -8
+13:50:26 [h264 @ 000002a8377d4900] error while decoding MB 78 44, bytestream -19
+13:50:26 [h264 @ 000002a83d269ec0] left block unavailable for requested intra mode
+13:50:26 [h264 @ 000002a83d269ec0] error while decoding MB 0 8, bytestream 133316
+13:50:26 [h264 @ 000002a83d2695c0] top block unavailable for requested intra mode -1
+13:50:26 [h264 @ 000002a83d2695c0] error while decoding MB 29 0, bytestream 5990
+13:50:26 [h264 @ 000002a837a787c0] left block unavailable for requested intra4x4 mode -1
+13:50:26 [h264 @ 000002a837a787c0] error while decoding MB 0 9, bytestream 3601
+13:50:26 [h264 @ 000002a83d26cc80] error while decoding MB 57 42, bytestream -5
+13:50:26 [h264 @ 000002a8377d7680] left block unavailable for requested intra mode
+13:50:26 [h264 @ 000002a8377d7680] error while decoding MB 0 27, bytestream 63098
+13:50:26 [h264 @ 000002a83d269ec0] left block unavailable for requested intra4x4 mode -1
+13:50:26 [h264 @ 000002a83d269ec0] error while decoding MB 0 18, bytestream 52618
+13:50:26 [h264 @ 000002a837a787c0] error while decoding MB 46 39, bytestream -10
+13:50:26 [h264 @ 000002a8377d4900] cabac decode of qscale diff failed at 35 24
+13:52:06 [h264 @ 000002a8377d4900] error while decoding MB 35 24, bytestream 772
+13:52:06 [h264 @ 000002a8377d7b40] error while decoding MB 76 13, bytestream -7
+13:52:06 [h264 @ 000002a8377d6900] cabac decode of qscale diff failed at 29 15
+13:52:06 [h264 @ 000002a8377d6900] error while decoding MB 29 15, bytestream 5449
+13:52:06 [h264 @ 000002a8377d7680] left block unavailable for requested intra4x4 mode -1
+13:52:06 [h264 @ 000002a8377d7680] error while decoding MB 0 23, bytestream 35028
+13:52:06 [h264 @ 000002a83d2695c0] error while decoding MB 62 3, bytestream -8
+13:52:06 [h264 @ 000002a8377d4900] cabac decode of qscale diff failed at 53 14
+13:52:06 [h264 @ 000002a8377d4900] error while decoding MB 53 14, bytestream 14446
+13:52:06 [h264 @ 000002a83d26c800] cabac decode of qscale diff failed at 46 21
+13:52:06 [h264 @ 000002a83d26c800] error while decoding MB 46 21, bytestream 39572
+13:52:06 [h264 @ 000002a83d26cc80] error while decoding MB 73 44, bytestream -8
+13:52:06 [h264 @ 000002a83d26c800] cabac decode of qscale diff failed at 31 22
+13:52:06 [h264 @ 000002a83d26c800] error while decoding MB 31 22, bytestream 37242
+13:52:06 [h264 @ 000002a83d26cc80] error while decoding MB 72 44, bytestream -5
+13:52:06 [h264 @ 000002a83d26c340] left block unavailable for requested intra4x4 mode -1
+13:52:06 [h264 @ 000002a83d26c340] error while decoding MB 0 23, bytestream 2306
+13:52:06 [h264 @ 000002a83d269140] left block unavailable for requested intra4x4 mode -1
+13:52:06 [h264 @ 000002a83d269140] error while decoding MB 0 30, bytestream 604
+13:52:06 [h264 @ 000002a83d26cc80] error while decoding MB 76 4, bytestream -10
+13:52:06 [h264 @ 000002a837a787c0] cabac decode of qscale diff failed at 60 24
+13:52:06 [h264 @ 000002a837a787c0] error while decoding MB 60 24, bytestream 3711
+13:52:06 [h264 @ 000002a8377d7680] cabac decode of qscale diff failed at 76 16
+13:52:06 [h264 @ 000002a8377d7680] error while decoding MB 76 16, bytestream 97387
+13:52:06 [h264 @ 000002a83d26b5c0] error while decoding MB 56 24, bytestream -25
+13:52:06 [h264 @ 000002a8377d4480] error while decoding MB 63 36, bytestream -5
+13:52:06 [h264 @ 000002a83d268c80] error while decoding MB 60 44, bytestream -10
+13:52:06 [h264 @ 000002a8377d4900] left block unavailable for requested intra4x4 mode -1
+13:52:06 [h264 @ 000002a8377d4900] error while decoding MB 0 7, bytestream 3795
+13:52:06 [h264 @ 000002a83d26c800] error while decoding MB 75 23, bytestream -29
+13:52:06 [h264 @ 000002a8377d7b40] cabac decode of qscale diff failed at 75 44
+13:52:06 [h264 @ 000002a8377d7b40] error while decoding MB 75 44, bytestream -3
+13:52:06 [h264 @ 000002a83d26cc80] cabac decode of qscale diff failed at 47 38
+13:52:06 [h264 @ 000002a83d26cc80] error while decoding MB 47 38, bytestream 1170
+13:52:06 [h264 @ 000002a8377d7680] left block unavailable for requested intra4x4 mode -1
+13:52:06 [h264 @ 000002a8377d7680] error while decoding MB 0 16, bytestream 7827
+13:52:06 [NULL @ 000002a8377d6d80] sps_id 32 out of range
+13:52:06 [h264 @ 000002a83d2695c0] sps_id 32 out of range
+13:52:06 [h264 @ 000002a83d2695c0] sps_id 32 out of range
+13:52:06 [h264 @ 000002a83d2695c0] sps_id 32 out of range
+13:52:06 [h264 @ 000002a83d26ba40] error while decoding MB 77 27, bytestream -9
+13:52:06 [h264 @ 000002a83d268c80] cabac decode of qscale diff failed at 29 15
+13:52:06 [h264 @ 000002a83d268c80] error while decoding MB 29 15, bytestream 3919
+13:52:06 [h264 @ 000002a83d268c80] cabac decode of qscale diff failed at 0 26
+13:52:06 [h264 @ 000002a83d268c80] error while decoding MB 0 26, bytestream 4168
+13:52:06 [h264 @ 000002a8377d6900] left block unavailable for requested intra mode
+13:52:06 [h264 @ 000002a8377d6900] error while decoding MB 0 35, bytestream 196
+13:52:06 [h264 @ 000002a83d2695c0] error while decoding MB 22 12, bytestream -7
+13:52:06 [h264 @ 000002a83d26b5c0] error while decoding MB 31 0, bytestream -9
+13:52:06 [h264 @ 000002a8377d6900] cabac decode of qscale diff failed at 50 38
+13:52:06 [h264 @ 000002a8377d6900] error while decoding MB 50 38, bytestream 1219
+13:52:06 [h264 @ 000002a83d26cc80] cabac decode of qscale diff failed at 48 8
+13:52:06 [h264 @ 000002a83d26cc80] error while decoding MB 48 8, bytestream 4900
+13:52:06 [h264 @ 000002a8377d7680] error while decoding MB 32 1, bytestream -11
+13:52:06 [h264 @ 000002a8377d6900] left block unavailable for requested intra mode
+13:52:06 [h264 @ 000002a8377d6900] error while decoding MB 0 18, bytestream 46669
+13:52:06 [h264 @ 000002a83d26cc80] left block unavailable for requested intra4x4 mode -1
+13:52:06 [h264 @ 000002a83d26cc80] error while decoding MB 0 20, bytestream 3003
+14:23:05 [h264 @ 
+14:23:05  ...

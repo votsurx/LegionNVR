@@ -34,4 +34,4 @@ Thumbs.db
 Desktop.ini
 
 # Логи
-*.log
+*.log__pycache__/

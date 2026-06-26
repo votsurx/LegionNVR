@@ -1,0 +1,250 @@
+08:00:28 Traceback (most recent call last):
+08:00:28   File "C:\legionNVR\engine\streamer.py", line 225, in <module>
+08:00:28     main()
+08:00:28   File "C:\legionNVR\engine\streamer.py", line 189, in main
+08:00:28     print("\U0001f6e1\ufe0f Legion NVR - Stream Engine")
+08:00:28   File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:00:28     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:00:28            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:00:28 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:04:24 Traceback (most recent call last):
+08:04:24   File "C:\legionNVR\engine\streamer.py", line 225, in <module>
+08:04:24     main()
+08:04:24   File "C:\legionNVR\engine\streamer.py", line 189, in main
+08:04:24     print("\U0001f6e1\ufe0f Legion NVR - Stream Engine")
+08:04:24   File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:04:24     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:04:24            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:04:24 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:08:57 C:\legionNVR\engine\streamer.py:196: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+08:08:57   client = mqtt.Client()
+08:12:07 🛡️ Legion NVR - Stream Engine
+08:12:07 📡 MQTT: 127.0.0.1:1883
+08:12:07 C:\legionNVR\engine\streamer.py:196: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+08:12:07   client = mqtt.Client()
+08:12:07 📷 Камер: 1
+08:12:07 🎥 HLS стрим 'Home' запущен (ID=4)
+08:12:07 🎥 HLS-стримов: 1
+08:12:07 👂 Подписки: spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+08:12:07 ⏳ Работаю... (Ctrl+C для выхода)
+08:13:16 ⏹️ Завершение...
+08:15:48 🛡️ Legion NVR - Stream Engine
+08:15:48 📡 MQTT: 127.0.0.1:1883
+08:15:48 C:\legionNVR\engine\streamer.py:196: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+08:15:48   client = mqtt.Client()
+08:15:48 📷 Камер: 1
+08:15:48 🎥 HLS стрим 'Home' запущен (ID=4)
+08:15:48 🎥 HLS-стримов: 1
+08:15:48 👂 Подписки: spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+08:15:48 ⏳ Работаю... (Ctrl+C для выхода)
+08:15:58 ⏹️ Завершение...
+08:20:12 Traceback (most recent call last):
+08:20:12   File "C:\legionNVR\engine\streamer.py", line 229, in <module>
+08:20:12     main()
+08:20:12   File "C:\legionNVR\engine\streamer.py", line 193, in main
+08:20:12       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:20:12     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:20:12            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:20:12 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:22:30 Traceback (most recent call last):
+08:22:30   File "C:\legionNVR\engine\streamer.py", line 229, in <module>
+08:22:30     main()
+08:22:30   File "C:\legionNVR\engine\streamer.py", line 193, in main
+08:22:30       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:22:30     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:22:30            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:22:30 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:29:28 Traceback (most recent call last):
+08:29:28   File "C:\legionNVR\engine\streamer.py", line 229, in <module>
+08:29:28     main()
+08:29:28   File "C:\legionNVR\engine\streamer.py", line 193, in main
+08:29:28       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:29:28     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:29:28            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:29:28 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:30:22 Traceback (most recent call last):
+08:30:22   File "C:\legionNVR\engine\streamer.py", line 229, in <module>
+08:30:22     main()
+08:30:22   File "C:\legionNVR\engine\streamer.py", line 193, in main
+08:30:22       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:30:22     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:30:22            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:30:22 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:30:43 Traceback (most recent call last):
+08:30:43   File "C:\legionNVR\engine\streamer.py", line 229, in <module>
+08:30:43     main()
+08:30:43   File "C:\legionNVR\engine\streamer.py", line 193, in main
+08:30:43       File "C:\Users\NIK\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1251.py", line 19, in encode
+08:30:43     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+08:30:43            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+08:30:43 UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+08:31:44  Legion NVR - Stream Engine
+08:31:44  MQTT: 127.0.0.1:1883
+08:31:44 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+08:31:44   client = mqtt.Client()
+08:31:44  : 1
+08:31:44  HLS  'Home'  (ID=4)
+08:31:44  HLS-: 1
+08:31:44  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+08:31:44  ... (Ctrl+C  )
+08:32:03  ...
+08:32:43  Legion NVR - Stream Engine
+08:32:43  MQTT: 127.0.0.1:1883
+08:32:43 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+08:32:43   client = mqtt.Client()
+08:32:43  : 1
+08:32:43  HLS  'Home'  (ID=4)
+08:32:43  HLS-: 1
+08:32:43  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+08:32:43  ... (Ctrl+C  )
+08:33:12  [CMD]     5
+08:33:12  HLS  'JOB'  (ID=5)
+08:33:12    'JOB' 
+08:33:16  [CMD]     4
+08:33:16   'Home' 
+08:33:17  [CMD]     4
+08:33:19  [CMD]     5
+08:33:19  HLS  'JOB'  (ID=5)
+08:33:19    'JOB' 
+11:26:58  ...
+11:27:05  Legion NVR - Stream Engine
+11:27:05  MQTT: 127.0.0.1:1883
+11:27:05 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:27:05   client = mqtt.Client()
+11:27:05  : 1
+11:27:05  HLS  'JOB'  (ID=5)
+11:27:05  HLS-: 1
+11:27:05  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:27:05  ... (Ctrl+C  )
+11:39:58  ...
+11:40:16  Legion NVR - Stream Engine
+11:40:16  MQTT: 127.0.0.1:1883
+11:40:16 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:40:16   client = mqtt.Client()
+11:40:16  : 1
+11:40:16  HLS  'JOB'  (ID=5)
+11:40:16  HLS-: 1
+11:40:16  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:40:16  ... (Ctrl+C  )
+11:40:16  ...
+11:40:55  Legion NVR - Stream Engine
+11:40:55  MQTT: 127.0.0.1:1883
+11:40:55 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:40:55   client = mqtt.Client()
+11:40:55  : 1
+11:40:55  HLS  'JOB'  (ID=5)
+11:40:55  HLS-: 1
+11:40:55  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:40:55  ... (Ctrl+C  )
+11:41:33  ...
+11:42:22  Legion NVR - Stream Engine
+11:42:22  MQTT: 127.0.0.1:1883
+11:42:22 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:42:22   client = mqtt.Client()
+11:42:22  : 1
+11:42:22  HLS  'JOB'  (ID=5)
+11:42:22  HLS-: 1
+11:42:22  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:42:22  ... (Ctrl+C  )
+11:44:57  ...
+11:45:10  Legion NVR - Stream Engine
+11:45:10  MQTT: 127.0.0.1:1883
+11:45:10 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:45:10   client = mqtt.Client()
+11:45:10  : 1
+11:45:10  HLS  'JOB'  (ID=5)
+11:45:10  HLS-: 1
+11:45:10  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:45:10  ... (Ctrl+C  )
+11:46:29  ...
+11:46:34  Legion NVR - Stream Engine
+11:46:34  MQTT: 127.0.0.1:1883
+11:46:34 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:46:34   client = mqtt.Client()
+11:46:34  : 1
+11:46:34  HLS  'JOB'  (ID=5)
+11:46:34  HLS-: 1
+11:46:34  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:46:34  ... (Ctrl+C  )
+11:47:28  ...
+11:47:35  Legion NVR - Stream Engine
+11:47:35  MQTT: 127.0.0.1:1883
+11:47:35 C:\legionNVR\engine\streamer.py:200: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+11:47:35   client = mqtt.Client()
+11:47:35  : 1
+11:47:35  HLS  'JOB'  (ID=5)
+11:47:35  HLS-: 1
+11:47:35  : spartan/+/motion, spartan/+/cmd, spartan/streams/reload
+11:47:35  ... (Ctrl+C  )
+12:53:17  [CMD]     5
+12:53:17  HLS  'JOB'  (ID=5)
+12:53:17    'JOB' 
+12:53:21  [CMD]     5
+12:53:21  HLS  'JOB'  (ID=5)
+12:53:21    'JOB' 
+12:53:24  [CMD]     5
+12:53:24  HLS  'JOB'  (ID=5)
+12:53:24    'JOB' 
+12:53:29  [CMD]     5
+12:53:29  HLS  'JOB'  (ID=5)
+12:53:29    'JOB' 
+12:53:48  [CMD]     5
+12:53:48  HLS  'JOB'  (ID=5)
+12:53:48    'JOB' 
+12:53:59  [CMD]     4
+12:53:59  HLS  'Home'  (ID=4)
+12:53:59    'Home' 
+13:03:38  [CMD]     5
+13:03:38  HLS  'JOB'  (ID=5)
+13:03:38    'JOB' 
+13:14:33  [CMD]     5
+13:14:33  HLS  'JOB'  (ID=5)
+13:14:33    'JOB' 
+13:14:36  [CMD]     5
+13:14:36  HLS  'JOB'  (ID=5)
+13:14:36    'JOB' 
+13:14:43  [CMD]     5
+13:14:43  HLS  'JOB'  (ID=5)
+13:14:43    'JOB' 
+13:14:49  [CMD]     5
+13:14:49  HLS  'JOB'  (ID=5)
+13:14:49    'JOB' 
+13:14:53  [CMD]     5
+13:14:53  HLS  'JOB'  (ID=5)
+13:14:53    'JOB' 
+13:14:55  [CMD]     5
+13:14:55  HLS  'JOB'  (ID=5)
+13:14:55    'JOB' 
+13:27:10  [CMD]     5
+13:27:10  HLS  'JOB'  (ID=5)
+13:27:10    'JOB' 
+13:27:13  [CMD]     5
+13:27:13  HLS  'JOB'  (ID=5)
+13:27:13    'JOB' 
+13:27:16  [CMD]     5
+13:27:16  HLS  'JOB'  (ID=5)
+13:27:16    'JOB' 
+13:27:19  [CMD]     5
+13:27:19  HLS  'JOB'  (ID=5)
+13:27:19    'JOB' 
+13:31:01  [CMD]     5
+13:31:01  HLS  'JOB'  (ID=5)
+13:31:01    'JOB' 
+13:40:51  [CMD]     5
+13:40:51  HLS  'JOB'  (ID=5)
+13:40:51    'JOB' 
+13:40:57  [CMD]     5
+13:40:57  HLS  'JOB'  (ID=5)
+13:40:57    'JOB' 
+13:41:00  [CMD]     5
+13:41:00  HLS  'JOB'  (ID=5)
+13:41:00    'JOB' 
+13:41:12  [CMD]     5
+13:41:12  HLS  'JOB'  (ID=5)
+13:41:12    'JOB' 
+13:41:31  [CMD]     4
+13:41:31  HLS  'Home'  (ID=4)
+13:41:31    'Home' 
+13:41:39  [CMD]     4
+13:41:39   'Home' 
+14:23:05  ...

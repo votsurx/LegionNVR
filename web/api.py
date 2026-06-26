@@ -83,10 +83,8 @@ def test_camera(camera_id):
 @api_bp.route('/api/settings/mqtt', methods=['GET'])
 @login_required
 def get_mqtt():
-    """ MQTT-"""
-    conn = get_db()
-    rows = conn.execute("SELECT key, value FROM settings WHERE key LIKE 'mqtt_%'").fetchall()
-    conn.close()
+    with get_db() as conn:
+        rows = conn.execute("SELECT key, value FROM settings WHERE key LIKE 'mqtt_%'").fetchall()
     
     config = {"broker": "127.0.0.1", "port": 1883, "username": "", "password": ""}
     for row in rows:
@@ -101,21 +99,16 @@ def get_mqtt():
 @api_bp.route('/api/settings/mqtt', methods=['POST'])
 @login_required
 def save_mqtt():
-    """ MQTT-"""
     data = request.get_json()
-    conn = get_db()
-    
-    for key in ['broker', 'port', 'username', 'password']:
-        if key in data:
-            conn.execute(
-                "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-                (f"mqtt_{key}", str(data[key]))
-            )
-    
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'message': ' MQTT '})
-
+    with get_db() as conn:
+        for key in ['broker', 'port', 'username', 'password']:
+            if key in data:
+                conn.execute(
+                    "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                    (f"mqtt_{key}", str(data[key]))
+                )
+        conn.commit()
+    return jsonify({'success': True, 'message': 'MQTT настройки сохранены'})
 # ============================================================
 # API: 
 # ============================================================
@@ -268,69 +261,61 @@ def get_cameras_list():
 @api_bp.route('/api/locations', methods=['GET'])
 @login_required
 def get_locations():
-    conn = get_db()
-    rows = conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()
-    conn.close()
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()
     return jsonify({'success': True, 'locations': [dict(r) for r in rows]})
 
 @api_bp.route('/api/locations', methods=['POST'])
 @login_required
 def create_location():
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': '  '}), 403
-    
+        return jsonify({'success': False, 'error': 'Только для админов'}), 403
+
     data = request.get_json()
     name = data.get('name', '').strip()
     icon = data.get('icon', '').strip()
-    
+
     if not name:
-        return jsonify({'success': False, 'error': ' '}), 400
-    
-    conn = get_db()
+        return jsonify({'success': False, 'error': 'Название обязательно'}), 400
+
     try:
-        conn.execute("INSERT INTO locations (name, icon) VALUES (?, ?)", (name, icon))
-        conn.commit()
-        return jsonify({'success': True, 'id': conn.execute("SELECT last_insert_rowid()").fetchone()[0]})
+        with get_db() as conn:
+            conn.execute("INSERT INTO locations (name, icon) VALUES (?, ?)", (name, icon))
+            conn.commit()
+            location_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        return jsonify({'success': True, 'id': location_id})
     except:
-        return jsonify({'success': False, 'error': '  '}), 400
-    finally:
-        conn.close()
+        return jsonify({'success': False, 'error': 'Такая локация уже есть'}), 400
 
 @api_bp.route('/api/locations/<int:loc_id>', methods=['PUT'])
 @login_required
 def update_location(loc_id):
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': '  '}), 403
-    
+        return jsonify({'success': False, 'error': 'Только для админов'}), 403
+
     data = request.get_json()
-    conn = get_db()
-    
-    if 'name' in data:
-        conn.execute("UPDATE locations SET name=? WHERE id=?", (data['name'].strip(), loc_id))
-    if 'icon' in data:
-        conn.execute("UPDATE locations SET icon=? WHERE id=?", (data['icon'].strip(), loc_id))
-    if 'sort_order' in data:
-        conn.execute("UPDATE locations SET sort_order=? WHERE id=?", (data['sort_order'], loc_id))
-    
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        if 'name' in data:
+            conn.execute("UPDATE locations SET name=? WHERE id=?", (data['name'].strip(), loc_id))
+        if 'icon' in data:
+            conn.execute("UPDATE locations SET icon=? WHERE id=?", (data['icon'].strip(), loc_id))
+        if 'sort_order' in data:
+            conn.execute("UPDATE locations SET sort_order=? WHERE id=?", (data['sort_order'], loc_id))
+        conn.commit()
     return jsonify({'success': True})
 
 @api_bp.route('/api/locations/<int:loc_id>', methods=['DELETE'])
 @login_required
 def delete_location(loc_id):
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': '  '}), 403
-    
-    conn = get_db()
-    #    NULL ()
-    conn.execute("UPDATE cameras SET location_id=NULL WHERE location_id=?", (loc_id,))
-    conn.execute("DELETE FROM locations WHERE id=?", (loc_id,))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'message': ' ,    '})
+        return jsonify({'success': False, 'error': 'Только для админов'}), 403
 
-#  
+    with get_db() as conn:
+        conn.execute("UPDATE cameras SET location_id=NULL WHERE location_id=?", (loc_id,))
+        conn.execute("DELETE FROM locations WHERE id=?", (loc_id,))
+        conn.commit()
+    return jsonify({'success': True, 'message': 'Локация удалена'})
+
 @api_bp.route('/api/cameras/<int:camera_id>/zones', methods=['GET'])
 @login_required
 def get_zones(camera_id):
@@ -347,31 +332,25 @@ def save_zone(camera_id):
 @api_bp.route('/api/settings/recordings_path', methods=['GET', 'POST'])
 @login_required
 def recordings_path():
-    """      """
-    from models.database import get_db
-    
     if request.method == 'GET':
-        conn = get_db()
-        row = conn.execute("SELECT value FROM settings WHERE key='recordings_path'").fetchone()
-        conn.close()
+        with get_db() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key='recordings_path'").fetchone()
         path = row[0] if row else "recordings"
         return jsonify({'success': True, 'path': path})
-    
-    # POST   
+
+    # POST
     data = request.get_json()
     new_path = data.get('path', '').strip()
     if not new_path:
-        return jsonify({'success': False, 'error': '    '}), 400
-    
-    #    
+        return jsonify({'success': False, 'error': 'Путь обязателен'}), 400
+
     os.makedirs(new_path, exist_ok=True)
-    
-    conn = get_db()
-    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('recordings_path', ?)", (new_path,))
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'success': True, 'path': new_path, 'message': ' .  Stream Engine.'})
+
+    with get_db() as conn:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('recordings_path', ?)", (new_path,))
+        conn.commit()
+
+    return jsonify({'success': True, 'path': new_path, 'message': 'Путь сохранен'})
 
 @api_bp.route('/api/cameras/<int:camera_id>/apply', methods=['POST'])
 @login_required
@@ -423,30 +402,28 @@ def delete_zone(camera_id, zone_id):
 @api_bp.route('/api/recordings', methods=['GET'])
 @login_required
 def get_recordings():
-    """   """
     camera_id = request.args.get('camera_id')
     date = request.args.get('date')
-    
-    conn = get_db()
+
     query = """
-        SELECT r.*, c.name as camera_name 
-        FROM recordings r 
-        LEFT JOIN cameras c ON r.camera_id = c.id 
+        SELECT r.*, c.name as camera_name
+        FROM recordings r
+        LEFT JOIN cameras c ON r.camera_id = c.id
         WHERE 1=1
     """
     params = []
-    
+
     if camera_id:
         query += " AND r.camera_id = ?"
         params.append(camera_id)
     if date:
         query += " AND date(r.start_time) = ?"
         params.append(date)
-    
+
     query += " ORDER BY r.start_time DESC LIMIT 100"
-    
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
+
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
     
     recordings = [dict(row) for row in rows]
     return jsonify({'success': True, 'recordings': recordings})

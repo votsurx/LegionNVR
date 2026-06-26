@@ -98,14 +98,13 @@ class MotionDetector:
         
         #   
         try:
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
-                (self.camera["id"], f"motion_{event_type}", json.dumps({"percent": round(percent, 2)}))
-            )
-            conn.commit()
-            conn.close()
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
+                    (self.camera["id"], f"motion_{event_type}", json.dumps({"percent": round(percent, 2)}))
+                )
+                conn.commit()
         except:
             pass
 

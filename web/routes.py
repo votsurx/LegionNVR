@@ -16,23 +16,19 @@ def index():
 @login_required
 def dashboard():
     cameras = Camera.get_all()
-    recent_events = []
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT e.*, c.name as camera_name 
-        FROM events e 
-        LEFT JOIN cameras c ON e.camera_id = c.id 
-        ORDER BY e.timestamp DESC 
-        LIMIT 20
-    """)
-    recent_events = [dict(row) for row in cursor.fetchall()]
-    
-    # 
-    locations = [dict(r) for r in conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()]
-    
-    conn.close()
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT e.*, c.name as camera_name
+            FROM events e
+            LEFT JOIN cameras c ON e.camera_id = c.id
+            ORDER BY e.timestamp DESC
+            LIMIT 20
+        """)
+        recent_events = [dict(row) for row in cursor.fetchall()]
+
+        locations = [dict(r) for r in conn.execute("SELECT * FROM locations ORDER BY sort_order, id").fetchall()]
     
     today_recordings = Recording.count_today()
     
