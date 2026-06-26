@@ -251,7 +251,6 @@ def start_motion_recording(camera):
     print(f"⏱️ Сбор сегментов через {record_post_sec} сек...")
 
 def _collect_motion_segments(cam_id):
-    """Собирает HLS-сегменты за период тревоги и склеивает в ролик"""
     if cam_id not in motion_recordings:
         return
 
@@ -261,18 +260,36 @@ def _collect_motion_segments(cam_id):
     post_sec = data['post_sec']
     camera = data['camera']
 
-    # ✅ ПОЛУЧАЕМ ВСЕ СЕГМЕНТЫ
     all_segments = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
+
+    print(f"📼 Всего сегментов: {len(all_segments)}")
+    print(f"📼 Искомый сегмент: {os.path.basename(first_segment)}")
 
     if not all_segments:
         print(f"❌ Нет сегментов для склейки")
         return
 
-    # ✅ НАХОДИМ ИНДЕКС ПЕРВОГО СЕГМЕНТА
+    # Находим индекс первого сегмента
     try:
         first_idx = all_segments.index(first_segment)
     except ValueError:
+        print(f"⚠️ Сегмент не найден, берём последние")
         first_idx = max(0, len(all_segments) - pre_sec - post_sec)
+
+    start_idx = max(0, first_idx - pre_sec)
+    end_idx = min(len(all_segments), first_idx + post_sec)
+
+    selected_segments = all_segments[start_idx:end_idx]
+
+    print(f"🔧 Выбрано сегментов: {len(selected_segments)} (с {start_idx} по {end_idx})")
+
+    if len(selected_segments) < 2:
+        print(f"❌ Слишком мало сегментов: {len(selected_segments)}")
+        # Пробуем сохранить хоть что-то
+        if len(all_segments) >= 2:
+            selected_segments = all_segments[-10:]  # Последние 10 сек
+        else:
+            return
 
     # ✅ ОТБИРАЕМ НУЖНЫЕ СЕГМЕНТЫ
     start_idx = max(0, first_idx - pre_sec)

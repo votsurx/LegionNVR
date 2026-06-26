@@ -54,7 +54,9 @@ class Camera:
             'motion_threshold', 'motion_cooldown', 'motion_fps',
             'record_mode', 'record_pre_sec', 'record_post_sec', 'record_retention_days',
             'stream_quality', 'stream_hls_time',
-            'location_id'
+            'location_id',
+            # 🤖 AI
+            'ai_enabled', 'ai_classes', 'ai_confidence', 'ai_frame_skip'
         ]
         updates = {k: data[k] for k in allowed if k in data}
         if not updates:

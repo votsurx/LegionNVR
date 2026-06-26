@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <a href="/cameras" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад к камерам</a>
-<h1 style="margin:12px 0;">✏️ Редактирование: {{ camera.name }}</h1>
+<h1>✏️ Редактирование: {{ camera.name }}</h1>
 
 <div style="max-width:700px;">
 
     <!-- Вкладки -->
-    <div style="display:flex; gap:8px; margin-bottom:16px;">
+    <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
         <button onclick="showTab('basic')" class="tab-btn active" id="tab-basic">📷 Основное</button>
         <button onclick="showTab('stream')" class="tab-btn" id="tab-stream">🎥 Стриминг</button>
         <button onclick="showTab('detector')" class="tab-btn" id="tab-detector">🔍 Детектор</button>
         <button onclick="showTab('record')" class="tab-btn" id="tab-record">📼 Запись</button>
+        <button onclick="showTab('ai')" class="tab-btn" id="tab-ai">🤖 AI</button>
     </div>
 
     <form id="cameraForm" style="background:#16213e; padding:24px; border-radius:8px;">
-        
+
         <!-- Основное -->
         <div id="tab-basic-content" class="tab-content">
             <label>Название</label>
@@ -24,17 +25,17 @@
             <select id="location_id" class="input-full">
                 <option value="">🏠 Все</option>
             </select>
-            
+
             <label>RTSP основной поток</label>
             <div style="display:flex; gap:8px;">
                 <input type="text" id="rtsp_main" value="{{ camera.rtsp_main }}" class="input-full">
                 <button type="button" onclick="testRtsp()" style="background:#0d47a1; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; white-space:nowrap;">🔍 Тест</button>
             </div>
             <span id="testResult" style="font-size:13px;"></span>
-            
+
             <label>RTSP сабстрим</label>
             <input type="text" id="rtsp_sub" value="{{ camera.rtsp_sub or '' }}" class="input-full">
-            
+
             <label><input type="checkbox" id="enabled" {% if camera.enabled %}checked{% endif %}> Камера включена</label>
         </div>
 
@@ -57,14 +58,14 @@
             <label><input type="checkbox" id="motion_enabled" {% if camera.motion_enabled %}checked{% endif %}> Детектор включен</label>
             <br><br>
             <label>Порог чувствительности: <span id="thresholdValue">{{ camera.motion_threshold or 2.0 }}</span>%</label>
-            <input type="range" id="motion_threshold" min="0.5" max="20" step="0.1" value="{{ camera.motion_threshold or 2.0 }}" oninput="document.getElementById('thresholdValue').textContent=this.value" class="input-full">
-            
+            <input type="range" id="motion_threshold" min="0.5" max="50" step="0.1" value="{{ camera.motion_threshold or 2.0 }}" oninput="document.getElementById('thresholdValue').textContent=this.value" class="input-full">
+
             <label>Пауза между тревогами (сек):</label>
             <input type="number" id="motion_cooldown" value="{{ camera.motion_cooldown or 5 }}" min="1" max="60" class="input-full">
-            
+
             <label>FPS для детектора:</label>
             <input type="number" id="motion_fps" value="{{ camera.motion_fps or 5 }}" min="1" max="15" class="input-full">
-            
+
             <a href="/cameras/{{ camera.id }}/zones" style="color:#e94560;">🎯 Настроить зоны детекции →</a>
         </div>
 
@@ -85,6 +86,63 @@
             <input type="number" id="record_retention_days" value="{{ camera.record_retention_days or 7 }}" min="1" max="90" class="input-full">
         </div>
 
+        <!-- 🤖 AI -->
+        <div id="tab-ai-content" class="tab-content" style="display:none;">
+            <div style="background:#1a1a2e; padding:16px; border-radius:8px; margin-bottom:16px;">
+                <h3 style="margin:0 0 12px 0;">🤖 Искусственный интеллект (YOLOv8)</h3>
+                <p style="color:#aaa; font-size:13px; margin-bottom:16px;">
+                    AI анализирует движение и отфильтровывает ложные тревоги.
+                    Работает в связке с MOG2: сначала детектится движение, потом AI проверяет объект.
+                </p>
+
+                <label><input type="checkbox" id="ai_enabled" {% if camera.ai_enabled %}checked{% endif %}>
+                    <span style="font-size:16px;">🤖 AI-фильтрация включена</span>
+                </label>
+            </div>
+
+            <div id="aiSettings" style="display: {% if camera.ai_enabled %}block{% else %}none{% endif %};">
+                <label>🎯 Что детектить:</label>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="0" onchange="updateAiClasses()"> 👤 Люди
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="2" onchange="updateAiClasses()"> 🚗 Машины
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="3" onchange="updateAiClasses()"> 🏍️ Мотоциклы
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="5" onchange="updateAiClasses()"> 🚌 Автобусы
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="7" onchange="updateAiClasses()"> 🚛 Грузовики
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="16" onchange="updateAiClasses()"> 🐕 Собаки
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; cursor:pointer; background:#1a1a2e; padding:8px 12px; border-radius:6px;">
+                        <input type="checkbox" class="ai-class" value="17" onchange="updateAiClasses()"> 🐈 Кошки
+                    </label>
+                </div>
+                <input type="hidden" id="ai_classes" value="{{ camera.ai_classes or '[0]' }}">
+
+                <label>🎯 Уверенность AI (0.1 - 1.0): <span id="aiConfValue">{{ camera.ai_confidence or 0.4 }}</span></label>
+                <input type="range" id="ai_confidence" min="0.1" max="1.0" step="0.05" value="{{ camera.ai_confidence or 0.4 }}"
+                       oninput="document.getElementById('aiConfValue').textContent=this.value" class="input-full">
+                <p style="color:#888; font-size:12px; margin-top:4px;">
+                    0.3 = ловит почти всё (много тревог) | 0.7 = только уверенные объекты (мало тревог)
+                </p>
+
+                <label>⏭️ Пропуск кадров (1 - 20): <span id="aiSkipValue">{{ camera.ai_frame_skip or 5 }}</span></label>
+                <input type="range" id="ai_frame_skip" min="1" max="20" step="1" value="{{ camera.ai_frame_skip or 5 }}"
+                       oninput="document.getElementById('aiSkipValue').textContent=this.value" class="input-full">
+                <p style="color:#888; font-size:12px; margin-top:4px;">
+                    1 = каждый кадр (макс нагрузка) | 10 = каждый 10-й (минимальная нагрузка)
+                </p>
+            </div>
+        </div>
+
         <br>
         <button type="button" onclick="saveCamera({{ camera.id }})" style="background:#e94560; color:#fff; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-size:16px;">💾 Сохранить</button>
         <a href="/cameras" style="color:#aaa; margin-left:12px;">Отмена</a>
@@ -93,98 +151,144 @@
 </div>
 
 <style>
-.input-full { width:100%; padding:8px; margin:4px 0 16px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px; }
-.tab-btn { background:#333; color:#aaa; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; }
-.tab-btn.active { background:#e94560; color:#fff; }
+    .input-full { width:100%; padding:8px; margin:4px 0 16px; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px; }
+    .tab-btn { background:#333; color:#aaa; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; }
+    .tab-btn.active { background:#e94560; color:#fff; }
 </style>
 
 <script>
-function showTab(name) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + name + '-content').style.display = 'block';
-    document.getElementById('tab-' + name).classList.add('active');
-}
+    function showTab(name) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + name + '-content').style.display = 'block';
+        document.getElementById('tab-' + name).classList.add('active');
 
-function testRtsp() {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '⏳';
-    document.getElementById('testResult').textContent = '';
-    
-    fetch('/api/cameras/{{ camera.id }}/test', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.textContent = '🔍 Тест';
-            document.getElementById('testResult').textContent = data.success ? '✅ OK' : '❌ ' + data.error;
-            document.getElementById('testResult').style.color = data.success ? '#4caf50' : '#ff6b81';
-        });
-}
-
-function saveCamera(id) {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '⏳ Сохранение...';
-    document.getElementById('saveStatus').textContent = '';
-    
-    var data = {
-        name: document.getElementById('name').value,
-        rtsp_main: document.getElementById('rtsp_main').value,
-        rtsp_sub: document.getElementById('rtsp_sub').value,
-        enabled: document.getElementById('enabled').checked ? 1 : 0,
-        stream_enabled: document.getElementById('stream_enabled').checked ? 1 : 0,
-        stream_quality: document.getElementById('stream_quality').value,
-        stream_hls_time: parseInt(document.getElementById('stream_hls_time').value),
-        motion_enabled: document.getElementById('motion_enabled').checked ? 1 : 0,
-        motion_threshold: parseFloat(document.getElementById('motion_threshold').value),
-        motion_cooldown: parseInt(document.getElementById('motion_cooldown').value),
-        motion_fps: parseInt(document.getElementById('motion_fps').value),
-        record_enabled: document.getElementById('record_enabled').checked ? 1 : 0,
-        record_mode: document.getElementById('record_mode').value,
-        record_pre_sec: parseInt(document.getElementById('record_pre_sec').value),
-        record_post_sec: parseInt(document.getElementById('record_post_sec').value),
-        record_retention_days: parseInt(document.getElementById('record_retention_days').value),
-        location_id: document.getElementById('location_id').value || null
-    };
-    
-    fetch('/api/cameras/' + id, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    }).then(r => r.json()).then(data => {
-        btn.disabled = false;
-        btn.textContent = '💾 Сохранить';
-        document.getElementById('saveStatus').textContent = data.success ? '✅ Сохранено!' : '❌ Ошибка';
-        document.getElementById('saveStatus').style.color = data.success ? '#4caf50' : '#ff6b81';
-        if (data.success) {
-            setTimeout(function() { document.getElementById('saveStatus').textContent = ''; }, 3000);
+        // Показываем/скрываем настройки AI
+        if (name === 'ai') {
+            updateAiSettings();
         }
-    }).catch(function() {
-        btn.disabled = false;
-        btn.textContent = '💾 Сохранить';
-        document.getElementById('saveStatus').textContent = '❌ Ошибка сети';
-    });
-}
+    }
 
-// Показываем первую вкладку
-showTab('basic');
+    function updateAiSettings() {
+        var aiEnabled = document.getElementById('ai_enabled').checked;
+        document.getElementById('aiSettings').style.display = aiEnabled ? 'block' : 'none';
+    }
+
+    // Обработчик чекбокса AI
+    document.getElementById('ai_enabled').addEventListener('change', updateAiSettings);
+
+    function updateAiClasses() {
+        var classes = [];
+        document.querySelectorAll('.ai-class:checked').forEach(cb => {
+            classes.push(parseInt(cb.value));
+        });
+        document.getElementById('ai_classes').value = JSON.stringify(classes);
+    }
+
+    // Инициализация AI классов при загрузке
+    function initAiClasses() {
+        var savedClasses = document.getElementById('ai_classes').value;
+        try {
+            var classes = JSON.parse(savedClasses);
+            document.querySelectorAll('.ai-class').forEach(cb => {
+                cb.checked = classes.includes(parseInt(cb.value));
+            });
+            updateAiClasses();
+        } catch(e) {
+            // По умолчанию — только люди
+            document.querySelectorAll('.ai-class').forEach(cb => {
+                cb.checked = cb.value === '0';
+            });
+            updateAiClasses();
+        }
+    }
+
+    function testRtsp() {
+        var btn = event.target;
+        btn.disabled = true;
+        btn.textContent = '⏳';
+        document.getElementById('testResult').textContent = '';
+
+        fetch('/api/cameras/{{ camera.id }}/test', { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = '🔍 Тест';
+                document.getElementById('testResult').textContent = data.success ? '✅ OK' : '❌ ' + data.error;
+                document.getElementById('testResult').style.color = data.success ? '#4caf50' : '#ff6b81';
+            });
+    }
+
+    function saveCamera(id) {
+        var btn = event.target;
+        btn.disabled = true;
+        btn.textContent = '⏳ Сохранение...';
+        document.getElementById('saveStatus').textContent = '';
+
+        var data = {
+            name: document.getElementById('name').value,
+            rtsp_main: document.getElementById('rtsp_main').value,
+            rtsp_sub: document.getElementById('rtsp_sub').value,
+            enabled: document.getElementById('enabled').checked ? 1 : 0,
+            stream_enabled: document.getElementById('stream_enabled').checked ? 1 : 0,
+            stream_quality: document.getElementById('stream_quality').value,
+            stream_hls_time: parseInt(document.getElementById('stream_hls_time').value),
+            motion_enabled: document.getElementById('motion_enabled').checked ? 1 : 0,
+            motion_threshold: parseFloat(document.getElementById('motion_threshold').value),
+            motion_cooldown: parseInt(document.getElementById('motion_cooldown').value),
+            motion_fps: parseInt(document.getElementById('motion_fps').value),
+            record_enabled: document.getElementById('record_enabled').checked ? 1 : 0,
+            record_mode: document.getElementById('record_mode').value,
+            record_pre_sec: parseInt(document.getElementById('record_pre_sec').value),
+            record_post_sec: parseInt(document.getElementById('record_post_sec').value),
+            record_retention_days: parseInt(document.getElementById('record_retention_days').value),
+            location_id: document.getElementById('location_id').value || null,
+            // 🤖 AI настройки
+            ai_enabled: document.getElementById('ai_enabled').checked ? 1 : 0,
+            ai_classes: document.getElementById('ai_classes').value,
+            ai_confidence: parseFloat(document.getElementById('ai_confidence').value),
+            ai_frame_skip: parseInt(document.getElementById('ai_frame_skip').value)
+        };
+
+        fetch('/api/cameras/' + id, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        }).then(r => r.json()).then(data => {
+            btn.disabled = false;
+            btn.textContent = '💾 Сохранить';
+            document.getElementById('saveStatus').textContent = data.success ? '✅ Сохранено!' : '❌ Ошибка';
+            document.getElementById('saveStatus').style.color = data.success ? '#4caf50' : '#ff6b81';
+            if (data.success) {
+                setTimeout(function() { document.getElementById('saveStatus').textContent = ''; }, 3000);
+            }
+        }).catch(function() {
+            btn.disabled = false;
+            btn.textContent = '💾 Сохранить';
+            document.getElementById('saveStatus').textContent = '❌ Ошибка сети';
+        });
+    }
+
+    // Показываем первую вкладку
+    showTab('basic');
+    // Инициализируем AI классы
+    initAiClasses();
 </script>
 <script>
-// Загружаем локации для выпадающего списка
-fetch('/api/locations')
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            var sel = document.getElementById('location_id');
-            d.locations.forEach(function(loc) {
-                var opt = document.createElement('option');
-                opt.value = loc.id;
-                opt.textContent = loc.icon + ' ' + loc.name;
-                if (loc.id == {{ camera.location_id or 'null' }}) opt.selected = true;
-                sel.appendChild(opt);
-            });
-        }
-    });
+    // Загружаем локации для выпадающего списка
+    fetch('/api/locations')
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                var sel = document.getElementById('location_id');
+                d.locations.forEach(function(loc) {
+                    var opt = document.createElement('option');
+                    opt.value = loc.id;
+                    opt.textContent = loc.icon + ' ' + loc.name;
+                    if (loc.id == {{ camera.location_id or 'null' }}) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            }
+        });
 </script>
 {% endblock %}

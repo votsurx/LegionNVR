@@ -178,13 +178,13 @@ class MotionDetector:
         self.enabled = camera.get("enabled", True)
 
         self.threshold = camera.get("motion_threshold", 2.0)
-        self.cooldown = camera.get("cooldown_sec", 5)
+        self.cooldown = camera.get("motion_cooldown", 5)
         self.log_min_threshold = 5.0
 
         self.zones = []
         self._load_zones()
 
-        self.motion_end_delay = 2.0
+        self.motion_end_delay = camera.get("motion_end_delay", 2.0)
         self.motion_end_time = None
         self.motion_end_timer = None
 
@@ -193,6 +193,37 @@ class MotionDetector:
         self._reconnect_attempts = 0
         self._max_reconnect_attempts = 5
         self._reconnect_delay = 2
+
+        # 🤖 AI НАСТРОЙКИ
+        self.ai_enabled = camera.get("ai_enabled", False)
+        self.ai_model = None
+        self.ai_classes = camera.get("ai_classes", [0])  # 0=человек, 2=машина
+        self.ai_confidence = camera.get("ai_confidence", 0.5)
+        self.ai_frame_skip = camera.get("ai_frame_skip", 5)  # каждый 5-й кадр
+        self.frame_count = 0
+
+        if self.ai_enabled:
+            self._init_ai()
+
+    def _init_ai(self):
+        """Инициализация YOLO"""
+        try:
+            from ultralytics import YOLO
+            print(f"🤖 [{self.camera['name']}] Загружаю YOLOv8n...")
+            self.ai_model = YOLO('yolov8n.pt')
+
+            # ✅ ПАРСИМ ai_classes (может быть строка из БД)
+            if isinstance(self.ai_classes, str):
+                import json
+                try:
+                    self.ai_classes = json.loads(self.ai_classes)
+                except:
+                    self.ai_classes = [0]  # По умолчанию — человек
+
+            print(f"✅ [{self.camera['name']}] YOLOv8n загружен! Классы: {self.ai_classes}")
+        except Exception as e:
+            print(f"❌ [{self.camera['name']}] Ошибка загрузки YOLO: {e}")
+            self.ai_enabled = False
 
     def _load_zones(self):
         """Загружает зоны детекции из БД"""
@@ -262,7 +293,8 @@ class MotionDetector:
         self.warmup_frames = 0
         self._reconnect_attempts = 0
 
-        print(f"🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
+        mode = "🤖 AI + MOG2" if self.ai_enabled else "🔍 MOG2"
+        print(f"{mode} [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
         return True
 
     def stop(self):
@@ -271,7 +303,6 @@ class MotionDetector:
         if self.cap:
             self.cap.release()
             self.cap = None
-        print(f"⏹️ [{self.camera['name']}] Детектор остановлен")
 
     def restart(self):
         """Перезапускает детектор"""
@@ -287,7 +318,7 @@ class MotionDetector:
         self.start()
 
     def loop(self):
-        """Один цикл детекции (вызывается из внешнего цикла)"""
+        """Один цикл детекции"""
         if not self.running or not self.enabled:
             return
 
@@ -318,17 +349,14 @@ class MotionDetector:
         # Применяем зоны детекции
         if self.zones:
             mask = np.zeros((240, 320), dtype=np.uint8)
-
             for zone in self.zones:
                 scale_x = 320 / frame.shape[1]
                 scale_y = 240 / frame.shape[0]
                 pts = np.array([[(int(p["x"] * scale_x), int(p["y"] * scale_y)) for p in zone["points"]]], dtype=np.int32)
-
                 if zone["zone_type"] == "include":
                     cv2.fillPoly(mask, pts, 255)
                 else:
                     cv2.fillPoly(mask, pts, 0)
-
             has_include = any(z["zone_type"] == "include" for z in self.zones)
             if has_include:
                 fgmask = cv2.bitwise_and(fgmask, mask)
@@ -345,41 +373,110 @@ class MotionDetector:
 
         motion_pixels = np.count_nonzero(fgmask)
         motion_percent = motion_pixels / (320 * 240) * 100
-        now = time.time()
 
+        # 🤖 ЭТАП 1: MOG2 ПРОВЕРЯЕТ ДВИЖЕНИЕ
         if motion_percent > self.threshold:
-            if not self.motion_active:
-                self.motion_active = True
-                self._publish("motion_start", motion_percent)
-                send_mqtt_command(self.camera['id'], 'start_recording')
-                self._last_extend_time = time.time()
 
-            # ✅ ПРОДЛЕВАЕМ ЗАПИСЬ КАЖДЫЕ N СЕКУНД
-            if time.time() - self._last_extend_time > self.cooldown:
-                send_mqtt_command(self.camera['id'], 'extend_recording')
-                self._last_extend_time = time.time()
+            # 🤖 ЭТАП 2: ЕСЛИ AI ВКЛЮЧЕН — ЗАПУСКАЕМ YOLO
+            if self.ai_enabled and self.ai_model:
+                self.frame_count += 1
+                if self.frame_count % self.ai_frame_skip == 0:
+                    # Запускаем YOLO на полном кадре
+                    ai_result = self._ai_detect(frame)
 
-            if self.motion_end_timer:
-                self.motion_end_timer.cancel()
-                self.motion_end_timer = None
-            print(f"📊 [{self.camera['name']}] Движение: {motion_percent:.1f}% (порог: {self.threshold}%)")
-
-            if not self.motion_active:
-                self.motion_active = True
-                self.motion_start_time = time.time()
-                self._publish("motion_start", motion_percent)
-                send_mqtt_command(self.camera['id'], 'start_recording')
-                print(f"🔴 [{self.camera['name']}] ДВИЖЕНИЕ! Старт записи")
+                    if ai_result:
+                        # ✅ AI ПОДТВЕРДИЛ — ЭТО ЧЕЛОВЕК/МАШИНА!
+                        self._trigger_motion(motion_percent, ai_result)
+                    else:
+                        # ❌ AI ОТКЛОНИЛ — ЛОЖНАЯ ТРЕВОГА
+                        if motion_percent > self.log_min_threshold:
+                            print(f"🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%)")
+                else:
+                    # Пропускаем кадр, но если движение сильное — проверяем AI
+                    if motion_percent > self.threshold * 3:
+                        ai_result = self._ai_detect(frame)
+                        if ai_result:
+                            self._trigger_motion(motion_percent, ai_result)
+            else:
+                # AI выключен — работаем как раньше
+                self._trigger_motion(motion_percent, None)
         else:
+            # Движения нет — таймер остановки
             if self.motion_active:
                 if self.motion_end_timer is None:
-                    print(f"⏳ [{self.camera['name']}] Движение прекратилось, ждём {self.motion_end_delay} сек...")
                     self.motion_end_timer = threading.Timer(
                         self.motion_end_delay,
                         self._stop_motion
                     )
                     self.motion_end_timer.daemon = True
                     self.motion_end_timer.start()
+
+    def _ai_detect(self, frame):
+        try:
+            results = self.ai_model(frame, verbose=False, conf=self.ai_confidence)
+            boxes = results[0].boxes
+
+            if boxes is None or len(boxes) == 0:
+                return None
+
+            detected = {'person': 0, 'car': 0, 'motorcycle': 0, 'dog': 0, 'cat': 0, 'total': 0}
+
+            for box in boxes:
+                cls = int(box.cls[0])
+                conf = float(box.conf[0])
+
+                # ✅ ПРОВЕРЯЕМ, ЧТО ai_classes — СПИСОК
+                ai_classes = self.ai_classes
+                if isinstance(ai_classes, str):
+                    import json
+                    ai_classes = json.loads(ai_classes)
+
+                if cls == 0 and 0 in ai_classes:
+                    detected['person'] += 1
+                elif cls == 2 and 2 in ai_classes:
+                    detected['car'] += 1
+                elif cls == 3 and 3 in ai_classes:
+                    detected['motorcycle'] += 1
+                elif cls == 16 and 16 in ai_classes:
+                    detected['dog'] += 1
+                elif cls == 17 and 17 in ai_classes:
+                    detected['cat'] += 1
+
+                detected['total'] += 1
+
+            if detected['total'] > 0:
+                return detected
+            return None
+
+        except Exception as e:
+            print(f"⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
+            return None
+
+    def _trigger_motion(self, motion_percent, ai_result):
+        """Триггерит тревогу"""
+        # Отменяем таймер остановки
+        if self.motion_end_timer:
+            self.motion_end_timer.cancel()
+            self.motion_end_timer = None
+
+        if not self.motion_active:
+            self.motion_active = True
+            self.motion_start_time = time.time()
+
+            # Формируем описание
+            if ai_result:
+                desc = []
+                if ai_result['person'] > 0:
+                    desc.append(f"👤 x{ai_result['person']}")
+                if ai_result['car'] > 0:
+                    desc.append(f"🚗 x{ai_result['car']}")
+                print(f"🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%)")
+            else:
+                print(f"📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
+
+            self._publish("motion_start", motion_percent, ai_result)
+            send_mqtt_command(self.camera['id'], 'start_recording')
+            print(f"🔴 [{self.camera['name']}] Старт записи!")
 
     def _stop_motion(self):
         """Останавливает запись после задержки"""
@@ -390,16 +487,20 @@ class MotionDetector:
             print(f"🟢 [{self.camera['name']}] Движение прекратилось, запись остановлена")
         self.motion_end_timer = None
 
-    def _publish(self, event_type, percent):
+    def _publish(self, event_type, percent, ai_result=None):
         """Публикует MQTT событие"""
         topic = f"spartan/{self.camera['id']}/motion"
-        payload = json.dumps({
+        payload_dict = {
             "camera_id": self.camera["id"],
             "camera_name": self.camera["name"],
             "event": f"motion_{event_type}",
             "percent": round(percent, 2),
             "timestamp": int(time.time())
-        })
+        }
+        if ai_result:
+            payload_dict["ai"] = ai_result
+
+        payload = json.dumps(payload_dict)
         self.mqtt.publish(topic, payload)
 
         # Логируем в БД
@@ -407,7 +508,7 @@ class MotionDetector:
             with get_db() as conn:
                 conn.execute(
                     "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
-                    (self.camera["id"], f"motion_{event_type}", json.dumps({"percent": round(percent, 2)}))
+                    (self.camera["id"], f"motion_{event_type}", json.dumps(payload_dict))
                 )
                 conn.commit()
         except:
