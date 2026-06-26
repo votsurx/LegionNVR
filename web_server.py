@@ -135,59 +135,60 @@ def api_get_cameras():
 
 @app.route('/api/cameras/<int:camera_id>', methods=['PUT'])
 def api_update_camera(camera_id):
-    """Обновляет камеру и управляет компонентами"""
     data = request.get_json()
 
     cam = Camera.get_by_id(camera_id)
     if not cam:
         return jsonify({'success': False, 'error': 'Камера не найдена'}), 404
 
-    # Проверяем изменения
     old_enabled = cam.get('enabled', 1)
-    new_enabled = data.get('enabled', old_enabled)
-
     old_motion = cam.get('motion_enabled', 0)
-    new_motion = data.get('motion_enabled', old_motion)
-
     old_record = cam.get('record_enabled', 0)
-    new_record = data.get('record_enabled', old_record)
 
-    # Обновляем камеру в БД
     Camera.update_full(camera_id, data)
 
-    # ════════════════════════════════════════════════════════
-    # 1. ON/OFF камеры
-    # ════════════════════════════════════════════════════════
+    new_enabled = data.get('enabled', old_enabled)
+    new_motion = data.get('motion_enabled', old_motion)
+    new_record = data.get('record_enabled', old_record)
+
+    # 1. КАМЕРА ON/OFF
     if new_enabled != old_enabled:
         if new_enabled == 1:
             print(f"🟢 Камера {camera_id} ВКЛЮЧЕНА")
-           # send_mqtt_command(camera_id, 'start_stream')      # ← КОНКРЕТНАЯ КОМАНДА
-           # send_mqtt_command(camera_id, 'start_detector')    # ← КОНКРЕТНАЯ КОМАНДА
+            send_mqtt_command(camera_id, 'start_stream')
         else:
-            print(f"🔴 Камера {camera_id} ВЫКЛЮЧЕНА")
-           # send_mqtt_command(camera_id, 'stop_stream')       # ← КОНКРЕТНАЯ КОМАНДА
-           # send_mqtt_command(camera_id, 'stop_detector')     # ← КОНКРЕТНАЯ КОМАНДА
+            print(f"🔴 Камера {camera_id} ВЫКЛЮЧЕНА → стоп всё")
+            # ✅ ОБНОВЛЯЕМ БД
+            Camera.update_full(camera_id, {
+                'motion_enabled': 0,
+                'record_enabled': 0
+            })
+            send_mqtt_command(camera_id, 'stop_stream')
+            send_mqtt_command(camera_id, 'stop_detector')
+            send_mqtt_command(camera_id, 'stop_recording')
 
-    # ════════════════════════════════════════════════════════
-    # 2. ДЕТЕКТОР (если изменился отдельно)
-    # ════════════════════════════════════════════════════════
+    # 2. ДЕТЕКТОР ON/OFF
     elif new_motion != old_motion:
         if new_motion == 1:
             print(f"🔍 Детектор камеры {camera_id}: ВКЛ")
-           # send_mqtt_command(camera_id, 'start_detector')
+            send_mqtt_command(camera_id, 'reload_config')
         else:
             print(f"🔍 Детектор камеры {camera_id}: ВЫКЛ")
-           # send_mqtt_command(camera_id, 'stop_detector')
+            # ✅ ОСТАНАВЛИВАЕМ ЗАПИСЬ ПРИ ВЫКЛЮЧЕНИИ ДЕТЕКТОРА
+            Camera.update_full(camera_id, {'record_enabled': 0})
+            send_mqtt_command(camera_id, 'stop_detector')
+            send_mqtt_command(camera_id, 'stop_recording')
 
-    # ════════════════════════════════════════════════════════
-    # 3. ЗАПИСЬ (если изменилась отдельно)
-    # ════════════════════════════════════════════════════════
+    # 3. ЗАПИСЬ ON/OFF
     elif new_record != old_record:
-        if new_record == 1:
-            print(f"📼 Запись камеры {camera_id}: ВКЛ")
-        else:
+        if new_record == 0:
             print(f"📼 Запись камеры {camera_id}: ВЫКЛ")
-        # Запись включается автоматически при детекции движения
+            send_mqtt_command(camera_id, 'stop_recording')
+
+    # 4. ДРУГИЕ НАСТРОЙКИ
+    else:
+        if any(k in data for k in ['motion_threshold', 'motion_cooldown', 'motion_fps']):
+            send_mqtt_command(camera_id, 'reload_config')
 
     return jsonify({'success': True})
 

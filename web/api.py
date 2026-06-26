@@ -31,20 +31,6 @@ def delete_camera(camera_id):
     Camera.delete(camera_id)
     return jsonify({'success': True})
 
-@api_bp.route('/api/cameras/<int:camera_id>', methods=['PUT'])
-@login_required
-def update_camera(camera_id):
-    """   (   )"""
-    data = request.get_json()
-    #  location_id
-    if 'location_id' in data:
-        if data['location_id'] == '' or data['location_id'] is None:
-            data['location_id'] = None
-        else:
-            data['location_id'] = int(data['location_id'])
-    Camera.update_full(camera_id, data)
-    return jsonify({'success': True})
-
 @api_bp.route('/api/cameras/<int:camera_id>/test', methods=['POST'])
 @login_required
 def test_camera(camera_id):

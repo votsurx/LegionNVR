@@ -31,10 +31,7 @@ function toggleCamera(camId) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({enabled: newState})
     }).then(r => r.json()).then(d => {
-        if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {method:'POST'}); // ← ВЕРНУЛИ
-            location.reload();
-        }
+        if (d.success) location.reload();
     });
 }
 
@@ -49,10 +46,7 @@ function toggleDetector(camId) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({motion_enabled: newState})
     }).then(r => r.json()).then(d => {
-        if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {method:'POST'}); // ← ВЕРНУЛИ
-            location.reload();
-        }
+        if (d.success) location.reload();
     });
 }
 
@@ -67,10 +61,7 @@ function toggleRecord(camId) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({record_enabled: newState})
     }).then(r => r.json()).then(d => {
-        if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {method:'POST'}); // ← ВЕРНУЛИ
-            location.reload();
-        }
+        if (d.success) location.reload();
     });
 }
 

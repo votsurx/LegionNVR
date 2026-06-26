@@ -67,43 +67,91 @@ def on_cmd(client, userdata, msg):
         cam_id = data.get("camera_id")
 
         if action == "reload_config":
+            print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
 
             if cam:
                 cam_dict = dict(cam)
+
+                # ✅ ИЩЕМ КАМЕРУ В СПИСКЕ АКТИВНЫХ ДЕТЕКТОРОВ
+                found = False
                 for det in userdata["detectors"]:
                     if str(det.camera["id"]) == str(cam_id):
-                        print(f"⏹️ [{det.camera['name']}] Останавливаем детектор...")
+                        found = True
+
+                        # ✅ ОБНОВЛЯЕМ НАСТРОЙКИ
+                        print(f"⏹️ [{det.camera['name']}] Перезагружаю настройки...")
                         det.stop()
 
                         det.camera = cam_dict
                         det.threshold = cam_dict.get("motion_threshold", 2.0)
                         det.cooldown = cam_dict.get("motion_cooldown", 5)
-                        det.enabled = cam_dict.get("enabled", True)
+                        det.enabled = cam_dict.get("enabled", True) and cam_dict.get("motion_enabled", True)
                         det._load_zones()
+                        det.warmup_frames = 0
 
-                        if det.enabled and cam_dict.get("motion_enabled", True):
-                            print(f"▶️ [{det.camera['name']}] Запускаем с новыми настройками...")
+                        # ✅ ЗАПУСКАЕМ ЕСЛИ НУЖНО
+                        if det.enabled:
+                            print(f"▶️ [{det.camera['name']}] Запускаю детектор...")
                             det.start()
+                            print(f"✅ [{det.camera['name']}] Порог: {det.threshold}%, Зон: {len(det.zones)}, Cooldown: {det.cooldown} сек")
                         else:
-                            print(f"⏸️ [{det.camera['name']}] Детектор отключён")
-
-                        print(f"✅ [{det.camera['name']}] Настройки применены (порог: {det.threshold}%)")
+                            print(f"⏸️ [{det.camera['name']}] Детектор отключён (motion_enabled=0)")
                         break
+
+                # ✅ ЕСЛИ НЕ НАШЛИ — СОЗДАЁМ НОВЫЙ ДЕТЕКТОР
+                if not found:
+                    print(f"🆕 Камера {cam_id} не найдена в активных — создаю новый детектор")
+                    if cam_dict.get("enabled") and cam_dict.get("motion_enabled"):
+                        # Получаем MQTT клиент из первого детектора или создаём новый
+                        mqtt_client = userdata.get("mqtt_client", client)
+                        det = MotionDetector(cam_dict, mqtt_client)
+                        if det.start():
+                            userdata["detectors"].append(det)
+                            print(f"✅ [{det.camera['name']}] Детектор создан и запущен")
+                        else:
+                            print(f"❌ [{cam_dict['name']}] Не удалось запустить детектор")
+                    else:
+                        print(f"⏸️ Камера {cam_id} отключена или детектор выключен — пропускаю")
 
         elif action == "start_detector":
             print(f"▶️ [CMD] Запуск детектора для камеры {cam_id}")
-            for det in userdata["detectors"]:
-                if str(det.camera["id"]) == str(cam_id):
-                    det.enable()
-                    break
+            with get_db() as conn:
+                cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
+
+            if cam:
+                cam_dict = dict(cam)
+
+                # Ищем или создаём
+                found = False
+                for det in userdata["detectors"]:
+                    if str(det.camera["id"]) == str(cam_id):
+                        found = True
+                        det.camera = cam_dict
+                        det.threshold = cam_dict.get("motion_threshold", 2.0)
+                        det.cooldown = cam_dict.get("motion_cooldown", 5)
+                        det._load_zones()
+                        det.enabled = True
+                        det.warmup_frames = 0
+                        det.start()
+                        print(f"✅ [{det.camera['name']}] Детектор запущен")
+                        break
+
+                if not found:
+                    print(f"🆕 Создаю детектор для камеры {cam_id}")
+                    mqtt_client = userdata.get("mqtt_client", client)
+                    det = MotionDetector(cam_dict, mqtt_client)
+                    if det.start():
+                        userdata["detectors"].append(det)
 
         elif action == "stop_detector":
             print(f"⏹️ [CMD] Остановка детектора для камеры {cam_id}")
             for det in userdata["detectors"]:
                 if str(det.camera["id"]) == str(cam_id):
-                    det.disable()
+                    det.enabled = False
+                    det.stop()
+                    print(f"⏹️ [{det.camera['name']}] Детектор остановлен")
                     break
 
     except Exception as e:
@@ -300,12 +348,21 @@ class MotionDetector:
         now = time.time()
 
         if motion_percent > self.threshold:
-            print(f"📊 [{self.camera['name']}] Движение: {motion_percent:.1f}% (порог: {self.threshold}%)")
+            if not self.motion_active:
+                self.motion_active = True
+                self._publish("motion_start", motion_percent)
+                send_mqtt_command(self.camera['id'], 'start_recording')
+                self._last_extend_time = time.time()
+
+            # ✅ ПРОДЛЕВАЕМ ЗАПИСЬ КАЖДЫЕ N СЕКУНД
+            if time.time() - self._last_extend_time > self.cooldown:
+                send_mqtt_command(self.camera['id'], 'extend_recording')
+                self._last_extend_time = time.time()
 
             if self.motion_end_timer:
                 self.motion_end_timer.cancel()
                 self.motion_end_timer = None
-                print(f"⏸️ [{self.camera['name']}] Движение возобновилось, отмена остановки")
+            print(f"📊 [{self.camera['name']}] Движение: {motion_percent:.1f}% (порог: {self.threshold}%)")
 
             if not self.motion_active:
                 self.motion_active = True
@@ -390,27 +447,31 @@ def main():
         if det.start():
             detectors.append(det)
 
-    mqtt_client.user_data_set({"detectors": detectors})
-    mqtt_client.on_message = on_cmd
-    mqtt_client.subscribe("spartan/+/cmd")
-    mqtt_client.loop_start()
+    # ✅ СОХРАНЯЕМ mqtt_client ДЛЯ on_cmd
+        mqtt_client.user_data_set({
+            "detectors": detectors,
+            "mqtt_client": mqtt_client
+        })
+        mqtt_client.on_message = on_cmd
+        mqtt_client.subscribe("spartan/+/cmd")
+        mqtt_client.loop_start()
 
-    print(f"[Detectors] Active: {len(detectors)}")
-    print(f"[Subscriptions] spartan/+/cmd")
-    print("[Running] Working... (Ctrl+C to exit)")
+        print(f"[Detectors] Active: {len(detectors)}")
+        print(f"[Subscriptions] spartan/+/cmd")
+        print("[Running] Working... (Ctrl+C to exit)")
 
-    try:
-        while True:
+        try:
+            while True:
+                for det in detectors:
+                    if det.running and det.enabled:
+                        det.loop()
+                time.sleep(0.05)
+        except KeyboardInterrupt:
+            print("\n[Stopping] Shutting down...")
             for det in detectors:
-                if det.running and det.enabled:
-                    det.loop()
-            time.sleep(0.05)
-    except KeyboardInterrupt:
-        print("\n[Stopping] Shutting down...")
-        for det in detectors:
-            det.stop()
-        mqtt_client.loop_stop()
-        mqtt_client.disconnect()
+                det.stop()
+            mqtt_client.loop_stop()
+            mqtt_client.disconnect()
 
 
 if __name__ == '__main__':
