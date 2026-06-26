@@ -211,32 +211,44 @@ def capture_buffer(cam_id, pre_sec):
 
 
 def start_motion_recording(camera):
-    """Запускает запись по тревоге (собирает HLS-сегменты)"""
+    """Запускает запись по тревоге (собирает HLS-сегменты по времени)"""
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
         return
+
     if not camera.get("record_enabled", False):
+        print(f"⏸️ Запись отключена для камеры {cam_id}")
         return
 
     record_pre_sec = camera.get('record_pre_sec', 5)
     record_post_sec = camera.get('record_post_sec', 10)
 
-    # ✅ НАХОДИМ ПОСЛЕДНИЙ HLS-СЕГМЕНТ
-    all_segments = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
+    # ✅ ЗАПОМИНАЕМ ВРЕМЯ СТАРТА ТРЕВОГИ
+    alarm_time = time.time()
+
+    # ✅ НАХОДИМ ВСЕ СЕГМЕНТЫ С ВРЕМЕНЕМ
+    all_segments = []
+    for seg in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
+        try:
+            mtime = os.path.getmtime(seg)
+            all_segments.append((mtime, seg))
+        except:
+            pass
 
     if not all_segments:
         print(f"❌ Нет HLS-сегментов для камеры {cam_id}")
         return
 
-    last_segment = all_segments[-1]
-    print(f"📼 Тревога! Последний сегмент: {os.path.basename(last_segment)}")
+    all_segments.sort(key=lambda x: x[0])  # Сортируем по времени
+
+    print(f"📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
     print(f"🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек")
 
     # ✅ СОХРАНЯЕМ ИНФОРМАЦИЮ О ЗАПИСИ
     motion_recordings[cam_id] = {
         'start_time': time.time(),
-        'first_segment': last_segment,
+        'alarm_time': alarm_time,  # ← ВРЕМЯ ТРЕВОГИ (вместо имени сегмента)
         'pre_sec': record_pre_sec,
         'post_sec': record_post_sec,
         'camera': camera
@@ -251,55 +263,55 @@ def start_motion_recording(camera):
     print(f"⏱️ Сбор сегментов через {record_post_sec} сек...")
 
 def _collect_motion_segments(cam_id):
+    """Собирает HLS-сегменты по времени и склеивает в ролик"""
     if cam_id not in motion_recordings:
         return
 
     data = motion_recordings.pop(cam_id)
-    first_segment = data['first_segment']
+    alarm_time = data['alarm_time']  # ← ВРЕМЯ ТРЕВОГИ
     pre_sec = data['pre_sec']
     post_sec = data['post_sec']
     camera = data['camera']
 
-    all_segments = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
-
-    print(f"📼 Всего сегментов: {len(all_segments)}")
-    print(f"📼 Искомый сегмент: {os.path.basename(first_segment)}")
+    # ✅ СОБИРАЕМ ВСЕ СЕГМЕНТЫ С ВРЕМЕНЕМ
+    all_segments = []
+    for seg in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
+        try:
+            mtime = os.path.getmtime(seg)
+            all_segments.append((mtime, seg))
+        except:
+            pass
 
     if not all_segments:
         print(f"❌ Нет сегментов для склейки")
         return
 
-    # Находим индекс первого сегмента
-    try:
-        first_idx = all_segments.index(first_segment)
-    except ValueError:
-        print(f"⚠️ Сегмент не найден, берём последние")
-        first_idx = max(0, len(all_segments) - pre_sec - post_sec)
+    all_segments.sort(key=lambda x: x[0])  # Сортируем по времени
 
-    start_idx = max(0, first_idx - pre_sec)
-    end_idx = min(len(all_segments), first_idx + post_sec)
+    # ✅ ВЫЧИСЛЯЕМ ВРЕМЕННЫЕ ГРАНИЦЫ
+    start_time = alarm_time - pre_sec     # Начало предзаписи
+    end_time = time.time()                 # Текущее время (конец постзаписи)
 
-    selected_segments = all_segments[start_idx:end_idx]
-
-    print(f"🔧 Выбрано сегментов: {len(selected_segments)} (с {start_idx} по {end_idx})")
+    # ✅ ОТБИРАЕМ СЕГМЕНТЫ ПО ВРЕМЕНИ
+    selected_segments = []
+    for mtime, seg_path in all_segments:
+        if start_time - 1 <= mtime <= end_time + 1:  # +-1 сек на погрешность
+            selected_segments.append(seg_path)
 
     if len(selected_segments) < 2:
         print(f"❌ Слишком мало сегментов: {len(selected_segments)}")
-        # Пробуем сохранить хоть что-то
+        # Пробуем взять последние 10 как fallback
         if len(all_segments) >= 2:
-            selected_segments = all_segments[-10:]  # Последние 10 сек
+            selected_segments = [s[1] for s in all_segments[-10:]]
+            print(f"⚠️ Беру последние {len(selected_segments)} сегментов (fallback)")
         else:
             return
 
-    # ✅ ОТБИРАЕМ НУЖНЫЕ СЕГМЕНТЫ
-    start_idx = max(0, first_idx - pre_sec)
-    end_idx = min(len(all_segments), first_idx + post_sec)
-
-    selected_segments = all_segments[start_idx:end_idx]
-
-    if len(selected_segments) < 2:
-        print(f"❌ Слишком мало сегментов: {len(selected_segments)}")
-        return
+    # ✅ ЛОГИРУЕМ ВРЕМЕНА
+    print(f"📼 Предзапись с: {time.strftime('%H:%M:%S', time.localtime(start_time))}")
+    print(f"📼 Тревога в:    {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
+    print(f"📼 Конец записи: {time.strftime('%H:%M:%S', time.localtime(end_time))}")
+    print(f"📼 Длительность: {len(selected_segments)} сек (пред {pre_sec}с + пост {post_sec}с)")
 
     # ✅ СОЗДАЁМ ФИНАЛЬНЫЙ ФАЙЛ
     now = time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -318,11 +330,11 @@ def _collect_motion_segments(cam_id):
     temp_dir = tempfile.gettempdir()
     concat_file = os.path.join(temp_dir, f"concat_{cam_id}_{int(time.time())}.txt")
 
-    with open(concat_file, "w") as f:
+    with open(concat_file, "w", encoding='utf-8') as f:
         for seg in selected_segments:
-            f.write(f"file '{os.path.abspath(seg)}'\n")
-
-    print(f"🔧 Склейка {len(selected_segments)} сегментов ({len(selected_segments)} сек)")
+            # Экранируем путь для ffmpeg
+            escaped_path = os.path.abspath(seg).replace('\\', '/')
+            f.write(f"file '{escaped_path}'\n")
 
     # ✅ СКЛЕИВАЕМ БЕЗ ПЕРЕКОДИРОВАНИЯ
     cmd_concat = [
@@ -336,32 +348,46 @@ def _collect_motion_segments(cam_id):
         final_output
     ]
 
-    result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
+    try:
+        result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
 
-    if result.returncode == 0 and os.path.exists(final_output):
-        file_size = os.path.getsize(final_output)
-        print(f"✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
+        if result.returncode == 0 and os.path.exists(final_output) and os.path.getsize(final_output) > 0:
+            file_size = os.path.getsize(final_output)
+            print(f"✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
 
-        # ✅ ЛОГИРУЕМ В БД
-        try:
-            with get_db() as conn:
-                conn.execute(
-                    "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
-                    (int(cam_id), final_output)
-                )
-                conn.commit()
-            print(f"📝 Запись добавлена в БД")
-        except Exception as e:
-            print(f"❌ Ошибка БД: {e}")
-    else:
-        print(f"❌ Ошибка склейки")
+            # ✅ ЛОГИРУЕМ В БД
+            try:
+                with get_db() as conn:
+                    conn.execute(
+                        "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
+                        (int(cam_id), final_output)
+                    )
+                    conn.commit()
+                print(f"📝 Запись добавлена в БД")
+            except Exception as e:
+                print(f"❌ Ошибка записи в БД: {e}")
+        else:
+            error_msg = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Неизвестная ошибка'
+            print(f"❌ Ошибка склейки (код {result.returncode}): {error_msg[:200]}")
 
-    # ✅ ЧИСТИМ
+            # Fallback: копируем первый и последний сегмент для диагностики
+            if selected_segments:
+                debug_dir = os.path.join(temp_dir, f"debug_{cam_id}")
+                os.makedirs(debug_dir, exist_ok=True)
+                for i, seg in enumerate(selected_segments[:3] + selected_segments[-3:]):
+                    shutil.copy2(seg, os.path.join(debug_dir, f"seg_{i}_{os.path.basename(seg)}"))
+                print(f"🔍 Отладочные сегменты сохранены в {debug_dir}")
+
+    except subprocess.TimeoutExpired:
+        print(f"❌ Таймаут склейки (60 сек)")
+    except Exception as e:
+        print(f"❌ Ошибка склейки: {e}")
+
+    # ✅ ЧИСТИМ ВРЕМЕННЫЕ ФАЙЛЫ
     try:
         os.remove(concat_file)
     except:
         pass
-
 
 def extend_recording(cam_id):
     """Продлевает запись (сбрасывает таймер сбора)"""
@@ -611,6 +637,15 @@ def on_cmd(client, userdata, msg):
                 if cam.get("enabled") and cam.get("stream_enabled", True):
                     start_hls_stream(cam)
             print(f"🔄 Перезапущено стримов: {len(stream_processes)}")
+
+        elif action == "ping":
+            # Ответ на пинг от Health Monitor
+            client.publish("spartan/streamer/pong", json.dumps({
+                "status": "alive",
+                "streams": len(stream_processes),
+                "recordings": len(recording_processes),
+                "timestamp": int(time.time())
+            }))
 
     except Exception as e:
         print(f"⚠️ [CMD] Ошибка: {e}")

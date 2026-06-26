@@ -19,6 +19,9 @@ import sys
 import time
 import json
 import paho.mqtt.client as mqtt
+import psutil
+import glob
+from models.database import get_db
 
 # Отключаем логи HTTP-запросов
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -48,12 +51,59 @@ HLS_DIR = "streams"
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ============================================================
 
+def check_process_running(script_name):
+    """Проверяет, запущен ли Python-процесс с указанным скриптом"""
+    try:
+        result = subprocess.run(
+            ['wmic', 'process', 'where', f'name="python.exe"', 'get', 'commandline'],
+            capture_output=True, text=True, timeout=5
+        )
+        return script_name in result.stdout
+    except:
+        return False
+
+def check_service_mqtt(service_name):
+    """Проверяет, отвечает ли сервис через MQTT"""
+    import paho.mqtt.client as mqtt
+    import threading
+
+    result = {'alive': False}
+
+    def on_message(client, userdata, msg):
+        if msg.topic == f"spartan/{service_name}/pong":
+            result['alive'] = True
+
+    try:
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+        client.on_message = on_message
+        client.connect("127.0.0.1", 1883, 3)
+        client.subscribe(f"spartan/{service_name}/pong")
+        client.loop_start()
+
+        # ✅ Отправляем ping в spartan/{name}/cmd (куда подписан сервис)
+        client.publish(f"spartan/{service_name}/cmd", json.dumps({"action": "ping"}))
+        time.sleep(1)  # Ждём ответ
+
+        client.loop_stop()
+        client.disconnect()
+    except:
+        pass
+
+    return result['alive']
+
+def mqtt_running():
+    """Проверка MQTT брокера"""
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = sock.connect_ex(('127.0.0.1', 1883))
+    sock.close()
+    return result == 0
 
 def send_mqtt_command(camera_id, action, params=None):
     """Отправляет MQTT команду"""
     try:
         import paho.mqtt.client as mqtt
-        client = mqtt.Client()
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
         client.connect("127.0.0.1", 1883, 5)
         payload = {
             'action': action,
@@ -72,7 +122,7 @@ def send_mqtt_command(camera_id, action, params=None):
 def send_mqtt_status(camera_id, status_type, value):
     """Отправляет статус камеры в MQTT"""
     try:
-        client = mqtt.Client()
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
         client.connect("127.0.0.1", 1883, 5)
         payload = json.dumps({
             'camera_id': camera_id,
@@ -118,6 +168,124 @@ def check_rtsp_available(rtsp_url):
 # ============================================================
 # API КАМЕРЫ
 # ============================================================
+
+@app.route('/api/health/full')
+def health_full():
+    import psutil
+    import os
+    import time as time_module
+
+    # Системные метрики
+    cpu_percent = psutil.cpu_percent(interval=0.5)
+    ram = psutil.virtual_memory()
+    disk = psutil.disk_usage('C:\\')
+    uptime_seconds = time_module.time() - psutil.boot_time()
+    uptime_str = f"{int(uptime_seconds // 86400)}д {int((uptime_seconds % 86400) // 3600)}ч {int((uptime_seconds % 3600) // 60)}м"
+
+    # Папки
+    recordings_path = 'recordings'
+    recordings_size = 0
+    recordings_count = 0
+    if os.path.exists(recordings_path):
+        for dirpath, dirnames, filenames in os.walk(recordings_path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                recordings_size += os.path.getsize(fp)
+                recordings_count += 1
+
+    streams_path = 'streams'
+    streams_count = len(glob.glob(os.path.join(streams_path, '*.ts'))) if os.path.exists(streams_path) else 0
+
+    # Камеры
+    cameras = Camera.get_all()
+    cameras_online = 0
+    cameras_list = []
+    for cam in cameras:
+        online = check_rtsp_available(cam['rtsp_main'])
+        if online:
+            cameras_online += 1
+        cameras_list.append({
+            'id': cam['id'],
+            'name': cam['name'],
+            'online': online,
+            'enabled': cam.get('enabled', 0),
+            'motion_enabled': cam.get('motion_enabled', 0),
+            'ai_enabled': cam.get('ai_enabled', 0)
+        })
+
+    # Сервисы (проверка портов)
+    services = {
+        'web_server': {'status': 'running', 'port': 8080, 'pid': os.getpid()},
+        'mqtt': {'status': 'running' if mqtt_running() else 'stopped', 'port': 1883},
+        'detector': {'status': 'running' if check_service_mqtt('detector') else 'stopped', 'port': None},
+        'streamer': {'status': 'running' if check_service_mqtt('streamer') else 'stopped', 'port': None}
+    }
+
+    # AI статистика
+    with get_db() as conn:
+        total_events = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type='motion_start'"
+        ).fetchone()[0]
+        ai_events = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type='motion_start' AND details LIKE '%ai%'"
+        ).fetchone()[0]
+        today_recordings = conn.execute(
+            "SELECT COUNT(*) FROM recordings WHERE date(start_time) = date('now','localtime')"
+        ).fetchone()[0]
+
+        # Последние события
+        last_events = conn.execute(
+            "SELECT e.*, c.name as camera_name FROM events e LEFT JOIN cameras c ON e.camera_id=c.id ORDER BY e.timestamp DESC LIMIT 10"
+        ).fetchall()
+        events_list = [dict(r) for r in last_events]
+
+    return jsonify({
+        'success': True,
+        'system': {
+            'cpu': cpu_percent,
+            'ram_used_mb': round(ram.used / (1024*1024), 1),
+            'ram_total_mb': round(ram.total / (1024*1024), 1),
+            'ram_percent': ram.percent,
+            'disk_free_gb': round(disk.free / (1024*1024*1024), 1),
+            'disk_total_gb': round(disk.total / (1024*1024*1024), 1),
+            'disk_percent': disk.percent,
+            'uptime': uptime_str,
+            'python_version': sys.version.split()[0]
+        },
+        'services': services,
+        'cameras': {
+            'total': len(cameras),
+            'online': cameras_online,
+            'offline': len(cameras) - cameras_online,
+            'list': cameras_list
+        },
+        'ai': {
+            'total_events': total_events,
+            'ai_events': ai_events,
+            'filtered': total_events - ai_events,
+            'filter_rate': round((total_events - ai_events) / total_events * 100, 1) if total_events > 0 else 0
+        },
+        'recordings': {
+            'total': recordings_count,
+            'today': today_recordings,
+            'size_mb': round(recordings_size / (1024*1024), 1)
+        },
+        'streams': {
+            'active_segments': streams_count
+        },
+        'events': events_list
+    })
+
+@app.route('/api/health/reset', methods=['POST'])
+def reset_health_stats():
+    """Сбрасывает статистику (события, AI-статистику)"""
+    try:
+        with get_db() as conn:
+            conn.execute("DELETE FROM events")
+            conn.commit()
+        return jsonify({'success': True, 'message': f'Статистика сброшена'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/cameras', methods=['GET'])
 def api_get_cameras():

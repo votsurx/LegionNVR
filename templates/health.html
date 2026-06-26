@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a href="/dashboard" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад на дашборд</a>
+
+<div style="display:flex; gap:12px; margin:12px 0; align-items:center; flex-wrap:wrap;">
+    <h1 style="margin:0;">🫀 Health Monitor</h1>
+    <button onclick="resetStats()" style="margin-left:auto; background:#b71c1c; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13px;">
+        🗑️ Сбросить статистику
+    </button>
+</div>
+
+<!-- Системные метрики -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px;">
+
+    <div class="health-card">
+        <div style="font-size:28px;">🖥️</div>
+        <div style="font-size:22px; font-weight:bold;" id="cpuValue">--</div>
+        <div style="color:var(--text-secondary); font-size:13px;">CPU</div>
+        <div class="progress-bar"><div class="progress-fill" id="cpuBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="health-card">
+        <div style="font-size:28px;">💾</div>
+        <div style="font-size:22px; font-weight:bold;" id="ramValue">--</div>
+        <div style="color:var(--text-secondary); font-size:13px;">RAM</div>
+        <div class="progress-bar"><div class="progress-fill" id="ramBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="health-card">
+        <div style="font-size:28px;">💿</div>
+        <div style="font-size:22px; font-weight:bold;" id="diskValue">--</div>
+        <div style="color:var(--text-secondary); font-size:13px;">Диск</div>
+        <div class="progress-bar"><div class="progress-fill" id="diskBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="health-card">
+        <div style="font-size:28px;">⏱️</div>
+        <div style="font-size:22px; font-weight:bold;" id="uptimeValue">--</div>
+        <div style="color:var(--text-secondary); font-size:13px;">Аптайм</div>
+    </div>
+
+</div>
+
+<!-- Сервисы + Камеры -->
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+    <div class="health-card">
+        <h3 style="margin:0 0 12px 0;">📡 Сервисы</h3>
+        <div id="servicesList">Загрузка...</div>
+    </div>
+    <div class="health-card">
+        <h3 style="margin:0 0 12px 0;">📷 Камеры <span id="camerasCount"></span></h3>
+        <div id="camerasList">Загрузка...</div>
+    </div>
+</div>
+
+<!-- AI + Записи -->
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+    <div class="health-card">
+        <h3 style="margin:0 0 12px 0;">🤖 AI Статистика</h3>
+        <div id="aiStats">Загрузка...</div>
+    </div>
+    <div class="health-card">
+        <h3 style="margin:0 0 12px 0;">📼 Записи</h3>
+        <div id="recordingsStats">Загрузка...</div>
+    </div>
+</div>
+
+<!-- События -->
+<div class="health-card">
+    <h3 style="margin:0 0 12px 0;">📋 Последние события</h3>
+    <div id="eventsList" style="max-height:300px; overflow-y:auto;">Загрузка...</div>
+</div>
+
+<style>
+    .health-card {
+        background: var(--bg-card);
+        padding: 16px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--elevation-1);
+    }
+    .progress-bar {
+        height: 6px;
+        background: var(--bg-input);
+        border-radius: 3px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+    .progress-green { background: #4caf50; }
+    .progress-yellow { background: #ff9800; }
+    .progress-red { background: #f44336; }
+    .service-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .service-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .dot-green { background: #4caf50; }
+    .dot-red { background: #f44336; }
+    .dot-yellow { background: #ff9800; }
+    .camera-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 13px;
+    }
+    .event-row {
+        padding: 4px 0;
+        font-size: 12px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-secondary);
+    }
+</style>
+
+<script>
+    function loadHealth() {
+        fetch('/api/health/full')
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) return;
+
+                // CPU
+                document.getElementById('cpuValue').textContent = d.system.cpu + '%';
+                document.getElementById('cpuBar').style.width = d.system.cpu + '%';
+                document.getElementById('cpuBar').className = 'progress-fill ' +
+                    (d.system.cpu > 80 ? 'progress-red' : d.system.cpu > 50 ? 'progress-yellow' : 'progress-green');
+
+                // RAM
+                var ramGB = (d.system.ram_used_mb / 1024).toFixed(1);
+                document.getElementById('ramValue').textContent = ramGB + ' / ' + (d.system.ram_total_mb / 1024).toFixed(1) + ' GB';
+                document.getElementById('ramBar').style.width = d.system.ram_percent + '%';
+                document.getElementById('ramBar').className = 'progress-fill ' +
+                    (d.system.ram_percent > 80 ? 'progress-red' : d.system.ram_percent > 50 ? 'progress-yellow' : 'progress-green');
+
+                // Disk
+                document.getElementById('diskValue').textContent = d.system.disk_free_gb + ' / ' + d.system.disk_total_gb + ' GB';
+                document.getElementById('diskBar').style.width = d.system.disk_percent + '%';
+                document.getElementById('diskBar').className = 'progress-fill ' +
+                    (d.system.disk_percent > 80 ? 'progress-red' : d.system.disk_percent > 50 ? 'progress-yellow' : 'progress-green');
+
+                // Uptime
+                document.getElementById('uptimeValue').textContent = d.system.uptime;
+
+                // Сервисы
+                var sHtml = '';
+                for (var s in d.services) {
+                    var serv = d.services[s];
+                    var dot = serv.status === 'running' ? 'dot-green' : 'dot-red';
+                    sHtml += '<div class="service-row"><div class="service-dot ' + dot + '"></div><span>' + s + '</span><span style="flex:1"></span><span style="color:var(--text-secondary)">' + serv.status + '</span></div>';
+                }
+                document.getElementById('servicesList').innerHTML = sHtml;
+
+                // Камеры
+                document.getElementById('camerasCount').textContent = '(' + d.cameras.online + '/' + d.cameras.total + ')';
+                var cHtml = '';
+                d.cameras.list.forEach(cam => {
+                    var dot = cam.online ? 'dot-green' : 'dot-red';
+                    cHtml += '<div class="camera-row"><div class="service-dot ' + dot + '"></div><span>' + cam.name + '</span></div>';
+                });
+                document.getElementById('camerasList').innerHTML = cHtml || 'Нет камер';
+
+                // AI
+                document.getElementById('aiStats').innerHTML =
+                    'Всего: <b>' + d.ai.total_events + '</b> | AI: <b>' + d.ai.ai_events + '</b> | Ложных: <b>' + d.ai.filtered + '</b><br>Эффективность: <b>' + d.ai.filter_rate + '%</b>';
+
+                // Записи
+                document.getElementById('recordingsStats').innerHTML =
+                    'Файлов: <b>' + d.recordings.total + '</b> | Сегодня: <b>' + d.recordings.today + '</b> | Объём: <b>' + d.recordings.size_mb + ' MB</b>';
+
+                // События
+                var eHtml = '';
+                d.events.forEach(e => {
+                    var icon = e.event_type.includes('start') ? '🔴' : '🟢';
+                    eHtml += '<div class="event-row">' + icon + ' ' + e.timestamp + ' ' + e.event_type + '</div>';
+                });
+                document.getElementById('eventsList').innerHTML = eHtml || 'Нет событий';
+            });
+    }
+
+    function resetStats() {
+        if (!confirm('Сбросить ВСЮ статистику?\n(Записи останутся, удалятся только события)')) return;
+        fetch('/api/health/reset', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                alert(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Ошибка'));
+                loadHealth();
+            });
+    }
+
+    loadHealth();
+    setInterval(loadHealth, 5000);
+</script>
+{% endblock %}

@@ -103,3 +103,8 @@ def delete_camera(camera_id):
         return "  ", 404
     Camera.delete(camera_id)
     return redirect(url_for('main.cameras'))
+
+@main_bp.route('/health')
+@login_required
+def health_page():
+    return render_template('health.html', user=current_user)

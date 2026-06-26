@@ -13,6 +13,7 @@ import json
 import time
 import sys
 import threading
+import traceback
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
@@ -94,11 +95,18 @@ def on_cmd(client, userdata, msg):
                         # ✅ ЗАПУСКАЕМ ЕСЛИ НУЖНО
                         if det.enabled:
                             print(f"▶️ [{det.camera['name']}] Запускаю детектор...")
-                            det.start()
-                            print(f"✅ [{det.camera['name']}] Порог: {det.threshold}%, Зон: {len(det.zones)}, Cooldown: {det.cooldown} сек")
+                            try:
+                                result = det.start()
+                                if result:
+                                    print(f"✅ [{det.camera['name']}] Детектор запущен")
+                                    print(f"✅ [{det.camera['name']}] Порог: {det.threshold}%, Зон: {len(det.zones)}, Cooldown: {det.cooldown} сек")
+                                else:
+                                    print(f"❌ [{det.camera['name']}] Не удалось запустить детектор")
+                            except Exception as e:
+                                print(f"❌ [{det.camera['name']}] ОШИБКА запуска: {e}")
+                                traceback.print_exc()
                         else:
                             print(f"⏸️ [{det.camera['name']}] Детектор отключён (motion_enabled=0)")
-                        break
 
                 # ✅ ЕСЛИ НЕ НАШЛИ — СОЗДАЁМ НОВЫЙ ДЕТЕКТОР
                 if not found:
@@ -114,6 +122,15 @@ def on_cmd(client, userdata, msg):
                             print(f"❌ [{cam_dict['name']}] Не удалось запустить детектор")
                     else:
                         print(f"⏸️ Камера {cam_id} отключена или детектор выключен — пропускаю")
+
+        elif action == "ping":
+            # Ответ на пинг от Health Monitor
+            mqtt_client = userdata.get("mqtt_client", client)
+            mqtt_client.publish("spartan/detector/pong", json.dumps({
+                "status": "alive",
+                "cameras": len(userdata.get("detectors", [])),
+                "timestamp": int(time.time())
+            }))
 
         elif action == "start_detector":
             print(f"▶️ [CMD] Запуск детектора для камеры {cam_id}")
@@ -266,36 +283,46 @@ class MotionDetector:
     def start(self):
         """Запускает детектор"""
         if not self.enabled:
-            print(f"⏸️ [{self.camera['name']}] Камера отключена, детектор не запущен")
+            print(f"⏸️ [{self.camera['name']}] Камера отключена")
             return False
 
         rtsp_url = self.camera.get("rtsp_sub") or self.camera.get("rtsp_main")
 
         if self.cap:
-            self.cap.release()
+            try:
+                self.cap.release()
+            except:
+                pass
             self.cap = None
 
-        for attempt in range(self._max_reconnect_attempts):
-            self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
-            if self.cap.isOpened():
-                break
-            print(f"⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts} подключиться...")
-            time.sleep(self._reconnect_delay)
+        # ✅ ЗАЩИЩАЕМСЯ ОТ ПАДЕНИЯ OpenCV
+        try:
+            for attempt in range(self._max_reconnect_attempts):
+                self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+                if self.cap.isOpened():
+                    break
+                print(f"⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts}...")
+                time.sleep(self._reconnect_delay)
 
-        if not self.cap or not self.cap.isOpened():
-            print(f"❌ [{self.camera['name']}] Не могу открыть RTSP: {rtsp_url}")
+            if not self.cap or not self.cap.isOpened():
+                print(f"❌ [{self.camera['name']}] Не могу открыть RTSP")
+                self.cap = None
+                return False
+
+            self.cap.set(cv2.CAP_PROP_FPS, 5)
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            self.running = True
+            self.warmup_frames = 0
+            self._reconnect_attempts = 0
+
+            print(f"🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
+            return True
+
+        except Exception as e:
+            print(f"❌ [{self.camera['name']}] Ошибка открытия RTSP: {e}")
             self.cap = None
+            self.running = False
             return False
-
-        self.cap.set(cv2.CAP_PROP_FPS, 5)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        self.running = True
-        self.warmup_frames = 0
-        self._reconnect_attempts = 0
-
-        mode = "🤖 AI + MOG2" if self.ai_enabled else "🔍 MOG2"
-        print(f"{mode} [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
-        return True
 
     def stop(self):
         """Останавливает детектор"""
@@ -328,11 +355,26 @@ class MotionDetector:
                 self.start()
             return
 
-        ret, frame = self.cap.read()
+        try:
+            ret, frame = self.cap.read()
+        except Exception as e:
+            print(f"⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
+            self._reconnect_attempts += 1
+            if self._reconnect_attempts <= self._max_reconnect_attempts:
+                time.sleep(2)
+                self.start()
+            else:
+                self.running = False
+                self.cap.release()
+                self.cap = None
+                print(f"❌ [{self.camera['name']}] Слишком много ошибок, детектор остановлен")
+            return
+
         if not ret:
             self._reconnect_attempts += 1
             if self._reconnect_attempts <= self._max_reconnect_attempts:
                 print(f"⚠️ [{self.camera['name']}] Потеря потока, переподключение...")
+                time.sleep(2)
                 self.start()
             else:
                 self.running = False
@@ -401,13 +443,12 @@ class MotionDetector:
                 # AI выключен — работаем как раньше
                 self._trigger_motion(motion_percent, None)
         else:
-            # Движения нет — таймер остановки
+            # Движения нет — запускаем таймер остановки
             if self.motion_active:
                 if self.motion_end_timer is None:
-                    self.motion_end_timer = threading.Timer(
-                        self.motion_end_delay,
-                        self._stop_motion
-                    )
+                    total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
+                    print(f"⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...")
+                    self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
                     self.motion_end_timer.daemon = True
                     self.motion_end_timer.start()
 
@@ -579,6 +620,11 @@ def main():
                         det.loop()
                 except Exception as e:
                     print(f"⚠️ Ошибка цикла детекции: {e}")
+                    # Пробуем перезапустить детектор
+                    try:
+                        det.start()
+                    except:
+                        pass
             time.sleep(0.05)
     except KeyboardInterrupt:
         print("\n[Stopping] Shutting down...")
