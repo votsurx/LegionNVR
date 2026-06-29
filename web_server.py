@@ -140,29 +140,26 @@ def send_mqtt_status(camera_id, status_type, value):
 
 
 def check_rtsp_available(rtsp_url):
-    """Проверяет доступность RTSP потока"""
-    ffmpeg = "ffmpeg"
-    if shutil.which(ffmpeg) is None:
-        for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
-            if os.path.exists(p):
-                ffmpeg = p
-                break
-
-    if not os.path.exists(ffmpeg):
-        return False
+    """Быстрая проверка доступности RTSP (по хосту и порту)"""
+    import socket
+    import re
 
     try:
-        cmd = [
-            ffmpeg, "-loglevel", "error",
-            "-rtsp_transport", "tcp",
-            "-i", rtsp_url,
-            "-frames:v", "1",
-            "-f", "null", "NUL"
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-        return result.returncode == 0
+        # Парсим хост и порт из RTSP URL
+        # rtsp://admin:pass@192.168.1.100:554/stream
+        match = re.search(r'rtsp://(?:[^@]+@)?([^:/]+)(?::(\d+))?', rtsp_url)
+        if match:
+            host = match.group(1)
+            port = int(match.group(2)) if match.group(2) else 554
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            return result == 0
     except:
-        return False
+        pass
+    return False
 
 
 # ============================================================
@@ -182,26 +179,57 @@ def health_full():
     uptime_seconds = time_module.time() - psutil.boot_time()
     uptime_str = f"{int(uptime_seconds // 86400)}д {int((uptime_seconds % 86400) // 3600)}ч {int((uptime_seconds % 3600) // 60)}м"
 
-    # Папки
+    # ✅ ПУТЬ К ЗАПИСЯМ ИЗ НАСТРОЕК
     recordings_path = 'recordings'
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key='recordings_path'").fetchone()
+        if row and row[0]:
+            recordings_path = row[0]
+    except:
+        pass
+
+    # Если путь относительный — делаем абсолютным
+    if not os.path.isabs(recordings_path):
+        recordings_path = os.path.join(os.path.dirname(__file__), recordings_path)
+
+    # ✅ РЕКУРСИВНЫЙ ОБХОД ВСЕХ ПОДПАПОК
     recordings_size = 0
     recordings_count = 0
+    today_str = time.strftime("%Y-%m-%d")
+    today_count = 0
+
     if os.path.exists(recordings_path):
         for dirpath, dirnames, filenames in os.walk(recordings_path):
             for f in filenames:
-                fp = os.path.join(dirpath, f)
-                recordings_size += os.path.getsize(fp)
-                recordings_count += 1
+                try:
+                    fp = os.path.join(dirpath, f)
+                    size = os.path.getsize(fp)
+                    recordings_size += size
+                    recordings_count += 1
 
-    streams_path = 'streams'
-    streams_count = len(glob.glob(os.path.join(streams_path, '*.ts'))) if os.path.exists(streams_path) else 0
+                    # ✅ ПРОВЕРЯЕМ ДАТУ ФАЙЛА (для "сегодня")
+                    try:
+                        file_date = time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(fp)))
+                        if file_date == today_str:
+                            today_count += 1
+                    except:
+                        pass
+                except:
+                    pass
 
-    # Камеры
+    # ✅ HLS СЕГМЕНТЫ
+    streams_count = len(glob.glob(os.path.join('streams', '*.ts'))) if os.path.exists('streams') else 0
+
+    # ✅ КАМЕРЫ (быстрая проверка)
     cameras = Camera.get_all()
     cameras_online = 0
     cameras_list = []
     for cam in cameras:
-        online = check_rtsp_available(cam['rtsp_main'])
+        try:
+            online = check_rtsp_available(cam['rtsp_main'])
+        except:
+            online = False
         if online:
             cameras_online += 1
         cameras_list.append({
@@ -213,7 +241,7 @@ def health_full():
             'ai_enabled': cam.get('ai_enabled', 0)
         })
 
-    # Сервисы (проверка портов)
+    # ✅ СЕРВИСЫ
     services = {
         'web_server': {'status': 'running', 'port': 8080, 'pid': os.getpid()},
         'mqtt': {'status': 'running' if mqtt_running() else 'stopped', 'port': 1883},
@@ -221,15 +249,20 @@ def health_full():
         'streamer': {'status': 'running' if check_service_mqtt('streamer') else 'stopped', 'port': None}
     }
 
-    # AI статистика
+    # ✅ AI СТАТИСТИКА + ЗАПИСИ ИЗ БД
     with get_db() as conn:
         total_events = conn.execute(
             "SELECT COUNT(*) FROM events WHERE event_type='motion_start'"
         ).fetchone()[0]
-        ai_events = conn.execute(
-            "SELECT COUNT(*) FROM events WHERE event_type='motion_start' AND details LIKE '%ai%'"
-        ).fetchone()[0]
-        today_recordings = conn.execute(
+
+        ai_events = conn.execute("""
+            SELECT COUNT(*) FROM events
+            WHERE event_type='motion_start'
+            AND (details LIKE '%\"ai\"%' OR details LIKE '%person%' OR details LIKE '%car%')
+        """).fetchone()[0]
+
+        # ✅ ЗАПИСИ ЗА СЕГОДНЯ (ИЗ БД — ТОЧНЕЕ)
+        today_recordings_db = conn.execute(
             "SELECT COUNT(*) FROM recordings WHERE date(start_time) = date('now','localtime')"
         ).fetchone()[0]
 
@@ -238,6 +271,21 @@ def health_full():
             "SELECT e.*, c.name as camera_name FROM events e LEFT JOIN cameras c ON e.camera_id=c.id ORDER BY e.timestamp DESC LIMIT 10"
         ).fetchall()
         events_list = [dict(r) for r in last_events]
+
+    # ✅ ИСПОЛЬЗУЕМ БД ДЛЯ "СЕГОДНЯ" (точнее), или файлы (если БД пустая)
+    final_today = today_recordings_db if today_recordings_db > 0 else today_count
+
+    events_list = []
+    for r in last_events:
+        event = dict(r)
+        try:
+            details = json.loads(event.get('details', '{}'))
+            ts = details.get('timestamp', 0)
+            if ts:
+                event['timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+        except:
+            pass
+        events_list.append(event)
 
     return jsonify({
         'success': True,
@@ -267,7 +315,7 @@ def health_full():
         },
         'recordings': {
             'total': recordings_count,
-            'today': today_recordings,
+            'today': final_today,
             'size_mb': round(recordings_size / (1024*1024), 1)
         },
         'streams': {

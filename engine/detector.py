@@ -463,48 +463,67 @@ class MotionDetector:
                         print(f"{ts()} 📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)")
 
         # 🤖 ЭТАП 1: MOG2 ПРОВЕРЯЕТ ДВИЖЕНИЕ
-        if motion_percent > self.threshold:
+                if motion_percent > self.threshold:
 
-            # 🤖 ЭТАП 2: ЕСЛИ AI ВКЛЮЧЕН — ЗАПУСКАЕМ YOLO
-            if self.ai_enabled and self.ai_model:
-                self.frame_count += 1
-                if self.frame_count % self.ai_frame_skip == 0:
-                    ai_result, boxes = self._ai_detect(frame)
+                    # 🤖 ЭТАП 2: ЕСЛИ AI ВКЛЮЧЕН — ЗАПУСКАЕМ YOLO
+                    if self.ai_enabled and self.ai_model:
+                        self.frame_count += 1
 
-                    if ai_result:
-                        if not self.motion_active:
-                            # Первая тревога
-                            self._trigger_motion(motion_percent, ai_result, frame, boxes)
+                        # ✅ ВО ВРЕМЯ ТРЕВОГИ — ПРОВЕРЯЕМ КАЖДЫЙ КАДР (или чаще)
+                        skip = self.ai_frame_skip if not self.motion_active else max(1, self.ai_frame_skip // 2)
+
+                        if self.frame_count % skip == 0:
+                            try:
+                                ai_result, boxes = self._ai_detect(frame)
+                            except Exception as e:
+                                print(f"{ts()} {C_RED}❌ [{self.camera['name']}] Ошибка AI: {e}{C_RESET}")
+                                ai_result, boxes = None, None
+
+                            if ai_result and boxes:
+                                if not self.motion_active:
+                                    self._trigger_motion(motion_percent, ai_result, frame, boxes)
+                                else:
+                                    # ✅ СОХРАНЯЕМ КООРДИНАТЫ ВО ВРЕМЯ ДВИЖЕНИЯ
+                                    self._save_motion_boxes(boxes, time.time())
+                                    # Логируем
+                                    desc = []
+                                    if ai_result.get('person', 0) > 0:
+                                        desc.append(f"👤 x{ai_result['person']}")
+                                    if ai_result.get('car', 0) > 0:
+                                        desc.append(f"🚗 x{ai_result['car']}")
+                                    if desc:
+                                        print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
+                            else:
+                                if motion_percent > self.log_min_threshold and not self.motion_active:
+                                    print(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
                         else:
-                            # ✅ ДВИЖЕНИЕ ПРОДОЛЖАЕТСЯ — СОХРАНЯЕМ КООРДИНАТЫ
-                            self._save_motion_boxes(boxes, time.time())
-                            # Опционально: рисуем рамки для отладки
-                            if boxes:
-                                desc = []
-                                if ai_result['person'] > 0: desc.append(f"👤 x{ai_result['person']}")
-                                if ai_result['car'] > 0: desc.append(f"🚗 x{ai_result['car']}")
-                                print(f"{ts()} 🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}")
+                            # Пропускаем кадр, но если движение сильное — проверяем AI
+                            if motion_percent > self.threshold * 3:
+                                try:
+                                    ai_result, boxes = self._ai_detect(frame)
+                                except Exception as e:
+                                    ai_result, boxes = None, None
+
+                                if ai_result and boxes:
+                                    if not self.motion_active:
+                                        self._trigger_motion(motion_percent, ai_result, frame, boxes)
+                                    else:
+                                        self._save_motion_boxes(boxes, time.time())
                     else:
-                        if motion_percent > self.log_min_threshold:
-                            print(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
+                        # AI выключен — работаем как раньше (без AI)
+                        try:
+                            self._trigger_motion(motion_percent, None)
+                        except Exception as e:
+                            print(f"{ts()} {C_RED}❌ [{self.camera['name']}] Ошибка trigger: {e}{C_RESET}")
                 else:
-                    # Пропускаем кадр, но если движение сильное — проверяем AI
-                    if motion_percent > self.threshold * 3:
-                        ai_result = self._ai_detect(frame)
-                        if ai_result:
-                            self._trigger_motion(motion_percent, ai_result)
-            else:
-                # AI выключен — работаем как раньше
-                self._trigger_motion(motion_percent, None)
-        else:
-            # Движения нет — запускаем таймер остановки
-            if self.motion_active:
-                if self.motion_end_timer is None:
-                    total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
-                    print(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...{C_RESET}")
-                    self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
-                    self.motion_end_timer.daemon = True
-                    self.motion_end_timer.start()
+                    # Движения нет — запускаем таймер остановки
+                    if self.motion_active:
+                        if self.motion_end_timer is None:
+                            total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
+                            print(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...{C_RESET}")
+                            self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
+                            self.motion_end_timer.daemon = True
+                            self.motion_end_timer.start()
 
     def _ai_detect(self, frame):
         """
@@ -625,7 +644,8 @@ class MotionDetector:
         """Сохраняет скриншот с рамками при тревоге"""
         try:
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-            snap_dir = os.path.join("snapshots", str(self.camera["id"]))
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            snap_dir = os.path.join(base_dir, "snapshots", str(self.camera["id"]))
             os.makedirs(snap_dir, exist_ok=True)
 
             filename = f"{timestamp}_alert.jpg"
@@ -743,14 +763,16 @@ class MotionDetector:
         return filepath
 
     def _stop_motion(self):
+        """Останавливает запись после задержки"""
         if self.motion_active:
-            # ✅ СОХРАНЯЕМ ВСЕ КООРДИНАТЫ
+            # ✅ СНАЧАЛА СОХРАНЯЕМ JSON С КООРДИНАТАМИ
             boxes_file = self._save_all_boxes()
             if boxes_file:
-                print(f"{ts()} 📦 [{self.camera['name']}] Всего кадров с рамками: {len(self.motion_boxes)}")
+                print(f"{ts()} {C_BLUE}📦 [{self.camera['name']}] JSON сохранён: {len(self.motion_boxes)} кадров{C_RESET}")
 
+            # ✅ ПОТОМ ОТПРАВЛЯЕМ stop_recording
             self.motion_active = False
-            self.motion_boxes = []  # Очищаем
+            self.motion_boxes = []
             self._publish("motion_end", 0)
             send_mqtt_command(self.camera['id'], 'stop_recording')
             print(f"{ts()} {C_GREEN}🟢 [{self.camera['name']}] Запись остановлена{C_RESET}")
@@ -762,7 +784,7 @@ class MotionDetector:
         payload_dict = {
             "camera_id": self.camera["id"],
             "camera_name": self.camera["name"],
-            "event": f"motion_{event_type}",
+            "event": event_type,
             "percent": round(percent, 2),
             "timestamp": int(time.time())
         }
@@ -777,7 +799,7 @@ class MotionDetector:
             with get_db() as conn:
                 conn.execute(
                     "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
-                    (self.camera["id"], f"motion_{event_type}", json.dumps(payload_dict))
+                    (self.camera["id"], event_type, json.dumps(payload_dict))
                 )
                 conn.commit()
         except:

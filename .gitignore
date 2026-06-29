@@ -35,3 +35,6 @@ Desktop.ini
 
 # Логи
 *.log__pycache__/
+snapshots/
+*.jpg
+*_boxes.json
