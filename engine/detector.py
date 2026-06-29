@@ -25,11 +25,20 @@ from models.database import get_db
 
 MQTT_BROKER = "127.0.0.1"
 MQTT_PORT = 1883
-
+# ════════════════════════════════════════════════════════════
+# НАСТРОЙКИ ВЫВОДА MOG2
+# ════════════════════════════════════════════════════════════
+MOG2_LOG_MIN = 10.0          # Минимальный % для вывода (меньше — не показываем)
+MOG2_LOG_COLORS = True      # Цветной вывод (False — если терминал не поддерживает)
+MOG2_LOG_INTERVAL = 0.5     # Минимальный интервал между логами (сек), чтобы не спамить
 
 # ════════════════════════════════════════════════════════════
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (вне класса!)
 # ════════════════════════════════════════════════════════════
+
+def ts():
+    """Возвращает текущую временную метку [HH:MM:SS]"""
+    return f"\033[36m[{time.strftime('%H:%M:%S')}]\033[0m"
 
 def send_mqtt_command(camera_id, action, params=None):
     """Отправляет MQTT команду"""
@@ -47,7 +56,7 @@ def send_mqtt_command(camera_id, action, params=None):
         client.disconnect()
         return True
     except Exception as e:
-        print(f"❌ MQTT ошибка: {e}")
+        print(f"{ts()} ❌ MQTT ошибка: {e}")
         return False
 
 
@@ -68,7 +77,7 @@ def on_cmd(client, userdata, msg):
         cam_id = data.get("camera_id")
 
         if action == "reload_config":
-            print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
+            print(f"{ts()} 📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
 
@@ -82,7 +91,7 @@ def on_cmd(client, userdata, msg):
                         found = True
 
                         # ✅ ОБНОВЛЯЕМ НАСТРОЙКИ
-                        print(f"⏹️ [{det.camera['name']}] Перезагружаю настройки...")
+                        print(f"{ts()} ⏹️ [{det.camera['name']}] Перезагружаю настройки...")
                         det.stop()
 
                         det.camera = cam_dict
@@ -94,34 +103,34 @@ def on_cmd(client, userdata, msg):
 
                         # ✅ ЗАПУСКАЕМ ЕСЛИ НУЖНО
                         if det.enabled:
-                            print(f"▶️ [{det.camera['name']}] Запускаю детектор...")
+                            print(f"{ts()} ▶️ [{det.camera['name']}] Запускаю детектор...")
                             try:
                                 result = det.start()
                                 if result:
-                                    print(f"✅ [{det.camera['name']}] Детектор запущен")
-                                    print(f"✅ [{det.camera['name']}] Порог: {det.threshold}%, Зон: {len(det.zones)}, Cooldown: {det.cooldown} сек")
+                                    print(f"{ts()} ✅ [{det.camera['name']}] Детектор запущен")
+                                    print(f"{ts()} ✅ [{det.camera['name']}] Порог: {det.threshold}%, Зон: {len(det.zones)}, Cooldown: {det.cooldown} сек")
                                 else:
-                                    print(f"❌ [{det.camera['name']}] Не удалось запустить детектор")
+                                    print(f"{ts()} ❌ [{det.camera['name']}] Не удалось запустить детектор")
                             except Exception as e:
-                                print(f"❌ [{det.camera['name']}] ОШИБКА запуска: {e}")
+                                print(f"{ts()} ❌ [{det.camera['name']}] ОШИБКА запуска: {e}")
                                 traceback.print_exc()
                         else:
-                            print(f"⏸️ [{det.camera['name']}] Детектор отключён (motion_enabled=0)")
+                            print(f"{ts()} ⏸️ [{det.camera['name']}] Детектор отключён (motion_enabled=0)")
 
                 # ✅ ЕСЛИ НЕ НАШЛИ — СОЗДАЁМ НОВЫЙ ДЕТЕКТОР
                 if not found:
-                    print(f"🆕 Камера {cam_id} не найдена в активных — создаю новый детектор")
+                    print(f"{ts()} 🆕 Камера {cam_id} не найдена в активных — создаю новый детектор")
                     if cam_dict.get("enabled") and cam_dict.get("motion_enabled"):
                         # Получаем MQTT клиент из первого детектора или создаём новый
                         mqtt_client = userdata.get("mqtt_client", client)
                         det = MotionDetector(cam_dict, mqtt_client)
                         if det.start():
                             userdata["detectors"].append(det)
-                            print(f"✅ [{det.camera['name']}] Детектор создан и запущен")
+                            print(f"{ts()} ✅ [{det.camera['name']}] Детектор создан и запущен")
                         else:
-                            print(f"❌ [{cam_dict['name']}] Не удалось запустить детектор")
+                            print(f"{ts()} ❌ [{cam_dict['name']}] Не удалось запустить детектор")
                     else:
-                        print(f"⏸️ Камера {cam_id} отключена или детектор выключен — пропускаю")
+                        print(f"{ts()} ⏸️ Камера {cam_id} отключена или детектор выключен — пропускаю")
 
         elif action == "ping":
             # Ответ на пинг от Health Monitor
@@ -133,7 +142,7 @@ def on_cmd(client, userdata, msg):
             }))
 
         elif action == "start_detector":
-            print(f"▶️ [CMD] Запуск детектора для камеры {cam_id}")
+            print(f"{ts()} ▶️ [CMD] Запуск детектора для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
 
@@ -152,27 +161,27 @@ def on_cmd(client, userdata, msg):
                         det.enabled = True
                         det.warmup_frames = 0
                         det.start()
-                        print(f"✅ [{det.camera['name']}] Детектор запущен")
+                        print(f"{ts()} ✅ [{det.camera['name']}] Детектор запущен")
                         break
 
                 if not found:
-                    print(f"🆕 Создаю детектор для камеры {cam_id}")
+                    print(f"{ts()} 🆕 Создаю детектор для камеры {cam_id}")
                     mqtt_client = userdata.get("mqtt_client", client)
                     det = MotionDetector(cam_dict, mqtt_client)
                     if det.start():
                         userdata["detectors"].append(det)
 
         elif action == "stop_detector":
-            print(f"⏹️ [CMD] Остановка детектора для камеры {cam_id}")
+            print(f"{ts()} ⏹️ [CMD] Остановка детектора для камеры {cam_id}")
             for det in userdata["detectors"]:
                 if str(det.camera["id"]) == str(cam_id):
                     det.enabled = False
                     det.stop()
-                    print(f"⏹️ [{det.camera['name']}] Детектор остановлен")
+                    print(f"{ts()} ⏹️ [{det.camera['name']}] Детектор остановлен")
                     break
 
     except Exception as e:
-        print(f"⚠️ [CMD] Ошибка: {e}")
+        print(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
 
 
 # ════════════════════════════════════════════════════════════
@@ -218,6 +227,7 @@ class MotionDetector:
         self.ai_confidence = camera.get("ai_confidence", 0.5)
         self.ai_frame_skip = camera.get("ai_frame_skip", 5)  # каждый 5-й кадр
         self.frame_count = 0
+        self._last_mog2_log = 0
 
         if self.ai_enabled:
             self._init_ai()
@@ -226,7 +236,7 @@ class MotionDetector:
         """Инициализация YOLO"""
         try:
             from ultralytics import YOLO
-            print(f"🤖 [{self.camera['name']}] Загружаю YOLOv8n...")
+            print(f"{ts()} 🤖 [{self.camera['name']}] Загружаю YOLOv8n...")
             self.ai_model = YOLO('yolov8n.pt')
 
             # ✅ ПАРСИМ ai_classes (может быть строка из БД)
@@ -237,9 +247,9 @@ class MotionDetector:
                 except:
                     self.ai_classes = [0]  # По умолчанию — человек
 
-            print(f"✅ [{self.camera['name']}] YOLOv8n загружен! Классы: {self.ai_classes}")
+            print(f"{ts()} ✅ [{self.camera['name']}] YOLOv8n загружен! Классы: {self.ai_classes}")
         except Exception as e:
-            print(f"❌ [{self.camera['name']}] Ошибка загрузки YOLO: {e}")
+            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка загрузки YOLO: {e}")
             self.ai_enabled = False
 
     def _load_zones(self):
@@ -258,9 +268,9 @@ class MotionDetector:
                 self.zones.append(zone)
 
             if self.zones:
-                print(f"🎯 [{self.camera['name']}] Загружено зон: {len(self.zones)}")
+                print(f"{ts()} 🎯 [{self.camera['name']}] Загружено зон: {len(self.zones)}")
         except Exception as e:
-            print(f"⚠️ [{self.camera['name']}] Ошибка загрузки зон: {e}")
+            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка загрузки зон: {e}")
             self.zones = []
 
     def enable(self):
@@ -269,7 +279,7 @@ class MotionDetector:
             return
         self.enabled = True
         self._reconnect_attempts = 0
-        print(f"✅ [{self.camera['name']}] Детектор ВКЛЮЧЕН")
+        print(f"{ts()} ✅ [{self.camera['name']}] Детектор ВКЛЮЧЕН")
         self.start()
 
     def disable(self):
@@ -278,12 +288,12 @@ class MotionDetector:
             return
         self.enabled = False
         self.stop()
-        print(f"⏹️ [{self.camera['name']}] Детектор ВЫКЛЮЧЕН")
+        print(f"{ts()} ⏹️ [{self.camera['name']}] Детектор ВЫКЛЮЧЕН")
 
     def start(self):
         """Запускает детектор"""
         if not self.enabled:
-            print(f"⏸️ [{self.camera['name']}] Камера отключена")
+            print(f"{ts()} ⏸️ [{self.camera['name']}] Камера отключена")
             return False
 
         rtsp_url = self.camera.get("rtsp_sub") or self.camera.get("rtsp_main")
@@ -301,11 +311,11 @@ class MotionDetector:
                 self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
                 if self.cap.isOpened():
                     break
-                print(f"⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts}...")
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts}...")
                 time.sleep(self._reconnect_delay)
 
             if not self.cap or not self.cap.isOpened():
-                print(f"❌ [{self.camera['name']}] Не могу открыть RTSP")
+                print(f"{ts()} ❌ [{self.camera['name']}] Не могу открыть RTSP")
                 self.cap = None
                 return False
 
@@ -315,11 +325,11 @@ class MotionDetector:
             self.warmup_frames = 0
             self._reconnect_attempts = 0
 
-            print(f"🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
+            print(f"{ts()} 🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
             return True
 
         except Exception as e:
-            print(f"❌ [{self.camera['name']}] Ошибка открытия RTSP: {e}")
+            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка открытия RTSP: {e}")
             self.cap = None
             self.running = False
             return False
@@ -339,7 +349,7 @@ class MotionDetector:
 
     def restart_with_config(self):
         """Перезапускает детектор с новыми настройками"""
-        print(f"🔄 [{self.camera['name']}] Перезапуск с новыми настройками...")
+        print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск с новыми настройками...")
         self.stop()
         time.sleep(0.5)
         self.start()
@@ -358,7 +368,7 @@ class MotionDetector:
         try:
             ret, frame = self.cap.read()
         except Exception as e:
-            print(f"⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
+            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
             self._reconnect_attempts += 1
             if self._reconnect_attempts <= self._max_reconnect_attempts:
                 time.sleep(2)
@@ -367,20 +377,20 @@ class MotionDetector:
                 self.running = False
                 self.cap.release()
                 self.cap = None
-                print(f"❌ [{self.camera['name']}] Слишком много ошибок, детектор остановлен")
+                print(f"{ts()} ❌ [{self.camera['name']}] Слишком много ошибок, детектор остановлен")
             return
 
         if not ret:
             self._reconnect_attempts += 1
             if self._reconnect_attempts <= self._max_reconnect_attempts:
-                print(f"⚠️ [{self.camera['name']}] Потеря потока, переподключение...")
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Потеря потока, переподключение...")
                 time.sleep(2)
                 self.start()
             else:
                 self.running = False
                 self.cap.release()
                 self.cap = None
-                print(f"❌ [{self.camera['name']}] Потеря потока, детектор остановлен")
+                print(f"{ts()} ❌ [{self.camera['name']}] Потеря потока, детектор остановлен")
             return
 
         self._reconnect_attempts = 0
@@ -410,11 +420,28 @@ class MotionDetector:
         if self.warmup_frames < self.WARMUP_NEEDED:
             self.warmup_frames += 1
             if self.warmup_frames % 5 == 0:
-                print(f"🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
+                print(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
             return
 
         motion_pixels = np.count_nonzero(fgmask)
         motion_percent = motion_pixels / (320 * 240) * 100
+
+        # ✅ ВЫВОД ВСЕХ СРАБОТОК MOG2
+        if motion_percent >= MOG2_LOG_MIN:
+            now = time.time()
+            if now - self._last_mog2_log >= MOG2_LOG_INTERVAL:
+                self._last_mog2_log = now
+
+                if motion_percent < self.threshold:
+                    if MOG2_LOG_COLORS:
+                        print(f"{ts()} \033[90m👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%)\033[0m")
+                    else:
+                        print(f"{ts()} 👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%)")
+                else:
+                    if MOG2_LOG_COLORS:
+                        print(f"{ts()} \033[91m📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)\033[0m")
+                    else:
+                        print(f"{ts()} 📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)")
 
         # 🤖 ЭТАП 1: MOG2 ПРОВЕРЯЕТ ДВИЖЕНИЕ
         if motion_percent > self.threshold:
@@ -432,7 +459,7 @@ class MotionDetector:
                     else:
                         # ❌ AI ОТКЛОНИЛ — ЛОЖНАЯ ТРЕВОГА
                         if motion_percent > self.log_min_threshold:
-                            print(f"🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%)")
+                            print(f"{ts()} 🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%)")
                 else:
                     # Пропускаем кадр, но если движение сильное — проверяем AI
                     if motion_percent > self.threshold * 3:
@@ -447,7 +474,7 @@ class MotionDetector:
             if self.motion_active:
                 if self.motion_end_timer is None:
                     total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
-                    print(f"⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...")
+                    print(f"{ts()} ⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...")
                     self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
                     self.motion_end_timer.daemon = True
                     self.motion_end_timer.start()
@@ -490,12 +517,10 @@ class MotionDetector:
             return None
 
         except Exception as e:
-            print(f"⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
+            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
             return None
 
     def _trigger_motion(self, motion_percent, ai_result):
-        """Триггерит тревогу"""
-        # Отменяем таймер остановки
         if self.motion_end_timer:
             self.motion_end_timer.cancel()
             self.motion_end_timer = None
@@ -504,20 +529,19 @@ class MotionDetector:
             self.motion_active = True
             self.motion_start_time = time.time()
 
-            # Формируем описание
             if ai_result:
                 desc = []
-                if ai_result['person'] > 0:
-                    desc.append(f"👤 x{ai_result['person']}")
-                if ai_result['car'] > 0:
-                    desc.append(f"🚗 x{ai_result['car']}")
-                print(f"🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%)")
+                if ai_result['person'] > 0: desc.append(f"👤 x{ai_result['person']}")
+                if ai_result['car'] > 0: desc.append(f"🚗 x{ai_result['car']}")
+                print(f"{ts()} 🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%)")
             else:
-                print(f"📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
+                print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
 
             self._publish("motion_start", motion_percent, ai_result)
-            send_mqtt_command(self.camera['id'], 'start_recording')
-            print(f"🔴 [{self.camera['name']}] Старт записи!")
+
+            # ✅ ДОБАВЬ ЛОГ ОТПРАВКИ
+            result = send_mqtt_command(self.camera['id'], 'start_recording')
+            print(f"{ts()} 🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'})")
 
     def _stop_motion(self):
         """Останавливает запись после задержки"""
@@ -525,7 +549,7 @@ class MotionDetector:
             self.motion_active = False
             self._publish("motion_end", 0)
             send_mqtt_command(self.camera['id'], 'stop_recording')
-            print(f"🟢 [{self.camera['name']}] Движение прекратилось, запись остановлена")
+            print(f"{ts()} 🟢 [{self.camera['name']}] Движение прекратилось, запись остановлена")
         self.motion_end_timer = None
 
     def _publish(self, event_type, percent, ai_result=None):
@@ -573,7 +597,7 @@ class MotionDetector:
 
 def main():
     print("[Legion NVR] Motion Detector")
-    print(f"[MQTT] {MQTT_BROKER}:{MQTT_PORT}")
+    print(f"{ts()} [MQTT] {MQTT_BROKER}:{MQTT_PORT}")
 
     # Подключаем MQTT
     mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
@@ -584,9 +608,9 @@ def main():
     try:
         cameras = load_cameras()
     except Exception as e:
-        print(f"⚠️ Ошибка загрузки камер: {e}")
+        print(f"{ts()} ⚠️ Ошибка загрузки камер: {e}")
 
-    print(f"[Cameras] with detector: {len(cameras)}")
+    print(f"{ts()} [Cameras] with detector: {len(cameras)}")
 
     # Создаём детекторы (если есть камеры)
     detectors = []
@@ -596,7 +620,7 @@ def main():
             if det.start():
                 detectors.append(det)
         except Exception as e:
-            print(f"⚠️ Ошибка создания детектора для {cam.get('name', '?')}: {e}")
+            print(f"{ts()} ⚠️ Ошибка создания детектора для {cam.get('name', '?')}: {e}")
 
     # ✅ ВСЕГДА ПОДПИСЫВАЕМСЯ НА MQTT
     mqtt_client.user_data_set({
@@ -607,8 +631,8 @@ def main():
     mqtt_client.subscribe("spartan/+/cmd")
     mqtt_client.loop_start()
 
-    print(f"[Detectors] Active: {len(detectors)}")
-    print(f"[Subscriptions] spartan/+/cmd")
+    print(f"{ts()} [Detectors] Active: {len(detectors)}")
+    print(f"{ts()} [Subscriptions] spartan/+/cmd")
     print("[Running] Working... (Ctrl+C to exit)")
 
     # ✅ БЕСКОНЕЧНЫЙ ЦИКЛ
@@ -619,7 +643,7 @@ def main():
                     if det.running and det.enabled:
                         det.loop()
                 except Exception as e:
-                    print(f"⚠️ Ошибка цикла детекции: {e}")
+                    print(f"{ts()} ⚠️ Ошибка цикла детекции: {e}")
                     # Пробуем перезапустить детектор
                     try:
                         det.start()

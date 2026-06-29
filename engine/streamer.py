@@ -39,6 +39,10 @@ motion_recordings = {}
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ════════════════════════════════════════════════════════════
 
+def ts():
+    """Возвращает текущую временную метку [HH:MM:SS]"""
+    return f"\033[36m[{time.strftime('%H:%M:%S')}]\033[0m"
+
 def get_recordings_path():
     """Получает путь к папке записей из настроек"""
     try:
@@ -98,7 +102,7 @@ def stop_hls_stream(camera_id):
                 os.remove(m3u8)
             except:
                 pass
-        print(f"⏹️ HLS стрим для камеры {cam_id} остановлен")
+        print(f"{ts()} ⏹️ HLS стрим для камеры {cam_id} остановлен")
 
 
 def start_hls_stream(camera):
@@ -110,11 +114,11 @@ def start_hls_stream(camera):
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
-        print(f"⏸️ Камера {cam_id} отключена, стрим не запущен")
+        print(f"{ts()} ⏸️ Камера {cam_id} отключена, стрим не запущен")
         return
 
     if not camera.get("stream_enabled", True):
-        print(f"⏸️ Стрим для камеры {cam_id} отключен")
+        print(f"{ts()} ⏸️ Стрим для камеры {cam_id} отключен")
         return
 
     # Останавливаем старый стрим
@@ -136,7 +140,7 @@ def start_hls_stream(camera):
     record_pre_sec = camera.get('record_pre_sec', 5)
     hls_list_size = record_pre_sec + 3  # Буфер + запас (3 сегмента на лаги)
 
-    print(f"🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
+    print(f"{ts()} 🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
 
     cmd = [
         ffmpeg,
@@ -160,9 +164,9 @@ def start_hls_stream(camera):
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         stream_processes[cam_id] = proc
-        print(f"🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
+        print(f"{ts()} 🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
     except Exception as e:
-        print(f"❌ Ошибка запуска стрима для {camera['name']}: {e}")
+        print(f"{ts()} ❌ Ошибка запуска стрима для {camera['name']}: {e}")
 
 
 def restart_hls_stream(camera):
@@ -191,7 +195,7 @@ def capture_buffer(cam_id, pre_sec):
     else:
         pre_segments = all_segments
 
-    print(f"📼 Буфер: захвачено {len(pre_segments)} из {segments_needed} сегментов")
+    print(f"{ts()} 📼 Буфер: захвачено {len(pre_segments)} из {segments_needed} сегментов")
 
     # Копируем во временную папку (чтобы HLS не удалил сегменты)
     temp_dir = os.path.join(tempfile.gettempdir(), f"motion_buffer_{cam_id}_{int(time.time())}")
@@ -205,7 +209,7 @@ def capture_buffer(cam_id, pre_sec):
             shutil.copy2(seg, seg_copy)
             saved_segments.append(seg_copy)
         except Exception as e:
-            print(f"⚠️ Ошибка копирования сегмента {seg_name}: {e}")
+            print(f"{ts()} ⚠️ Ошибка копирования сегмента {seg_name}: {e}")
 
     return saved_segments, temp_dir
 
@@ -218,7 +222,7 @@ def start_motion_recording(camera):
         return
 
     if not camera.get("record_enabled", False):
-        print(f"⏸️ Запись отключена для камеры {cam_id}")
+        print(f"{ts()} ⏸️ Запись отключена для камеры {cam_id}")
         return
 
     record_pre_sec = camera.get('record_pre_sec', 5)
@@ -237,13 +241,13 @@ def start_motion_recording(camera):
             pass
 
     if not all_segments:
-        print(f"❌ Нет HLS-сегментов для камеры {cam_id}")
+        print(f"{ts()} ❌ Нет HLS-сегментов для камеры {cam_id}")
         return
 
     all_segments.sort(key=lambda x: x[0])  # Сортируем по времени
 
-    print(f"📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
-    print(f"🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек")
+    print(f"{ts()} 📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
+    print(f"{ts()} 🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек")
 
     # ✅ СОХРАНЯЕМ ИНФОРМАЦИЮ О ЗАПИСИ
     motion_recordings[cam_id] = {
@@ -260,7 +264,7 @@ def start_motion_recording(camera):
     motion_recordings[cam_id]['timer'] = timer
     timer.start()
 
-    print(f"⏱️ Сбор сегментов через {record_post_sec} сек...")
+    print(f"{ts()} ⏱️ Сбор сегментов через {record_post_sec} сек...")
 
 def _collect_motion_segments(cam_id):
     """Собирает HLS-сегменты по времени и склеивает в ролик"""
@@ -283,7 +287,7 @@ def _collect_motion_segments(cam_id):
             pass
 
     if not all_segments:
-        print(f"❌ Нет сегментов для склейки")
+        print(f"{ts()} ❌ Нет сегментов для склейки")
         return
 
     all_segments.sort(key=lambda x: x[0])  # Сортируем по времени
@@ -299,19 +303,19 @@ def _collect_motion_segments(cam_id):
             selected_segments.append(seg_path)
 
     if len(selected_segments) < 2:
-        print(f"❌ Слишком мало сегментов: {len(selected_segments)}")
+        print(f"{ts()} ❌ Слишком мало сегментов: {len(selected_segments)}")
         # Пробуем взять последние 10 как fallback
         if len(all_segments) >= 2:
             selected_segments = [s[1] for s in all_segments[-10:]]
-            print(f"⚠️ Беру последние {len(selected_segments)} сегментов (fallback)")
+            print(f"{ts()} ⚠️ Беру последние {len(selected_segments)} сегментов (fallback)")
         else:
             return
 
     # ✅ ЛОГИРУЕМ ВРЕМЕНА
-    print(f"📼 Предзапись с: {time.strftime('%H:%M:%S', time.localtime(start_time))}")
-    print(f"📼 Тревога в:    {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
-    print(f"📼 Конец записи: {time.strftime('%H:%M:%S', time.localtime(end_time))}")
-    print(f"📼 Длительность: {len(selected_segments)} сек (пред {pre_sec}с + пост {post_sec}с)")
+    print(f"{ts()} 📼 Предзапись с: {time.strftime('%H:%M:%S', time.localtime(start_time))}")
+    print(f"{ts()} 📼 Тревога в:    {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
+    print(f"{ts()} 📼 Конец записи: {time.strftime('%H:%M:%S', time.localtime(end_time))}")
+    print(f"{ts()} 📼 Длительность: {len(selected_segments)} сек (пред {pre_sec}с + пост {post_sec}с)")
 
     # ✅ СОЗДАЁМ ФИНАЛЬНЫЙ ФАЙЛ
     now = time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -353,7 +357,7 @@ def _collect_motion_segments(cam_id):
 
         if result.returncode == 0 and os.path.exists(final_output) and os.path.getsize(final_output) > 0:
             file_size = os.path.getsize(final_output)
-            print(f"✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
+            print(f"{ts()} ✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
 
             # ✅ ЛОГИРУЕМ В БД
             try:
@@ -363,12 +367,12 @@ def _collect_motion_segments(cam_id):
                         (int(cam_id), final_output)
                     )
                     conn.commit()
-                print(f"📝 Запись добавлена в БД")
+                print(f"{ts()} 📝 Запись добавлена в БД")
             except Exception as e:
-                print(f"❌ Ошибка записи в БД: {e}")
+                print(f"{ts()} ❌ Ошибка записи в БД: {e}")
         else:
             error_msg = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Неизвестная ошибка'
-            print(f"❌ Ошибка склейки (код {result.returncode}): {error_msg[:200]}")
+            print(f"{ts()} ❌ Ошибка склейки (код {result.returncode}): {error_msg[:200]}")
 
             # Fallback: копируем первый и последний сегмент для диагностики
             if selected_segments:
@@ -376,12 +380,12 @@ def _collect_motion_segments(cam_id):
                 os.makedirs(debug_dir, exist_ok=True)
                 for i, seg in enumerate(selected_segments[:3] + selected_segments[-3:]):
                     shutil.copy2(seg, os.path.join(debug_dir, f"seg_{i}_{os.path.basename(seg)}"))
-                print(f"🔍 Отладочные сегменты сохранены в {debug_dir}")
+                print(f"{ts()} 🔍 Отладочные сегменты сохранены в {debug_dir}")
 
     except subprocess.TimeoutExpired:
-        print(f"❌ Таймаут склейки (60 сек)")
+        print(f"{ts()} ❌ Таймаут склейки (60 сек)")
     except Exception as e:
-        print(f"❌ Ошибка склейки: {e}")
+        print(f"{ts()} ❌ Ошибка склейки: {e}")
 
     # ✅ ЧИСТИМ ВРЕМЕННЫЕ ФАЙЛЫ
     try:
@@ -407,7 +411,7 @@ def extend_recording(cam_id):
     data['timer'] = timer
     timer.start()
 
-    print(f"⏱️ Запись продлена ещё на {post_sec} сек")
+    print(f"{ts()} ⏱️ Запись продлена ещё на {post_sec} сек")
 
 
 def _finalize_recording(cam_id):
@@ -433,7 +437,7 @@ def _finalize_recording(cam_id):
 
     # Проверяем, что есть что склеивать
     if not os.path.exists(temp_post) or os.path.getsize(temp_post) == 0:
-        print(f"❌ Постзапись пустая или не существует: {temp_post}")
+        print(f"{ts()} ❌ Постзапись пустая или не существует: {temp_post}")
         if saved_segments and os.path.exists(final_output) == False:
             # Сохраняем хотя бы буфер
             _save_segments_as_video(saved_segments, final_output, ffmpeg)
@@ -448,7 +452,7 @@ def _finalize_recording(cam_id):
         f.write(f"file '{os.path.abspath(temp_post)}'\n")
 
     # ✅ СКЛЕИВАЕМ БЕЗ ПЕРЕКОДИРОВАНИЯ
-    print(f"🔧 Склейка: {len(saved_segments)} сегментов буфера + постзапись")
+    print(f"{ts()} 🔧 Склейка: {len(saved_segments)} сегментов буфера + постзапись")
 
     cmd_concat = [
         ffmpeg,
@@ -465,7 +469,7 @@ def _finalize_recording(cam_id):
 
     if result.returncode == 0 and os.path.exists(final_output):
         file_size = os.path.getsize(final_output)
-        print(f"✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
+        print(f"{ts()} ✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
 
         # ✅ ЛОГИРУЕМ В БД
         try:
@@ -475,16 +479,16 @@ def _finalize_recording(cam_id):
                     (int(cam_id), final_output)
                 )
                 conn.commit()
-            print(f"📝 Запись добавлена в БД")
+            print(f"{ts()} 📝 Запись добавлена в БД")
         except Exception as e:
-            print(f"❌ Ошибка записи в БД: {e}")
+            print(f"{ts()} ❌ Ошибка записи в БД: {e}")
     else:
-        print(f"❌ Ошибка склейки (код {result.returncode})")
+        print(f"{ts()} ❌ Ошибка склейки (код {result.returncode})")
         # Fallback: сохраняем только постзапись
         if os.path.exists(temp_post) and os.path.getsize(temp_post) > 0:
             try:
                 os.rename(temp_post, final_output)
-                print(f"⚠️ Сохранена только постзапись (fallback)")
+                print(f"{ts()} ⚠️ Сохранена только постзапись (fallback)")
             except:
                 pass
 
@@ -505,7 +509,7 @@ def _finalize_recording(cam_id):
     except:
         pass
 
-    print(f"🧹 Временные файлы очищены")
+    print(f"{ts()} 🧹 Временные файлы очищены")
 
 
 def _save_segments_as_video(segments, output, ffmpeg):
@@ -552,7 +556,7 @@ def stop_motion_recording(camera_id):
     if 'timer' in data:
         data['timer'].cancel()
 
-    print(f"⏹️ Принудительное завершение записи для камеры {cam_id}")
+    print(f"{ts()} ⏹️ Принудительное завершение записи для камеры {cam_id}")
     _collect_motion_segments(cam_id)
 
 
@@ -570,7 +574,7 @@ def on_motion(client, userdata, msg):
             if cam:
                 start_motion_recording(dict(cam))
     except Exception as e:
-        print(f"⚠️ Ошибка обработки motion: {e}")
+        print(f"{ts()} ⚠️ Ошибка обработки motion: {e}")
 
 
 def on_cmd(client, userdata, msg):
@@ -582,7 +586,7 @@ def on_cmd(client, userdata, msg):
 
         # ✅ СТАРТ ЗАПИСИ
         if action == "start_recording" and cam_id:
-            print(f"📡 [CMD] Старт записи для камеры {cam_id}")
+            print(f"{ts()} 📡 [CMD] Старт записи для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
             if cam:
@@ -590,17 +594,17 @@ def on_cmd(client, userdata, msg):
 
         # ✅ ПРОДЛЕНИЕ ЗАПИСИ
         elif action == "extend_recording" and cam_id:
-            print(f"📡 [CMD] Продление записи для камеры {cam_id}")
+            print(f"{ts()} 📡 [CMD] Продление записи для камеры {cam_id}")
             extend_recording(cam_id)
 
         # ✅ ОСТАНОВКА ЗАПИСИ
         elif action == "stop_recording" and cam_id:
-            print(f"📡 [CMD] Остановка записи для камеры {cam_id}")
+            print(f"{ts()} 📡 [CMD] Остановка записи для камеры {cam_id}")
             stop_motion_recording(cam_id)
 
         # ✅ ЗАПУСК СТРИМА
         elif action == "start_stream" and cam_id:
-            print(f"▶️ [CMD] Запуск стрима для камеры {cam_id}")
+            print(f"{ts()} ▶️ [CMD] Запуск стрима для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
             if cam:
@@ -608,17 +612,17 @@ def on_cmd(client, userdata, msg):
 
         # ✅ ОСТАНОВКА СТРИМА
         elif action == "stop_stream" and cam_id:
-            print(f"⏹️ [CMD] Остановка стрима для камеры {cam_id}")
+            print(f"{ts()} ⏹️ [CMD] Остановка стрима для камеры {cam_id}")
             stop_hls_stream(cam_id)
 
         # ✅ ОСТАНОВКА ДЕТЕКТОРА → останавливаем запись
         elif action == "stop_detector" and cam_id:
-            print(f"⏹️ [CMD] Остановка детектора для камеры {cam_id} → стоп записи")
+            print(f"{ts()} ⏹️ [CMD] Остановка детектора для камеры {cam_id} → стоп записи")
             stop_motion_recording(cam_id)
 
         # ✅ ПЕРЕЗАГРУЗКА КОНФИГА
         elif action == "reload_config" and cam_id:
-            print(f"📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
+            print(f"{ts()} 📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
 
@@ -636,7 +640,7 @@ def on_cmd(client, userdata, msg):
             for cam in cameras:
                 if cam.get("enabled") and cam.get("stream_enabled", True):
                     start_hls_stream(cam)
-            print(f"🔄 Перезапущено стримов: {len(stream_processes)}")
+            print(f"{ts()} 🔄 Перезапущено стримов: {len(stream_processes)}")
 
         elif action == "ping":
             # Ответ на пинг от Health Monitor
@@ -648,7 +652,7 @@ def on_cmd(client, userdata, msg):
             }))
 
     except Exception as e:
-        print(f"⚠️ [CMD] Ошибка: {e}")
+        print(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
 
 
 def on_motion_and_cmd(client, userdata, msg):
@@ -703,8 +707,8 @@ def main():
     print("=" * 50)
     print("  🎥  LEGION NVR - STREAM ENGINE v2.0")
     print("=" * 50)
-    print(f"  📡 MQTT: {MQTT_BROKER}:{MQTT_PORT}")
-    print(f"  🎬 HLS сегменты: {HLS_TIME} сек")
+    print(f"{ts()}   📡 MQTT: {MQTT_BROKER}:{MQTT_PORT}")
+    print(f"{ts()}   🎬 HLS сегменты: {HLS_TIME} сек")
     print()
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -722,7 +726,7 @@ def main():
 
     # Запускаем HLS для всех камер
     cameras = load_cameras()
-    print(f"[Cameras] {len(cameras)}")
+    print(f"{ts()} [Cameras] {len(cameras)}")
     for cam in cameras:
         if cam.get("enabled") and cam.get("stream_enabled", True):
             start_hls_stream(cam)
@@ -730,8 +734,8 @@ def main():
     # Запускаем очистку старых сегментов
     threading.Thread(target=cleanup_old_segments, daemon=True).start()
 
-    print(f"[HLS] Streams: {len(stream_processes)}")
-    print(f"[Subscriptions] spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
+    print(f"{ts()} [HLS] Streams: {len(stream_processes)}")
+    print(f"{ts()} [Subscriptions] spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
     print("[Running] Working... (Ctrl+C to exit)")
     print()
 
