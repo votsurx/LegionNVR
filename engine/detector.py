@@ -4,6 +4,8 @@ Legion NVR - Motion Detector
 Читает камеры из БД, детектит движение, публикует MQTT
 """
 import os
+os.system('')  # Включает ANSI-цвета в Windows
+
 import sys
 import io
 import cv2
@@ -23,6 +25,22 @@ sys.stdout.reconfigure(line_buffering=True)
 
 from models.database import get_db
 
+
+# ════════════════════════════════════════════════════════════
+# ЦВЕТА ДЛЯ ЛОГОВ
+# ════════════════════════════════════════════════════════════
+C_RED = '\033[91m'
+C_GREEN = '\033[92m'
+C_YELLOW = '\033[93m'
+C_BLUE = '\033[94m'
+C_PURPLE = '\033[95m'
+C_CYAN = '\033[96m'
+C_GRAY = '\033[90m'
+C_WHITE = '\033[97m'
+C_RESET = '\033[0m'
+C_BOLD = '\033[1m'
+
+
 MQTT_BROKER = "127.0.0.1"
 MQTT_PORT = 1883
 # ════════════════════════════════════════════════════════════
@@ -37,13 +55,13 @@ MOG2_LOG_INTERVAL = 0.5     # Минимальный интервал между
 # ════════════════════════════════════════════════════════════
 
 def ts():
-    """Возвращает текущую временную метку [HH:MM:SS]"""
-    return f"\033[36m[{time.strftime('%H:%M:%S')}]\033[0m"
+    """Возвращает цветную временную метку [HH:MM:SS]"""
+    return f"{C_CYAN}[{time.strftime('%H:%M:%S')}]{C_RESET}"
 
 def send_mqtt_command(camera_id, action, params=None):
     """Отправляет MQTT команду"""
     try:
-        client = mqtt.Client()
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
         client.connect("127.0.0.1", 1883, 5)
         payload = {
             'action': action,
@@ -208,6 +226,7 @@ class MotionDetector:
         self.log_min_threshold = 5.0
 
         self.zones = []
+        self.motion_boxes = []
         self._load_zones()
 
         self.motion_end_delay = camera.get("motion_end_delay", 2.0)
@@ -434,12 +453,12 @@ class MotionDetector:
 
                 if motion_percent < self.threshold:
                     if MOG2_LOG_COLORS:
-                        print(f"{ts()} \033[90m👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%)\033[0m")
+                        print(f"{ts()} {C_GRAY}👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%){C_RESET}")
                     else:
                         print(f"{ts()} 👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%)")
                 else:
                     if MOG2_LOG_COLORS:
-                        print(f"{ts()} \033[91m📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)\033[0m")
+                        print(f"{ts()} {C_YELLOW}📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%){C_RESET}")
                     else:
                         print(f"{ts()} 📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)")
 
@@ -450,16 +469,24 @@ class MotionDetector:
             if self.ai_enabled and self.ai_model:
                 self.frame_count += 1
                 if self.frame_count % self.ai_frame_skip == 0:
-                    # Запускаем YOLO на полном кадре
-                    ai_result = self._ai_detect(frame)
+                    ai_result, boxes = self._ai_detect(frame)
 
                     if ai_result:
-                        # ✅ AI ПОДТВЕРДИЛ — ЭТО ЧЕЛОВЕК/МАШИНА!
-                        self._trigger_motion(motion_percent, ai_result)
+                        if not self.motion_active:
+                            # Первая тревога
+                            self._trigger_motion(motion_percent, ai_result, frame, boxes)
+                        else:
+                            # ✅ ДВИЖЕНИЕ ПРОДОЛЖАЕТСЯ — СОХРАНЯЕМ КООРДИНАТЫ
+                            self._save_motion_boxes(boxes, time.time())
+                            # Опционально: рисуем рамки для отладки
+                            if boxes:
+                                desc = []
+                                if ai_result['person'] > 0: desc.append(f"👤 x{ai_result['person']}")
+                                if ai_result['car'] > 0: desc.append(f"🚗 x{ai_result['car']}")
+                                print(f"{ts()} 🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}")
                     else:
-                        # ❌ AI ОТКЛОНИЛ — ЛОЖНАЯ ТРЕВОГА
                         if motion_percent > self.log_min_threshold:
-                            print(f"{ts()} 🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%)")
+                            print(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
                 else:
                     # Пропускаем кадр, но если движение сильное — проверяем AI
                     if motion_percent > self.threshold * 3:
@@ -474,53 +501,177 @@ class MotionDetector:
             if self.motion_active:
                 if self.motion_end_timer is None:
                     total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
-                    print(f"{ts()} ⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...")
+                    print(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек (пауза {self.motion_end_delay}с + пост {self.camera.get('record_post_sec', 5)}с)...{C_RESET}")
                     self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
                     self.motion_end_timer.daemon = True
                     self.motion_end_timer.start()
 
     def _ai_detect(self, frame):
+        """
+        Запускает YOLO на кадре.
+        Возвращает (ai_result, boxes) — словарь с типами и список рамок.
+        """
         try:
             results = self.ai_model(frame, verbose=False, conf=self.ai_confidence)
             boxes = results[0].boxes
 
             if boxes is None or len(boxes) == 0:
-                return None
+                return None, None
 
             detected = {'person': 0, 'car': 0, 'motorcycle': 0, 'dog': 0, 'cat': 0, 'total': 0}
+            box_list = []
+
+            # ✅ ПАРСИМ ai_classes
+            ai_classes = self.ai_classes
+            if isinstance(ai_classes, str):
+                import json
+                ai_classes = json.loads(ai_classes)
 
             for box in boxes:
                 cls = int(box.cls[0])
                 conf = float(box.conf[0])
 
-                # ✅ ПРОВЕРЯЕМ, ЧТО ai_classes — СПИСОК
-                ai_classes = self.ai_classes
-                if isinstance(ai_classes, str):
-                    import json
-                    ai_classes = json.loads(ai_classes)
+                # ✅ ПРОВЕРЯЕМ, ЧТО КЛАСС В СПИСКЕ РАЗРЕШЁННЫХ
+                if cls not in ai_classes:
+                    continue  # Пропускаем ненужные классы!
 
-                if cls == 0 and 0 in ai_classes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                box_list.append({
+                    'class': cls,
+                    'confidence': conf,
+                    'x1': int(x1), 'y1': int(y1),
+                    'x2': int(x2), 'y2': int(y2)
+                })
+
+                if cls == 0:
                     detected['person'] += 1
-                elif cls == 2 and 2 in ai_classes:
+                elif cls == 2:
                     detected['car'] += 1
-                elif cls == 3 and 3 in ai_classes:
+                elif cls == 3:
                     detected['motorcycle'] += 1
-                elif cls == 16 and 16 in ai_classes:
+                elif cls == 16:
                     detected['dog'] += 1
-                elif cls == 17 and 17 in ai_classes:
+                elif cls == 17:
                     detected['cat'] += 1
 
                 detected['total'] += 1
 
             if detected['total'] > 0:
-                return detected
-            return None
+                return detected, box_list
+            return None, None
 
         except Exception as e:
-            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
+            print(f"⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
+            return None, None
+
+    def _draw_boxes(self, frame, boxes):
+        """Рисует рамки и подписи на кадре (только разрешённые классы)"""
+        if not boxes:
+            return frame
+
+        # ✅ ПОЛУЧАЕМ РАЗРЕШЁННЫЕ КЛАССЫ
+        ai_classes = self.ai_classes
+        if isinstance(ai_classes, str):
+            import json
+            ai_classes = json.loads(ai_classes)
+
+        # Цвета для разных классов
+        colors = {
+            0: (0, 255, 0),    # Человек — зелёный
+            2: (255, 0, 0),    # Машина — синий
+            3: (0, 255, 255),  # Мотоцикл — жёлтый
+            16: (255, 0, 255), # Собака — фиолетовый
+            17: (0, 165, 255), # Кошка — оранжевый
+        }
+
+        names = {
+            0: 'Человек',
+            2: 'Машина',
+            3: 'Мотоцикл',
+            16: 'Собака',
+            17: 'Кошка',
+        }
+
+        for box in boxes:
+            cls = box['class']
+
+            # ✅ ПРОПУСКАЕМ НЕРАЗРЕШЁННЫЕ КЛАССЫ
+            if cls not in ai_classes:
+                continue
+
+            conf = box['confidence']
+            x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
+
+            color = colors.get(cls, (255, 255, 255))
+            name = names.get(cls, f'Объект {cls}')
+
+            # Рамка (контур)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+            # Подпись
+            label = f'{name} {conf*100:.0f}%'
+            (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+
+            # Фон подписи
+            cv2.rectangle(frame, (x1, y1 - label_h - 10), (x1 + label_w + 10, y1), color, -1)
+
+            # Текст
+            cv2.putText(frame, label, (x1 + 5, y1 - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+
+        return frame
+
+    def _save_alert_snapshot(self, frame, boxes):
+        """Сохраняет скриншот с рамками при тревоге"""
+        try:
+            timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+            snap_dir = os.path.join("snapshots", str(self.camera["id"]))
+            os.makedirs(snap_dir, exist_ok=True)
+
+            filename = f"{timestamp}_alert.jpg"
+            filepath = os.path.join(snap_dir, filename)
+
+            # Рисуем рамки на копии кадра
+            frame_with_boxes = self._draw_boxes(frame.copy(), boxes)
+            cv2.imwrite(filepath, frame_with_boxes, [cv2.IMWRITE_JPEG_QUALITY, 85])
+
+            print(f"{ts()} 📸 [{self.camera['name']}] Скриншот сохранён: {filename}")
+            return filepath
+        except Exception as e:
+            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка скриншота: {e}")
             return None
 
-    def _trigger_motion(self, motion_percent, ai_result):
+    def _save_boxes_data(self, boxes, motion_percent):
+        """Сохраняет координаты рамок для AI-ролика"""
+        try:
+            timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+            boxes_dir = os.path.join("snapshots", str(self.camera["id"]), "boxes")
+            os.makedirs(boxes_dir, exist_ok=True)
+
+            filename = f"{timestamp}_boxes.json"
+            filepath = os.path.join(boxes_dir, filename)
+
+            data = {
+                'camera_id': self.camera['id'],
+                'camera_name': self.camera['name'],
+                'timestamp': timestamp,
+                'motion_percent': motion_percent,
+                'boxes': boxes,
+                'frame_width': 640,   # Будет масштабироваться при склейке
+                'frame_height': 360
+            }
+
+            with open(filepath, 'w') as f:
+                json.dump(data, f, indent=2)
+
+            print(f"{ts()} 📦 [{self.camera['name']}] Координаты сохранены: {filename}")
+            return filepath
+        except Exception as e:
+            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка сохранения координат: {e}")
+            return None
+
+    def _trigger_motion(self, motion_percent, ai_result, frame=None, boxes=None):
+        """Триггерит тревогу"""
         if self.motion_end_timer:
             self.motion_end_timer.cancel()
             self.motion_end_timer = None
@@ -528,28 +679,81 @@ class MotionDetector:
         if not self.motion_active:
             self.motion_active = True
             self.motion_start_time = time.time()
+            self.motion_boxes = []
+
+            # Сохраняем скриншот и координаты
+            if frame is not None and boxes:
+                self._save_alert_snapshot(frame, boxes)
+                self._save_motion_boxes(boxes, time.time())
 
             if ai_result:
                 desc = []
-                if ai_result['person'] > 0: desc.append(f"👤 x{ai_result['person']}")
-                if ai_result['car'] > 0: desc.append(f"🚗 x{ai_result['car']}")
-                print(f"{ts()} 🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%)")
+                if ai_result['person'] > 0:
+                    desc.append(f"👤 x{ai_result['person']}")
+                if ai_result['car'] > 0:
+                    desc.append(f"🚗 x{ai_result['car']}")
+                print(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
             else:
                 print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
 
             self._publish("motion_start", motion_percent, ai_result)
-
-            # ✅ ДОБАВЬ ЛОГ ОТПРАВКИ
             result = send_mqtt_command(self.camera['id'], 'start_recording')
-            print(f"{ts()} 🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'})")
+            print(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
+
+    def _save_motion_boxes(self, boxes, frame_time):
+        """Сохраняет координаты с временной меткой"""
+        if boxes:
+            self.motion_boxes.append({
+                'time': frame_time,
+                'boxes': boxes
+            })
+
+    def _save_all_boxes(self):
+        import json
+
+        if not self.motion_boxes:
+            return None
+
+        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        boxes_dir = os.path.join("snapshots", str(self.camera["id"]), "boxes")
+        os.makedirs(boxes_dir, exist_ok=True)
+
+        filename = f"{timestamp}_boxes.json"
+        filepath = os.path.join(boxes_dir, filename)
+
+        ai_classes = self.ai_classes
+        if isinstance(ai_classes, str):
+            ai_classes = json.loads(ai_classes)
+
+        data = {
+            'camera_id': self.camera['id'],
+            'camera_name': self.camera['name'],
+            'timestamp': timestamp,
+            'ai_classes': ai_classes,
+            'frames': self.motion_boxes
+        }
+
+        # ✅ ЗАПИСЫВАЕМ И СРАЗУ СБРАСЫВАЕМ НА ДИСК
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.flush()  # ← ВАЖНО! Сбрасываем буфер на диск
+            os.fsync(f.fileno())  # ← ЕЩЁ ВАЖНЕЕ! Ждём физической записи
+
+        print(f"{ts()} 📦 [{self.camera['name']}] Координаты сохранены: {len(self.motion_boxes)} кадров")
+        return filepath
 
     def _stop_motion(self):
-        """Останавливает запись после задержки"""
         if self.motion_active:
+            # ✅ СОХРАНЯЕМ ВСЕ КООРДИНАТЫ
+            boxes_file = self._save_all_boxes()
+            if boxes_file:
+                print(f"{ts()} 📦 [{self.camera['name']}] Всего кадров с рамками: {len(self.motion_boxes)}")
+
             self.motion_active = False
+            self.motion_boxes = []  # Очищаем
             self._publish("motion_end", 0)
             send_mqtt_command(self.camera['id'], 'stop_recording')
-            print(f"{ts()} 🟢 [{self.camera['name']}] Движение прекратилось, запись остановлена")
+            print(f"{ts()} {C_GREEN}🟢 [{self.camera['name']}] Запись остановлена{C_RESET}")
         self.motion_end_timer = None
 
     def _publish(self, event_type, percent, ai_result=None):

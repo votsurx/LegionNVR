@@ -3,9 +3,10 @@ Legion NVR - Stream Engine v2.0
 Запуск: python engine/streamer.py
 Подписывается на MQTT, управляет HLS-стримами и записью по тревоге
 """
+import os
+os.system('')  # Включает ANSI-цвета в Windows
 
 import subprocess
-import os
 import shutil
 import json
 import threading
@@ -28,6 +29,20 @@ MQTT_PORT = 1883
 HLS_DIR = "streams"
 HLS_TIME = 1  # ✅ ФИКСИРУЕМ 1 СЕКУНДУ — ИДЕАЛЬНО ДЛЯ ПРЕДЗАПИСИ
 
+# ════════════════════════════════════════════════════════════
+# ЦВЕТА ДЛЯ ЛОГОВ
+# ════════════════════════════════════════════════════════════
+C_RED = '\033[91m'
+C_GREEN = '\033[92m'
+C_YELLOW = '\033[93m'
+C_BLUE = '\033[94m'
+C_PURPLE = '\033[95m'
+C_CYAN = '\033[96m'
+C_GRAY = '\033[90m'
+C_WHITE = '\033[97m'
+C_RESET = '\033[0m'
+C_BOLD = '\033[1m'
+
 # Глобальные переменные для управления процессами
 stream_processes = {}
 recording_processes = {}
@@ -40,8 +55,211 @@ motion_recordings = {}
 # ════════════════════════════════════════════════════════════
 
 def ts():
-    """Возвращает текущую временную метку [HH:MM:SS]"""
-    return f"\033[36m[{time.strftime('%H:%M:%S')}]\033[0m"
+    """Возвращает цветную временную метку [HH:MM:SS]"""
+    return f"{C_CYAN}[{time.strftime('%H:%M:%S')}]{C_RESET}"
+
+def _concat_with_boxes(selected_segments, boxes_file, final_output, ffmpeg):
+    if not boxes_file or not os.path.exists(boxes_file):
+        return False
+
+    # ✅ ПРОВЕРЯЕМ ЧТО ФАЙЛ НЕ ПУСТОЙ
+    if os.path.getsize(boxes_file) == 0:
+        print(f"{ts()} ⚠️ Файл координат пустой, пропускаю рамки")
+        return False
+
+    try:
+        with open(boxes_file, 'r') as f:
+            boxes_data = json.load(f)
+
+        # ✅ ПРОВЕРЯЕМ ЧТО ДАННЫЕ КОРРЕКТНЫ
+        if not boxes_data or not isinstance(boxes_data, dict):
+            print(f"{ts()} ⚠️ Некорректный формат данных рамок")
+            return False
+
+        frames = boxes_data.get('frames', [])
+        if not frames:
+            print(f"{ts()} ⚠️ Нет данных о рамках")
+            return False
+
+        # ✅ ПОЛУЧАЕМ РАЗРЕШЁННЫЕ КЛАССЫ
+        ai_classes = boxes_data.get('ai_classes', [0, 2])
+
+        print(f"{ts()} 🔧 Накладываю рамки на {len(selected_segments)} сегментов (классы: {ai_classes})...")
+
+        # Создаём временную папку для обработанных сегментов
+        temp_dir = tempfile.mkdtemp(prefix="ai_boxes_")
+        processed_segments = []
+
+        for seg in selected_segments:
+            seg_time = os.path.getmtime(seg)
+
+            # ✅ НАХОДИМ БЛИЖАЙШИЙ КАДР ПО ВРЕМЕНИ
+            closest_frame = None
+            min_diff = float('inf')
+            for frame_data in frames:
+                diff = abs(frame_data['time'] - seg_time)
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_frame = frame_data
+
+            seg_name = os.path.basename(seg)
+            processed_seg = os.path.join(temp_dir, seg_name)
+
+            if closest_frame and closest_frame.get('boxes'):
+                boxes = closest_frame['boxes']
+
+                # ✅ ФИЛЬТРУЕМ ТОЛЬКО РАЗРЕШЁННЫЕ КЛАССЫ
+                filtered_boxes = [b for b in boxes if b['class'] in ai_classes]
+
+                if filtered_boxes:
+                    # Строим drawbox фильтры
+                    draw_filters = []
+                    for box in filtered_boxes:
+                        x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
+                        w = x2 - x1
+                        h = y2 - y1
+
+                        # Цвет и подпись в зависимости от класса
+                        if box['class'] == 0:       # Человек
+                            color = 'green'
+                            label = f"Person {box['confidence']*100:.0f}%"
+                        elif box['class'] == 2:     # Машина
+                            color = 'red'
+                            label = f"Car {box['confidence']*100:.0f}%"
+                        elif box['class'] == 3:     # Мотоцикл
+                            color = 'yellow'
+                            label = f"Moto {box['confidence']*100:.0f}%"
+                        elif box['class'] == 5:     # Автобус
+                            color = 'blue'
+                            label = f"Bus {box['confidence']*100:.0f}%"
+                        elif box['class'] == 7:     # Грузовик
+                            color = 'orange'
+                            label = f"Truck {box['confidence']*100:.0f}%"
+                        elif box['class'] == 16:    # Собака
+                            color = 'purple'
+                            label = f"Dog {box['confidence']*100:.0f}%"
+                        elif box['class'] == 17:    # Кошка
+                            color = 'pink'
+                            label = f"Cat {box['confidence']*100:.0f}%"
+                        else:
+                            color = 'white'
+                            label = f"Obj {box['confidence']*100:.0f}%"
+
+                        # ✅ КОНТУР (t=3) вместо заливки (t=fill)
+                        draw_filters.append(f"drawbox=x={x1}:y={y1}:w={w}:h={h}:color={color}:t=3")
+                        # Подпись
+                        draw_filters.append(f"drawtext=text='{label}':x={x1+5}:y={y1-25}:fontsize=18:fontcolor=white:box=1:boxcolor=black@0.5")
+
+                    if draw_filters:
+                        filter_chain = ','.join(draw_filters)
+
+                        cmd = [
+                            ffmpeg,
+                            "-loglevel", "error",
+                            "-i", seg,
+                            "-vf", filter_chain,
+                            "-c:v", "libx264",
+                            "-preset", "ultrafast",
+                            "-crf", "23",
+                            "-an",
+                            "-y",
+                            processed_seg
+                        ]
+
+                        try:
+                            subprocess.run(cmd, timeout=30, capture_output=True)
+                            if os.path.exists(processed_seg) and os.path.getsize(processed_seg) > 0:
+                                processed_segments.append(processed_seg)
+                            else:
+                                # Если не получилось — копируем оригинал
+                                shutil.copy2(seg, processed_seg)
+                                processed_segments.append(processed_seg)
+                        except subprocess.TimeoutExpired:
+                            print(f"{ts()} ⚠️ Таймаут обработки сегмента {seg_name}")
+                            shutil.copy2(seg, processed_seg)
+                            processed_segments.append(processed_seg)
+                        except Exception as e:
+                            print(f"{ts()} ⚠️ Ошибка обработки сегмента {seg_name}: {e}")
+                            shutil.copy2(seg, processed_seg)
+                            processed_segments.append(processed_seg)
+                    else:
+                        # Нет фильтров — копируем как есть
+                        shutil.copy2(seg, processed_seg)
+                        processed_segments.append(processed_seg)
+                else:
+                    # Нет разрешённых классов — копируем как есть
+                    shutil.copy2(seg, processed_seg)
+                    processed_segments.append(processed_seg)
+            else:
+                # Нет рамок для этого сегмента — копируем как есть
+                shutil.copy2(seg, processed_seg)
+                processed_segments.append(processed_seg)
+
+        # ✅ СКЛЕИВАЕМ ОБРАБОТАННЫЕ СЕГМЕНТЫ
+        if processed_segments:
+            print(f"{ts()} 🔧 Склеиваю {len(processed_segments)} обработанных сегментов...")
+
+            concat_file = os.path.join(temp_dir, "concat.txt")
+            with open(concat_file, "w", encoding='utf-8') as f:
+                for seg in processed_segments:
+                    escaped_path = os.path.abspath(seg).replace('\\', '/')
+                    f.write(f"file '{escaped_path}'\n")
+
+            cmd_concat = [
+                ffmpeg,
+                "-loglevel", "error",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", concat_file,
+                "-c", "copy",
+                "-y",
+                final_output
+            ]
+
+            try:
+                result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
+
+                # Чистим временную папку
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                except:
+                    pass
+
+                if result.returncode == 0 and os.path.exists(final_output) and os.path.getsize(final_output) > 0:
+                    print(f"{ts()} ✅ AI-ролик с рамками готов!")
+                    return True
+                else:
+                    error_msg = result.stderr.decode('utf-8', errors='ignore')[:200] if result.stderr else 'Unknown'
+                    print(f"{ts()} ❌ Ошибка склейки: {error_msg}")
+                    return False
+
+            except subprocess.TimeoutExpired:
+                print(f"{ts()} ❌ Таймаут склейки (60 сек)")
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                except:
+                    pass
+                return False
+            except Exception as e:
+                print(f"{ts()} ❌ Ошибка склейки: {e}")
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                except:
+                    pass
+                return False
+        else:
+            print(f"{ts()} ❌ Нет обработанных сегментов")
+            try:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            except:
+                pass
+            return False
+
+    except Exception as e:
+        print(f"{ts()} ⚠️ Ошибка наложения рамок: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def get_recordings_path():
     """Получает путь к папке записей из настроек"""
@@ -246,7 +464,7 @@ def start_motion_recording(camera):
 
     all_segments.sort(key=lambda x: x[0])  # Сортируем по времени
 
-    print(f"{ts()} 📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
+    print(f"{ts()} {C_RED}📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
     print(f"{ts()} 🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек")
 
     # ✅ СОХРАНЯЕМ ИНФОРМАЦИЮ О ЗАПИСИ
@@ -267,12 +485,12 @@ def start_motion_recording(camera):
     print(f"{ts()} ⏱️ Сбор сегментов через {record_post_sec} сек...")
 
 def _collect_motion_segments(cam_id):
-    """Собирает HLS-сегменты по времени и склеивает в ролик"""
+    """Собирает HLS-сегменты по времени и склеивает в ролик (с AI-рамками если есть)"""
     if cam_id not in motion_recordings:
         return
 
     data = motion_recordings.pop(cam_id)
-    alarm_time = data['alarm_time']  # ← ВРЕМЯ ТРЕВОГИ
+    alarm_time = data['alarm_time']
     pre_sec = data['pre_sec']
     post_sec = data['post_sec']
     camera = data['camera']
@@ -290,21 +508,20 @@ def _collect_motion_segments(cam_id):
         print(f"{ts()} ❌ Нет сегментов для склейки")
         return
 
-    all_segments.sort(key=lambda x: x[0])  # Сортируем по времени
+    all_segments.sort(key=lambda x: x[0])
 
     # ✅ ВЫЧИСЛЯЕМ ВРЕМЕННЫЕ ГРАНИЦЫ
-    start_time = alarm_time - pre_sec     # Начало предзаписи
-    end_time = time.time()                 # Текущее время (конец постзаписи)
+    start_time = alarm_time - pre_sec
+    end_time = time.time()
 
     # ✅ ОТБИРАЕМ СЕГМЕНТЫ ПО ВРЕМЕНИ
     selected_segments = []
     for mtime, seg_path in all_segments:
-        if start_time - 1 <= mtime <= end_time + 1:  # +-1 сек на погрешность
+        if start_time - 1 <= mtime <= end_time + 1:
             selected_segments.append(seg_path)
 
     if len(selected_segments) < 2:
         print(f"{ts()} ❌ Слишком мало сегментов: {len(selected_segments)}")
-        # Пробуем взять последние 10 как fallback
         if len(all_segments) >= 2:
             selected_segments = [s[1] for s in all_segments[-10:]]
             print(f"{ts()} ⚠️ Беру последние {len(selected_segments)} сегментов (fallback)")
@@ -327,71 +544,95 @@ def _collect_motion_segments(cam_id):
 
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
-        print("❌ ffmpeg не найден!")
+        print(f"{ts()} ❌ ffmpeg не найден!")
         return
 
-    # ✅ СОЗДАЁМ ФАЙЛ КОНКАТЕНАЦИИ
-    temp_dir = tempfile.gettempdir()
-    concat_file = os.path.join(temp_dir, f"concat_{cam_id}_{int(time.time())}.txt")
+    # ✅ ИЩЕМ ФАЙЛ С КООРДИНАТАМИ РАМОК
+    boxes_dir = os.path.join("snapshots", cam_id, "boxes")
+    boxes_file = None
+    if os.path.exists(boxes_dir):
+        box_files = sorted(glob.glob(os.path.join(boxes_dir, "*_boxes.json")))
+        if box_files:
+            boxes_file = box_files[-1]
+            print(f"{ts()} 📦 Найдены координаты рамок: {os.path.basename(boxes_file)}")
 
-    with open(concat_file, "w", encoding='utf-8') as f:
-        for seg in selected_segments:
-            # Экранируем путь для ffmpeg
-            escaped_path = os.path.abspath(seg).replace('\\', '/')
-            f.write(f"file '{escaped_path}'\n")
+    # ✅ ПРОБУЕМ СКЛЕЙКУ С РАМКАМИ
+    success = False
+    if boxes_file:
+        success = _concat_with_boxes(selected_segments, boxes_file, final_output, ffmpeg)
 
-    # ✅ СКЛЕИВАЕМ БЕЗ ПЕРЕКОДИРОВАНИЯ
-    cmd_concat = [
-        ffmpeg,
-        "-loglevel", "error",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", concat_file,
-        "-c", "copy",
-        "-y",
-        final_output
-    ]
+    # ✅ ЕСЛИ НЕ ПОЛУЧИЛОСЬ — ОБЫЧНАЯ СКЛЕЙКА
+    if not success:
+        # Создаём файл конкатенации
+        temp_dir = tempfile.gettempdir()
+        concat_file = os.path.join(temp_dir, f"concat_{cam_id}_{int(time.time())}.txt")
 
-    try:
-        result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
+        with open(concat_file, "w", encoding='utf-8') as f:
+            for seg in selected_segments:
+                escaped_path = os.path.abspath(seg).replace('\\', '/')
+                f.write(f"file '{escaped_path}'\n")
 
-        if result.returncode == 0 and os.path.exists(final_output) and os.path.getsize(final_output) > 0:
-            file_size = os.path.getsize(final_output)
-            print(f"{ts()} ✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт)")
+        cmd_concat = [
+            ffmpeg,
+            "-loglevel", "error",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_file,
+            "-c", "copy",
+            "-y",
+            final_output
+        ]
 
-            # ✅ ЛОГИРУЕМ В БД
-            try:
-                with get_db() as conn:
-                    conn.execute(
-                        "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
-                        (int(cam_id), final_output)
-                    )
-                    conn.commit()
-                print(f"{ts()} 📝 Запись добавлена в БД")
-            except Exception as e:
-                print(f"{ts()} ❌ Ошибка записи в БД: {e}")
-        else:
-            error_msg = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Неизвестная ошибка'
-            print(f"{ts()} ❌ Ошибка склейки (код {result.returncode}): {error_msg[:200]}")
+        try:
+            result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
+            success = result.returncode == 0 and os.path.exists(final_output) and os.path.getsize(final_output) > 0
+        except subprocess.TimeoutExpired:
+            print(f"{ts()} ❌ Таймаут склейки (60 сек)")
+        except Exception as e:
+            print(f"{ts()} ❌ Ошибка склейки: {e}")
 
-            # Fallback: копируем первый и последний сегмент для диагностики
-            if selected_segments:
-                debug_dir = os.path.join(temp_dir, f"debug_{cam_id}")
-                os.makedirs(debug_dir, exist_ok=True)
-                for i, seg in enumerate(selected_segments[:3] + selected_segments[-3:]):
+        try:
+            os.remove(concat_file)
+        except:
+            pass
+
+    # ✅ ПРОВЕРЯЕМ РЕЗУЛЬТАТ
+    if success and os.path.exists(final_output) and os.path.getsize(final_output) > 0:
+        file_size = os.path.getsize(final_output)
+        print(f"{ts()} {C_GREEN}✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт){C_RESET}")
+
+        # ✅ ЛОГИРУЕМ В БД
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
+                    (int(cam_id), final_output)
+                )
+                conn.commit()
+            print(f"{ts()} 📝 Запись добавлена в БД")
+        except Exception as e:
+            print(f"{ts()} ❌ Ошибка записи в БД: {e}")
+    else:
+        print(f"{ts()} ❌ Не удалось сохранить запись")
+
+        # Сохраняем сегменты для отладки
+        if selected_segments:
+            debug_dir = os.path.join(tempfile.gettempdir(), f"debug_{cam_id}_{int(time.time())}")
+            os.makedirs(debug_dir, exist_ok=True)
+            for i, seg in enumerate(selected_segments[:3] + selected_segments[-3:]):
+                try:
                     shutil.copy2(seg, os.path.join(debug_dir, f"seg_{i}_{os.path.basename(seg)}"))
-                print(f"{ts()} 🔍 Отладочные сегменты сохранены в {debug_dir}")
+                except:
+                    pass
+            print(f"{ts()} 🔍 Отладочные сегменты: {debug_dir}")
 
-    except subprocess.TimeoutExpired:
-        print(f"{ts()} ❌ Таймаут склейки (60 сек)")
-    except Exception as e:
-        print(f"{ts()} ❌ Ошибка склейки: {e}")
-
-    # ✅ ЧИСТИМ ВРЕМЕННЫЕ ФАЙЛЫ
-    try:
-        os.remove(concat_file)
-    except:
-        pass
+    # ✅ ЧИСТИМ ФАЙЛ КООРДИНАТ (после использования)
+    if boxes_file and os.path.exists(boxes_file):
+        try:
+            os.remove(boxes_file)
+            print(f"{ts()} 🧹 Файл координат удалён")
+        except:
+            pass
 
 def extend_recording(cam_id):
     """Продлевает запись (сбрасывает таймер сбора)"""
@@ -586,7 +827,7 @@ def on_cmd(client, userdata, msg):
 
         # ✅ СТАРТ ЗАПИСИ
         if action == "start_recording" and cam_id:
-            print(f"{ts()} 📡 [CMD] Старт записи для камеры {cam_id}")
+            print(f"{ts()} {C_BLUE}📡 [CMD] Старт записи для камеры {cam_id}{C_RESET}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
             if cam:

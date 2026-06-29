@@ -385,6 +385,26 @@ def api_test_camera(camera_id):
         'message': 'RTSP доступен' if is_available else 'RTSP недоступен'
     })
 
+@app.route('/api/cameras/<int:camera_id>/snapshots/latest')
+def latest_snapshot(camera_id):
+    snap_dir = os.path.join("snapshots", str(camera_id))
+    if os.path.exists(snap_dir):
+        files = sorted(glob.glob(os.path.join(snap_dir, "*_alert.jpg")))
+        if files:
+            return send_file(files[-1], mimetype='image/jpeg')
+    return "Нет скриншотов", 404
+
+@app.route('/api/cameras/<int:camera_id>/snapshots')
+def list_snapshots(camera_id):
+    snap_dir = os.path.join("snapshots", str(camera_id))
+    if os.path.exists(snap_dir):
+        files = sorted(glob.glob(os.path.join(snap_dir, "*_alert.jpg")), reverse=True)
+        return jsonify({
+            'success': True,
+            'snapshots': [os.path.basename(f) for f in files[:20]]
+        })
+    return jsonify({'success': True, 'snapshots': []})
+
 
 # ============================================================
 # HLS-ЭНДПОИНТЫ
