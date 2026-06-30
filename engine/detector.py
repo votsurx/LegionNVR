@@ -16,6 +16,7 @@ import time
 import sys
 import threading
 import traceback
+import tempfile
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
@@ -308,6 +309,133 @@ class MotionDetector:
             traceback.print_exc()
             self.zones = []
 
+    def _draw_boxes_on_frame(self, frame, boxes):
+        """Рисует рамки на кадре в оригинальном разрешении"""
+        if boxes is None:
+            return frame
+
+        import cv2
+        # Цвета для разных классов (BGR)
+        colors = {
+            0: (0, 255, 0),    # Человек — зелёный
+            2: (0, 0, 255),    # Машина — красный
+            3: (0, 255, 255),  # Мотоцикл — жёлтый
+        }
+        names = {
+            0: 'Person',
+            2: 'Car',
+            3: 'Moto',
+        }
+
+        for box in boxes:
+            cls = box.get('class', 0)
+            conf = box.get('confidence', 0)
+            x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
+
+            color = colors.get(cls, (255, 255, 255))
+            name = names.get(cls, 'Obj')
+
+            # Рамка
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            # Подпись
+            label = f'{name} {conf*100:.0f}%'
+            cv2.putText(frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
+        return frame
+
+    def _save_ai_frame(self, frame, boxes):
+        """Сохраняет кадр с рамками в оригинальном разрешении"""
+        try:
+            # Рисуем рамки
+            frame_with_boxes = self._draw_boxes_on_frame(frame.copy(), boxes)
+
+            # Сохраняем во временную папку
+            timestamp = time.strftime("%Y%m%d_%H%M%S")  # ← УБРАЛ %f
+            ai_frames_dir = os.path.join(tempfile.gettempdir(), f"ai_frames_{self.camera['id']}")
+            os.makedirs(ai_frames_dir, exist_ok=True)
+
+            # Используем счётчик для уникальности
+            if not hasattr(self, '_ai_frame_counter'):
+                self._ai_frame_counter = 0
+            self._ai_frame_counter += 1
+
+            filename = f"ai_{timestamp}_{self._ai_frame_counter:04d}.png"
+            filepath = os.path.join(ai_frames_dir, filename)
+
+            cv2.imwrite(filepath, frame_with_boxes, [cv2.IMWRITE_PNG_COMPRESSION, 3])
+
+            # Сохраняем метаданные для стримера
+            meta = {
+                'time': time.time(),
+                'file': filepath,
+                'boxes': boxes
+            }
+
+            if not hasattr(self, '_ai_frames_list'):
+                self._ai_frames_list = []
+            self._ai_frames_list.append(meta)
+
+            return filepath
+        except Exception as e:
+            print(f"{ts()} {C_RED}❌ Ошибка сохранения AI-кадра: {e}{C_RESET}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _update_ai_frames_json(self):
+        # ✅ ВСЕГДА НОВОЕ ИМЯ С ТЕКУЩИМ ВРЕМЕНЕМ
+        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        boxes_dir = os.path.join(base_dir, "snapshots", str(self.camera["id"]), "boxes")
+        os.makedirs(boxes_dir, exist_ok=True)
+
+        filepath = os.path.join(boxes_dir, f"{timestamp}_boxes.json")
+
+        data = {
+            'camera_id': self.camera['id'],
+            'camera_name': self.camera['name'],
+            'timestamp': timestamp,
+            'frames': [{'time': f['time'], 'file': f['file'], 'boxes': f['boxes']} for f in self._ai_frames_list]
+        }
+
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+
+    def _save_ai_frames_json(self):
+        print(f"{ts()} 🔥 _save_ai_frames_json: ai_frames_list={len(self._ai_frames_list)}")
+        for i, f in enumerate(self._ai_frames_list):
+            print(f"{ts()}   {i}: time={f['time']}, file={f.get('file','?')}, boxes={len(f.get('boxes',[]))}")
+        """Сохраняет JSON со списком AI-кадров для стримера"""
+        if not hasattr(self, '_ai_frames_list') or not self._ai_frames_list:
+            return None
+
+        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        boxes_dir = os.path.join(base_dir, "snapshots", str(self.camera["id"]), "boxes")
+        os.makedirs(boxes_dir, exist_ok=True)
+
+        filename = f"{timestamp}_boxes.json"
+        filepath = os.path.join(boxes_dir, filename)
+
+        # Сохраняем только время и путь к файлу
+        data = {
+            'camera_id': self.camera['id'],
+            'camera_name': self.camera['name'],
+            'timestamp': timestamp,
+            'frames': [{'time': f['time'], 'file': f['file'], 'boxes': f['boxes']} for f in self._ai_frames_list]
+        }
+
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+
+        self._ai_frames_list = []  # Очищаем для следующей тревоги
+        print(f"{ts()} 📦 [{self.camera['name']}] AI-кадры сохранены: {len(data['frames'])} шт.")
+        return filepath
+
     def enable(self):
         """Включает детектор"""
         if self.enabled:
@@ -581,22 +709,26 @@ class MotionDetector:
                         print(f"{ts()} {C_RED}❌ [{self.camera['name']}] Ошибка AI: {e}{C_RESET}")
                         ai_result, boxes = None, None
 
-                    if ai_result and boxes:
-                        # ✅ AI НАШЁЛ ОБЪЕКТЫ (человек/машина)
-                        if not self.motion_active:
-                            # Тревога ещё не активна → СТАРТ ЗАПИСИ
-                            self._trigger_motion(motion_percent, ai_result, frame, boxes)
-                        else:
-                            # Тревога уже активна → СОХРАНЯЕМ КООРДИНАТЫ ДЛЯ РАМОК
-                            self._save_motion_boxes(boxes, time.time())
-                            # Логируем обновление
-                            desc = []
-                            if ai_result.get('person', 0) > 0:
-                                desc.append(f"👤 x{ai_result['person']}")
-                            if ai_result.get('car', 0) > 0:
-                                desc.append(f"🚗 x{ai_result['car']}")
-                            if desc:
-                                print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
+                        if ai_result and boxes:
+                            # ✅ AI НАШЁЛ ОБЪЕКТЫ (человек/машина)
+                            if not self.motion_active:
+                                # Тревога ещё не активна → СТАРТ ЗАПИСИ
+                                self._trigger_motion(motion_percent, ai_result, frame, boxes)
+                            else:
+                                # Тревога уже активна → СОХРАНЯЕМ ВСЁ ДЛЯ РАМОК
+                                self._save_motion_boxes(boxes, time.time())
+
+                                # ✅ СОХРАНЯЕМ КАДР С РАМКАМИ ДЛЯ AI-РОЛИКА
+                                self._save_ai_frame(frame, boxes)
+
+                                # Логируем обновление
+                                desc = []
+                                if ai_result.get('person', 0) > 0:
+                                    desc.append(f"👤 x{ai_result['person']}")
+                                if ai_result.get('car', 0) > 0:
+                                    desc.append(f"🚗 x{ai_result['car']}")
+                                if desc:
+                                    print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
                     else:
                         # ❌ AI НЕ НАШЁЛ ОБЪЕКТЫ
                         self._ai_found_streak = 0
@@ -631,8 +763,11 @@ class MotionDetector:
                         if ai_result and boxes:
                             if not self.motion_active:
                                 self._trigger_motion(motion_percent, ai_result, frame, boxes)
+                                if boxes:
+                                        self._save_ai_frame(frame, boxes)
                             else:
                                 self._save_motion_boxes(boxes, time.time())
+                                self._save_ai_frame(frame, boxes)
             else:
                 # ════════════════════════════════════════════
                 # AI ВЫКЛЮЧЕН — РАБОТАЕМ ТОЛЬКО ПО MOG2
@@ -886,11 +1021,13 @@ class MotionDetector:
             self.motion_active = True
             self.motion_start_time = time.time()
             self.motion_boxes = []
+            self._ai_frames_list = []
 
             # Сохраняем скриншот и координаты
             if frame is not None and boxes:
                 self._save_alert_snapshot(frame, boxes)
                 self._save_motion_boxes(boxes, time.time())
+                self._save_ai_frame(frame, boxes)
 
             if ai_result:
                 desc = []
@@ -949,10 +1086,12 @@ class MotionDetector:
         return filepath
 
     def _stop_motion(self):
-        """Останавливает запись после задержки"""
         if self.motion_active:
-            # ✅ СНАЧАЛА СОХРАНЯЕМ JSON С КООРДИНАТАМИ
-            boxes_file = self._save_all_boxes()
+            print(f"{ts()} 🔥 _stop_motion ВЫЗВАН! ai_frames_list={len(self._ai_frames_list) if hasattr(self, '_ai_frames_list') else 0}")
+
+            # ✅ Сохраняем JSON
+            boxes_file = self._save_ai_frames_json()
+            print(f"{ts} 🔥 _save_ai_frames_json вернул: {boxes_file}")
             if boxes_file:
                 print(f"{ts()} {C_BLUE}📦 [{self.camera['name']}] JSON сохранён: {len(self.motion_boxes)} кадров{C_RESET}")
 
