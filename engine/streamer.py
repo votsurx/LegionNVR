@@ -61,9 +61,9 @@ def ts():
 
 def _concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
     """
-    Склеивает сегменты, накладывая AI-рамки на те сегменты,
-    где есть координаты из JSON (без кэширования, без статики).
-    Возвращает True если успешно.
+    Быстрая склейка + пост-обработка рамками.
+    1. Склеиваем все сегменты через -c copy (быстро)
+    2. Одним ffmpeg накладываем рамки по таймкодам из JSON
     """
     print(f"{ts()} 🔧 _concat_with_ai_frames ВЫЗВАНА!")
 
@@ -75,151 +75,128 @@ def _concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
         with open(boxes_file, 'r') as f:
             data = json.load(f)
 
-            print(f"{ts()} 🔍 JSON keys: {list(data.keys())}")
-            if data.get('frames'):
-                print(f"{ts()} 🔍 Frame 0 keys: {list(data['frames'][0].keys())}")
-
         ai_frames = data.get('frames', [])
         if not ai_frames:
             print(f"{ts()} ⚠️ Нет AI-кадров в JSON")
             return False
 
-        # Получаем разрешённые классы
-        ai_classes = data.get('ai_classes', [0])
-
         print(f"{ts()} 🕐 AI-кадров: {len(ai_frames)}")
-        if ai_frames:
-            print(f"{ts} 🕐 Первый: {time.strftime('%H:%M:%S', time.localtime(ai_frames[0]['time']))}")
-            print(f"{ts} 🕐 Последний: {time.strftime('%H:%M:%S', time.localtime(ai_frames[-1]['time']))}")
 
-        temp_dir = tempfile.mkdtemp(prefix="ai_frames_")
-        processed_segments = []
-        frames_with_boxes = 0
+        temp_dir = tempfile.mkdtemp(prefix="ai_post_")
+        temp_video = os.path.join(temp_dir, "temp_concat.mp4")
 
-        for i, seg in enumerate(selected_segments):
-            seg_time = os.path.getmtime(seg)
-            seg_name = os.path.basename(seg)
+        # ════════════════════════════════════════════════
+        # ШАГ 1: БЫСТРАЯ СКЛЕЙКА ВСЕХ СЕГМЕНТОВ (-c copy)
+        # ════════════════════════════════════════════════
+        print(f"{ts()} 🔧 Шаг 1: Быстрая склейка {len(selected_segments)} сегментов...")
 
-            # Ищем ближайший AI-кадр по времени
-            best_ai = None
-            best_diff = float('inf')
-            for ai in ai_frames:
-                diff = abs(ai['time'] - seg_time)
-                if diff < best_diff:
-                    best_diff = diff
-                    best_ai = ai
+        concat_file = os.path.join(temp_dir, "concat.txt")
+        with open(concat_file, "w", encoding='utf-8') as f:
+            for seg in selected_segments:
+                escaped_path = os.path.abspath(seg).replace('\\', '/')
+                f.write(f"file '{escaped_path}'\n")
 
-            processed_seg = os.path.join(temp_dir, seg_name.replace('.ts', '_ai.ts'))
+        cmd_concat = [
+            ffmpeg, "-loglevel", "error",
+            "-f", "concat", "-safe", "0",
+            "-i", concat_file,
+            "-c", "copy",
+            "-y", temp_video
+        ]
 
-            # Если есть AI-кадр с разницей < 1.0 сек и есть координаты — рисуем рамки
-            if best_ai and best_diff < 1.0 and best_ai.get('boxes'):
-                boxes = best_ai['boxes']
+        result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
+        if result.returncode != 0 or not os.path.exists(temp_video):
+            print(f"{ts()} {C_RED}❌ Ошибка быстрой склейки{C_RESET}")
+            return False
 
-                # Фильтруем по разрешённым классам
-                filtered_boxes = [b for b in boxes if b['class'] in ai_classes]
+        print(f"{ts()} ✅ Склейка готова: {os.path.getsize(temp_video):,} байт")
 
-                if filtered_boxes:
-                    # Строим drawbox фильтры
-                    draw_filters = []
-                    for box in filtered_boxes:
-                        x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
-                        w = x2 - x1
-                        h = y2 - y1
+        # ════════════════════════════════════════════════
+        # ШАГ 2: ПОСТ-ОБРАБОТКА — НАКЛАДЫВАЕМ РАМКИ
+        # ════════════════════════════════════════════════
+        print(f"{ts()} 🔧 Шаг 2: Накладываю рамки по таймкодам...")
 
-                        # Цвет и подпись
-                        if box['class'] == 0:
-                            color = 'green'
-                            label = f"Person {box['confidence']*100:.0f}%"
-                        elif box['class'] == 2:
-                            color = 'red'
-                            label = f"Car {box['confidence']*100:.0f}%"
-                        elif box['class'] == 3:
-                            color = 'yellow'
-                            label = f"Moto {box['confidence']*100:.0f}%"
-                        else:
-                            color = 'white'
-                            label = f"Obj {box['confidence']*100:.0f}%"
+        # Получаем длительность видео
+        probe_cmd = [ffmpeg, "-i", temp_video, "-f", "null", "-"]
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
 
-                        # Контур (t=3) + подпись
-                        draw_filters.append(f"drawbox=x={x1}:y={y1}:w={w}:h={h}:color={color}:t=3")
-                        draw_filters.append(f"drawtext=text='{label}':x={x1+5}:y={y1-25}:fontsize=18:fontcolor=white:box=1:boxcolor=black@0.5")
+        # Строим drawbox фильтры с enable (по времени)
+        draw_filters = []
+        first_segment_time = os.path.getmtime(selected_segments[0])
 
-                    if draw_filters:
-                        filter_chain = ','.join(draw_filters)
+        for ai in ai_frames:
+            # Время от начала видео в секундах
+            offset = ai['time'] - first_segment_time
+            if offset < 0:
+                offset = 0
 
-                        cmd = [
-                            ffmpeg,
-                            "-loglevel", "error",
-                            "-i", seg,
-                            "-vf", filter_chain,
-                            "-c:v", "libx264",
-                            "-preset", "ultrafast",
-                            "-crf", "23",
-                            "-an",
-                            "-y",
-                            processed_seg
-                        ]
+            boxes = ai.get('boxes', [])
+            for box in boxes:
+                cls = box.get('class', 0)
+                conf = box.get('confidence', 0)
+                x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
+                w = x2 - x1
+                h = y2 - y1
 
-                        try:
-                            subprocess.run(cmd, timeout=30, capture_output=True)
-                            if os.path.exists(processed_seg) and os.path.getsize(processed_seg) > 0:
-                                processed_segments.append(processed_seg)
-                                frames_with_boxes += 1
-                                if i < 5 or best_diff < 1.5:
-                                    print(f"{ts()} 🔍 Сегмент {i}: РАМКИ (diff={best_diff:.2f}с)")
-                                continue
-                        except:
-                            pass
+                # Цвет
+                if cls == 0:
+                    color = 'green'
+                    label = f"Person {conf*100:.0f}%"
+                elif cls == 2:
+                    color = 'red'
+                    label = f"Car {conf*100:.0f}%"
+                else:
+                    color = 'yellow'
+                    label = f"Obj {conf*100:.0f}%"
 
-                # Если не получилось нарисовать — используем оригинал
-                shutil.copy2(seg, processed_seg.replace('_ai.ts', '.ts'))
-                processed_segments.append(processed_seg.replace('_ai.ts', '.ts'))
-                if i < 5:
-                    print(f"{ts()} 🔍 Сегмент {i}: обычный (diff={best_diff:.2f}с, рамки не наложились)")
-            else:
-                # Нет AI-кадра — используем оригинал
-                shutil.copy2(seg, processed_seg.replace('_ai.ts', '.ts'))
-                processed_segments.append(processed_seg.replace('_ai.ts', '.ts'))
-                if i < 5:
-                    print(f"{ts} 🔍 Сегмент {i}: обычный (diff={best_diff:.2f}с)")
+                # Рамка с enable (показываем 1 секунду)
+                draw_filters.append(
+                    f"drawbox=x={x1}:y={y1}:w={w}:h={h}:color={color}:t=3:enable='between(t,{offset:.1f},{offset+1:.1f})'"
+                )
+                # Подпись
+                draw_filters.append(
+                    f"drawtext=text='{label}':x={x1+5}:y={y1-25}:fontsize=18:fontcolor=white:box=1:boxcolor=black@0.5:enable='between(t,{offset:.1f},{offset+1:.1f})'"
+                )
 
-        print(f"{ts()} 🎯 Сегментов с рамками: {frames_with_boxes}/{len(selected_segments)}")
+        if draw_filters:
+            filter_chain = ','.join(draw_filters)
 
-        # Склеиваем все сегменты
-        if processed_segments:
-            concat_file = os.path.join(temp_dir, "concat.txt")
-            with open(concat_file, "w", encoding='utf-8') as f:
-                for seg in processed_segments:
-                    escaped_path = os.path.abspath(seg).replace('\\', '/')
-                    f.write(f"file '{escaped_path}'\n")
-
-            cmd_concat = [
+            cmd_boxes = [
                 ffmpeg, "-loglevel", "error",
-                "-f", "concat", "-safe", "0",
-                "-i", concat_file,
-                "-c", "copy", "-y",
-                final_output
+                "-i", temp_video,
+                "-vf", filter_chain,
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-crf", "23",
+                "-c:a", "copy",
+                "-y", final_output
             ]
 
-            result = subprocess.run(cmd_concat, timeout=120, capture_output=True)
+            print(f"{ts()} 🔧 Применяю {len(draw_filters)} фильтров...")
+            result = subprocess.run(cmd_boxes, timeout=300, capture_output=True)
 
-            # Чистим
-            try:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            except:
-                pass
-
-            if result.returncode == 0 and os.path.exists(final_output) and os.path.getsize(final_output) > 0:
-                print(f"{ts} {C_GREEN}✅ AI-ролик готов!{C_RESET}")
-                return True
+            if result.returncode == 0 and os.path.exists(final_output):
+                file_size = os.path.getsize(final_output)
+                print(f"{ts()} {C_GREEN}✅ AI-ролик готов! ({file_size:,} байт){C_RESET}")
             else:
-                print(f"{ts} {C_RED}❌ Ошибка склейки{C_RESET}")
-                return False
+                # Fallback: копируем склеенное видео без рамок
+                shutil.copy2(temp_video, final_output)
+                print(f"{ts_} {C_YELLOW}⚠️ Рамки не наложились, сохраняю без рамок{C_RESET}")
+        else:
+            # Нет рамок — просто копируем
+            shutil.copy2(temp_video, final_output)
+            print(f"{ts_} ⚠️ Нет рамок для наложения")
 
-        return False
+        # Чистим
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except:
+            pass
+
+        return os.path.exists(final_output) and os.path.getsize(final_output) > 0
 
     except Exception as e:
-        print(f"{ts} {C_RED}❌ Ошибка AI-склейки: {e}{C_RESET}")
+        print(f"{ts()} {C_RED}❌ Ошибка AI-склейки: {e}{C_RESET}")
         import traceback
         traceback.print_exc()
         return False
@@ -542,9 +519,9 @@ def _collect_motion_segments(cam_id):
 
             if age < 300:  # Не старше 300 секунд
                 boxes_file = newest
-                print(f"{ts_} 📦 Выбран новейший: {os.path.basename(boxes_file)} (возраст: {age:.1f}с)")
+                print(f"{ts()} 📦 Выбран новейший: {os.path.basename(boxes_file)} (возраст: {age:.1f}с)")
             else:
-                print(f"{ts_} ⚠️ Новейший JSON старше 300 сек (возраст: {age:.1f}с)")
+                print(f"{ts()} ⚠️ Новейший JSON старше 300 сек (возраст: {age:.1f}с)")
 
     # ✅ ПРОБУЕМ СКЛЕЙКУ С РАМКАМИ
     success = False
@@ -801,7 +778,7 @@ def stop_motion_recording(camera_id):
                 if diff < best_diff:
                     best_diff = diff
                     best_file = bf
-            if best_file and best_diff < 10:
+            if best_file and best_diff < 300:
                 boxes_file = best_file
                 print(f"{ts()} 📦 Выбран: {os.path.basename(boxes_file)} (diff={best_diff:.1f}с)")
             else:

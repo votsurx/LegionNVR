@@ -344,27 +344,60 @@ class MotionDetector:
         return frame
 
     def _save_ai_frame(self, frame, boxes):
-        """Сохраняет кадр с рамками в оригинальном разрешении"""
+        """Сохраняет PNG с прозрачным фоном и рамками для overlay"""
         try:
-            # Рисуем рамки
-            frame_with_boxes = self._draw_boxes_on_frame(frame.copy(), boxes)
+            import cv2
+            import numpy as np
 
-            # Сохраняем во временную папку
-            timestamp = time.strftime("%Y%m%d_%H%M%S")  # ← УБРАЛ %f
-            ai_frames_dir = os.path.join(tempfile.gettempdir(), f"ai_frames_{self.camera['id']}")
+            h, w = frame.shape[:2]
+
+            # Создаём прозрачное изображение (RGBA)
+            overlay = np.zeros((h, w, 4), dtype=np.uint8)
+
+            # Цвета для разных классов (RGBA)
+            colors = {
+                0: (0, 255, 0, 255),    # Человек — зелёный
+                2: (0, 0, 255, 255),    # Машина — красный
+                3: (0, 255, 255, 255),  # Мотоцикл — жёлтый
+            }
+            names = {
+                0: 'Person',
+                2: 'Car',
+                3: 'Moto',
+            }
+
+            for box in boxes:
+                cls = box.get('class', 0)
+                conf = box.get('confidence', 0)
+                x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
+
+                color = colors.get(cls, (255, 255, 255, 255))
+                name = names.get(cls, 'Obj')
+
+                # Рамка (контур, толщина 3)
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, 3)
+
+                # Подпись
+                label = f'{name} {conf*100:.0f}%'
+                (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                cv2.rectangle(overlay, (x1, y1-th-10), (x1+tw+10, y1), color, -1)
+                cv2.putText(overlay, label, (x1+5, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0, 255), 2)
+
+            # Сохраняем
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            ai_frames_dir = os.path.join(tempfile.gettempdir(), f"ai_overlay_{self.camera['id']}")
             os.makedirs(ai_frames_dir, exist_ok=True)
 
-            # Используем счётчик для уникальности
             if not hasattr(self, '_ai_frame_counter'):
                 self._ai_frame_counter = 0
             self._ai_frame_counter += 1
 
-            filename = f"ai_{timestamp}_{self._ai_frame_counter:04d}.png"
+            filename = f"overlay_{timestamp}_{self._ai_frame_counter:04d}.png"
             filepath = os.path.join(ai_frames_dir, filename)
 
-            cv2.imwrite(filepath, frame_with_boxes, [cv2.IMWRITE_PNG_COMPRESSION, 3])
+            cv2.imwrite(filepath, overlay, [cv2.IMWRITE_PNG_COMPRESSION, 3])
 
-            # Сохраняем метаданные для стримера
+            # Метаданные
             meta = {
                 'time': time.time(),
                 'file': filepath,
@@ -377,9 +410,7 @@ class MotionDetector:
 
             return filepath
         except Exception as e:
-            print(f"{ts()} {C_RED}❌ Ошибка сохранения AI-кадра: {e}{C_RESET}")
-            import traceback
-            traceback.print_exc()
+            print(f"{ts()} {C_RED}❌ Ошибка сохранения overlay: {e}{C_RESET}")
             return None
 
     def _update_ai_frames_json(self):
