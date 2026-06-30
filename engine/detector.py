@@ -116,7 +116,12 @@ def on_cmd(client, userdata, msg):
                         det.threshold = cam_dict.get("motion_threshold", 2.0)
                         det.cooldown = cam_dict.get("motion_cooldown", 5)
                         det.enabled = cam_dict.get("enabled", True) and cam_dict.get("motion_enabled", True)
-                        det._load_zones()
+                        try:
+                            det._load_zones()
+                        except Exception as e:
+                            print(f"{ts()} {C_RED}❌ [{det.camera['name']}] Ошибка загрузки зон: {e}{C_RESET}")
+                            import traceback
+                            traceback.print_exc()
                         det.warmup_frames = 0
 
                         # ✅ ЗАПУСКАЕМ ЕСЛИ НУЖНО
@@ -287,13 +292,20 @@ class MotionDetector:
             self.zones = []
             for row in rows:
                 zone = dict(row)
-                zone["points"] = json.loads(zone["points_json"])
-                self.zones.append(zone)
+                try:
+                    zone["points"] = json.loads(zone["points_json"])
+                    self.zones.append(zone)
+                except Exception as e:
+                    print(f"{ts()} {C_RED}⚠️ [{self.camera['name']}] Ошибка парсинга зоны {zone.get('id')}: {e}{C_RESET}")
 
             if self.zones:
                 print(f"{ts()} 🎯 [{self.camera['name']}] Загружено зон: {len(self.zones)}")
+            else:
+                print(f"{ts()} 🎯 [{self.camera['name']}] Зоны не настроены")
         except Exception as e:
-            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка загрузки зон: {e}")
+            print(f"{ts()} {C_RED}⚠️ [{self.camera['name']}] Ошибка загрузки зон: {e}{C_RESET}")
+            import traceback
+            traceback.print_exc()
             self.zones = []
 
     def enable(self):
@@ -316,11 +328,12 @@ class MotionDetector:
     def start(self):
         """Запускает детектор"""
         if not self.enabled:
-            print(f"{ts()} ⏸️ [{self.camera['name']}] Камера отключена")
+            print(f"{ts()} ⏸️ [{self.camera['name']}] Камера отключена, детектор не запущен")
             return False
 
         rtsp_url = self.camera.get("rtsp_sub") or self.camera.get("rtsp_main")
 
+        # Закрываем старый кап если есть
         if self.cap:
             try:
                 self.cap.release()
@@ -328,17 +341,22 @@ class MotionDetector:
                 pass
             self.cap = None
 
-        # ✅ ЗАЩИЩАЕМСЯ ОТ ПАДЕНИЯ OpenCV
+        # ✅ ЗАЩИТА ОТ ПАДЕНИЯ OPENCV
         try:
             for attempt in range(self._max_reconnect_attempts):
-                self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
-                if self.cap.isOpened():
-                    break
-                print(f"{ts()} ⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts}...")
+                try:
+                    self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+                    if self.cap.isOpened():
+                        break
+                except Exception as e:
+                    print(f"{ts()} {C_RED}⚠️ [{self.camera['name']}] Ошибка OpenCV (попытка {attempt+1}): {e}{C_RESET}")
+                    time.sleep(self._reconnect_delay)
+
+                print(f"{ts()} {C_YELLOW}⚠️ [{self.camera['name']}] Попытка {attempt+1}/{self._max_reconnect_attempts} подключиться...{C_RESET}")
                 time.sleep(self._reconnect_delay)
 
             if not self.cap or not self.cap.isOpened():
-                print(f"{ts()} ❌ [{self.camera['name']}] Не могу открыть RTSP")
+                print(f"{ts()} {C_RED}❌ [{self.camera['name']}] Не могу открыть RTSP: {rtsp_url}{C_RESET}")
                 self.cap = None
                 return False
 
@@ -348,11 +366,12 @@ class MotionDetector:
             self.warmup_frames = 0
             self._reconnect_attempts = 0
 
-            print(f"{ts()} 🔍 [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
+            mode = "🤖 AI + MOG2" if self.ai_enabled else "🔍 MOG2"
+            print(f"{ts()} {mode} [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
             return True
 
         except Exception as e:
-            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка открытия RTSP: {e}")
+            print(f"{ts()} {C_RED}❌ [{self.camera['name']}] КРИТИЧЕСКАЯ ошибка запуска: {e}{C_RESET}")
             self.cap = None
             self.running = False
             return False
@@ -493,6 +512,30 @@ class MotionDetector:
         # ════════════════════════════════════════════════════
         motion_pixels = np.count_nonzero(fgmask)        # Считаем белые пиксели (движение)
         motion_percent = motion_pixels / (320 * 240) * 100  # Процент от кадра
+
+        # ✅ ЗАЩИТА ОТ СМЕНЫ РЕЖИМА ДЕНЬ/НОЧЬ (AI-контроль)
+        if motion_percent > 80.0:
+            if self.ai_enabled and self.ai_model:
+                try:
+                    ai_result, _ = self._ai_detect(frame)
+                except:
+                    ai_result = None
+
+                if not ai_result:
+                    # AI не нашёл объектов — это смена режима
+                    print(f"{ts()} {C_GRAY}🌙 [{self.camera['name']}] Смена режима день/ночь (MOG2: {motion_percent:.1f}%, AI: пусто) — сброс MOG2{C_RESET}")
+                    self.fgbg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
+                    self.warmup_frames = 0
+                    return
+                else:
+                    # AI нашёл объекты — это реальное движение!
+                    print(f"{ts()} {C_YELLOW}⚠️ [{self.camera['name']}] Высокое движение + AI нашёл объекты — продолжаем{C_RESET}")
+            else:
+                # AI выключен — используем старый метод (просто сбрасываем MOG2)
+                print(f"{ts()} {C_GRAY}🌙 [{self.camera['name']}] Смена режима (MOG2: {motion_percent:.1f}%) — сброс MOG2{C_RESET}")
+                self.fgbg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
+                self.warmup_frames = 0
+                return
 
         # ════════════════════════════════════════════════════
         # ВЫВОД MOG2-ЛОГОВ В КОНСОЛЬ (с фильтром и интервалом)

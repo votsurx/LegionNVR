@@ -9,6 +9,26 @@ import json
 import time
 import os
 
+def send_mqtt_command(camera_id, action, params=None):
+    """Отправляет MQTT команду"""
+    try:
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+        client.connect("127.0.0.1", 1883, 5)
+        payload = {
+            'action': action,
+            'camera_id': camera_id,
+            'timestamp': int(time.time())
+        }
+        if params:
+            payload.update(params)
+        client.publish(f"spartan/{camera_id}/cmd", json.dumps(payload))
+        client.disconnect()
+        return True
+    except Exception as e:
+        print(f"❌ MQTT ошибка: {e}")
+        return False
+
+
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/api/cameras', methods=['POST'])
@@ -309,10 +329,22 @@ def get_zones(camera_id):
     return jsonify({'success': True, 'zones': zones})
 
 @api_bp.route('/api/cameras/<int:camera_id>/zones', methods=['POST'])
-@login_required
 def save_zone(camera_id):
     data = request.get_json()
     Camera.save_zone(camera_id, data)
+
+    # ✅ ПЕРЕЗАГРУЖАЕМ ДЕТЕКТОР
+    send_mqtt_command(camera_id, 'reload_config')
+
+    return jsonify({'success': True})
+
+@api_bp.route('/api/cameras/<int:camera_id>/zones/<int:zone_id>', methods=['DELETE'])
+def delete_zone(camera_id, zone_id):
+    Camera.delete_zone(zone_id)
+
+    # ✅ ПЕРЕЗАГРУЖАЕМ ДЕТЕКТОР
+    send_mqtt_command(camera_id, 'reload_config')
+
     return jsonify({'success': True})
 
 @api_bp.route('/api/settings/recordings_path', methods=['GET', 'POST'])
@@ -379,11 +411,6 @@ def restart_streams():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@api_bp.route('/api/cameras/<int:camera_id>/zones/<int:zone_id>', methods=['DELETE'])
-@login_required
-def delete_zone(camera_id, zone_id):
-    Camera.delete_zone(zone_id)
-    return jsonify({'success': True})
 
 @api_bp.route('/api/recordings', methods=['GET'])
 @login_required

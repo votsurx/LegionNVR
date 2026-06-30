@@ -397,7 +397,7 @@ def start_hls_stream(camera):
         "-hls_time", str(HLS_TIME),
         "-hls_list_size", str(hls_list_size),
         "-hls_segment_filename", segment_pattern,  # ← ИМЕНА С ДАТОЙ!
-        "-hls_flags", "omit_endlist+delete_segments",
+        "-hls_flags", "omit_endlist+delete_segments+split_by_time",
         "-strftime", "1",  # ← ВКЛЮЧАЕМ!
         playlist_file
     ]

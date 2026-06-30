@@ -333,6 +333,7 @@
                     btn.disabled = false;
                     btn.textContent = '💾 Сохранить все зоны';
                     setTimeout(function() { s.textContent = ''; }, 3000);
+                    return fetch('/api/cameras/' + cameraId + '/apply', { method: 'POST' });
                 })
                 .catch(function(e) {
                     var s = document.getElementById('saveStatus');
