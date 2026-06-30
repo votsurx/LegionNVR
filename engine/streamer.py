@@ -348,25 +348,19 @@ def stop_hls_stream(camera_id):
 
 
 def start_hls_stream(camera):
-    """
-    Запускает HLS стрим с буфером для предзаписи.
-    hls_time = 1 сек (идеально для точного буфера).
-    hls_list_size = record_pre_sec + 3 (буфер + запас).
-    """
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
-        print(f"{ts()} ⏸️ Камера {cam_id} отключена, стрим не запущен")
+        print(f"⏸️ Камера {cam_id} отключена, стрим не запущен")
         return
 
     if not camera.get("stream_enabled", True):
-        print(f"{ts()} ⏸️ Стрим для камеры {cam_id} отключен")
+        print(f"⏸️ Стрим для камеры {cam_id} отключен")
         return
 
-    # Останавливаем старый стрим
     stop_hls_stream(cam_id)
 
-    # Чистим старые сегменты
+    # Чистим старые сегменты (старый формат camera{cam_id}*.ts)
     for f in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
         try:
             os.remove(f)
@@ -378,11 +372,14 @@ def start_hls_stream(camera):
         print("❌ ffmpeg не найден!")
         return
 
-    # ✅ РАССЧИТЫВАЕМ БУФЕР
     record_pre_sec = camera.get('record_pre_sec', 5)
-    hls_list_size = record_pre_sec + 3  # Буфер + запас (3 сегмента на лаги)
+    hls_list_size = max(10, record_pre_sec + 5)
 
-    print(f"{ts()} 🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
+    # ✅ НОВЫЙ ФОРМАТ СЕГМЕНТОВ С ВРЕМЕНЕМ
+    segment_pattern = os.path.join(HLS_DIR, f"camera{cam_id}_%Y%m%d_%H%M%S.ts")
+    playlist_file = os.path.join(HLS_DIR, f"camera{cam_id}.m3u8")
+
+    print(f"🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
 
     cmd = [
         ffmpeg,
@@ -397,18 +394,20 @@ def start_hls_stream(camera):
         "-i", camera["rtsp_main"],
         "-c:v", "copy",
         "-an",
-        "-hls_time", str(HLS_TIME),               # 1 секунда
-        "-hls_list_size", str(hls_list_size),      # Буфер для предзаписи
+        "-hls_time", str(HLS_TIME),
+        "-hls_list_size", str(hls_list_size),
+        "-hls_segment_filename", segment_pattern,  # ← ИМЕНА С ДАТОЙ!
         "-hls_flags", "omit_endlist+delete_segments",
-        os.path.join(HLS_DIR, f"camera{cam_id}.m3u8")
+        "-strftime", "1",  # ← ВКЛЮЧАЕМ!
+        playlist_file
     ]
 
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         stream_processes[cam_id] = proc
-        print(f"{ts()} 🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
+        print(f"🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек, сегменты с временными метками)")
     except Exception as e:
-        print(f"{ts()} ❌ Ошибка запуска стрима для {camera['name']}: {e}")
+        print(f"❌ Ошибка запуска стрима для {camera['name']}: {e}")
 
 
 def restart_hls_stream(camera):
@@ -457,12 +456,11 @@ def capture_buffer(cam_id, pre_sec):
 
 
 def start_motion_recording(camera):
-    """Запускает запись по тревоге (собирает HLS-сегменты по времени)"""
+    """Запускает запись по тревоге с сохранением всех сегментов"""
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
         return
-
     if not camera.get("record_enabled", False):
         print(f"{ts()} ⏸️ Запись отключена для камеры {cam_id}")
         return
@@ -470,10 +468,9 @@ def start_motion_recording(camera):
     record_pre_sec = camera.get('record_pre_sec', 5)
     record_post_sec = camera.get('record_post_sec', 10)
 
-    # ✅ ЗАПОМИНАЕМ ВРЕМЯ СТАРТА ТРЕВОГИ
     alarm_time = time.time()
 
-    # ✅ НАХОДИМ ВСЕ СЕГМЕНТЫ С ВРЕМЕНЕМ
+    # ✅ 1. КОПИРУЕМ ПРЕДЗАПИСЬ
     all_segments = []
     for seg in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
         try:
@@ -482,25 +479,41 @@ def start_motion_recording(camera):
         except:
             pass
 
-    if not all_segments:
-        print(f"{ts()} ❌ Нет HLS-сегментов для камеры {cam_id}")
-        return
-
     all_segments.sort(key=lambda x: x[0])
+
+    # Берём последние record_pre_sec сегментов
+    pre_segments = [s[1] for s in all_segments[-record_pre_sec:]] if len(all_segments) >= record_pre_sec else [s[1] for s in all_segments]
+
+    # Копируем во временную папку
+    temp_dir = os.path.join(tempfile.gettempdir(), f"motion_{cam_id}_{int(time.time())}")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    saved_pre = []
+    for seg in pre_segments:
+        seg_copy = os.path.join(temp_dir, os.path.basename(seg))
+        shutil.copy2(seg, seg_copy)
+        saved_pre.append(seg_copy)
+
+    # ✅ ЗАПОМИНАЕМ mtime ПОСЛЕДНЕГО СЕГМЕНТА ПРЕДЗАПИСИ
+        last_mtime = 0
+        if pre_segments:
+            last_mtime = os.path.getmtime(pre_segments[-1])
+
+        motion_recordings[cam_id] = {
+            'alarm_time': alarm_time,
+            'pre_sec': record_pre_sec,
+            'post_sec': record_post_sec,
+            'camera': camera,
+            'recording': True,
+            'temp_dir': temp_dir,
+            'saved_pre': saved_pre,
+            'saved_body': [],
+            'last_mtime': last_mtime  # ← mtime вместо имени!
+        }
 
     print(f"{ts()} {C_RED}📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
     print(f"{ts()} {C_BLUE}🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек{C_RESET}")
-
-    # ✅ СОХРАНЯЕМ ИНФОРМАЦИЮ О ЗАПИСИ (БЕЗ ТАЙМЕРА!)
-    motion_recordings[cam_id] = {
-        'start_time': time.time(),
-        'alarm_time': alarm_time,
-        'pre_sec': record_pre_sec,
-        'post_sec': record_post_sec,
-        'camera': camera
-    }
-
-    print(f"{ts()} {C_CYAN}⏱️ Ожидаю stop_recording для склейки...{C_RESET}")
+    print(f"{ts()} {C_GREEN}📁 Сохранено {len(saved_pre)} сегментов предзаписи{C_RESET}")
 
 def _collect_motion_segments(cam_id):
     """Собирает HLS-сегменты по времени и склеивает в ролик (с AI-рамками если есть)"""
@@ -815,17 +828,150 @@ def _save_segments_as_video(segments, output, ffmpeg):
 
 
 def stop_motion_recording(camera_id):
-    """Принудительно завершает запись и склеивает ролик"""
+    """Завершает запись и склеивает: предзапись + тело + постзапись"""
     cam_id = str(camera_id)
 
     if cam_id not in motion_recordings:
-        print(f"{ts()} ⚠️ Нет активной записи для камеры {cam_id}")
         return
+
+    data = motion_recordings.pop(cam_id)
+    data['recording'] = False
 
     print(f"{ts()} {C_GREEN}⏹️ Завершение записи для камеры {cam_id}{C_RESET}")
 
-    # ✅ СРАЗУ СОБИРАЕМ СЕГМЕНТЫ (JSON от детектора уже готов!)
-    _collect_motion_segments(cam_id)
+    # Ждём постзапись
+    post_sec = data.get('post_sec', 10)
+    print(f"{ts()} {C_CYAN}⏱️ Постзапись {post_sec} сек...{C_RESET}")
+    time.sleep(post_sec)
+
+    # ✅ СОБИРАЕМ ВСЕ СЕГМЕНТЫ
+    all_saved = data['saved_pre'] + data['saved_body']
+
+    # Добавляем постзапись
+    all_hls = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
+    post_segments = []
+    if all_hls:
+        for seg in all_hls[-post_sec:]:
+            if seg not in all_saved:
+                seg_copy = os.path.join(data['temp_dir'], os.path.basename(seg))
+                try:
+                    shutil.copy2(seg, seg_copy)
+                    post_segments.append(seg_copy)
+                except:
+                    pass
+
+    all_saved.extend(post_segments)
+
+    if len(all_saved) < 2:
+        print(f"{ts()} {C_RED}❌ Слишком мало сегментов: {len(all_saved)}{C_RESET}")
+        return
+
+    # ✅✅✅ КРИТИЧЕСКИЙ ФИКС: СОРТИРОВКА ПО ВРЕМЕНИ СОЗДАНИЯ!
+    # Сортируем все сохранённые сегменты по mtime (реальное время создания)
+    all_saved = list(set(all_saved))  # Убираем дубликаты
+    all_saved_sorted = sorted(all_saved)  # Сортируем (время в имени = правильный порядок)
+
+    # Логируем первые 5 и последние 5 для проверки
+    print(f"{ts()} 📊 Сегментов после сортировки: {len(all_saved_sorted)}")
+    for i, seg in enumerate(all_saved_sorted[:3]):
+        seg_time = os.path.getmtime(seg)
+        print(f"{ts()}   #{i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
+    if len(all_saved_sorted) > 6:
+        print(f"{ts()}   ...")
+        for i, seg in enumerate(all_saved_sorted[-3:]):
+            seg_time = os.path.getmtime(seg)
+            print(f"{ts()}   #{len(all_saved_sorted)-3+i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
+
+    # ✅ СКЛЕИВАЕМ (с правильным порядком!)
+    now = time.strftime("%Y-%m-%d_%H-%M-%S")
+    recordings_path = get_recordings_path()
+    date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
+    os.makedirs(date_dir, exist_ok=True)
+
+    final_output = os.path.join(date_dir, f"{now}_motion.mp4")
+
+    ffmpeg = find_ffmpeg()
+    if not ffmpeg:
+        return
+
+    concat_file = os.path.join(data['temp_dir'], "concat.txt")
+    with open(concat_file, "w") as f:
+        for seg in all_saved_sorted:  # ← ИСПОЛЬЗУЕМ ОТСОРТИРОВАННЫЙ СПИСОК
+            escaped_path = os.path.abspath(seg).replace('\\', '/')
+            f.write(f"file '{escaped_path}'\n")
+
+    cmd = [
+        ffmpeg, "-loglevel", "error",
+        "-f", "concat", "-safe", "0",
+        "-i", concat_file,
+        "-c", "copy", "-y",
+        final_output
+    ]
+
+    result = subprocess.run(cmd, timeout=120, capture_output=True)
+
+    if result.returncode == 0 and os.path.exists(final_output):
+        file_size = os.path.getsize(final_output)
+        # Считаем длительность по разнице первого и последнего сегмента
+        first_time = os.path.getmtime(all_saved_sorted[0])
+        last_time = os.path.getmtime(all_saved_sorted[-1])
+        duration = int(last_time - first_time) + 1
+        print(f"{ts()} {C_GREEN}✅ Запись сохранена: {os.path.basename(final_output)} ({file_size:,} байт, ~{duration} сек){C_RESET}")
+
+        # БД
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO recordings (camera_id, filename, start_time, type) VALUES (?, ?, datetime('now','localtime'), 'motion')",
+                    (int(cam_id), final_output)
+                )
+                conn.commit()
+        except:
+            pass
+    else:
+        print(f"{ts()} {C_RED}❌ Ошибка склейки{C_RESET}")
+
+    # Чистим
+    try:
+        shutil.rmtree(data['temp_dir'], ignore_errors=True)
+    except:
+        pass
+
+def save_body_segments():
+    while True:
+        try:
+            for cam_id, data in list(motion_recordings.items()):
+                if not data.get('recording'):
+                    continue
+
+                all_segments = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
+
+                if not all_segments:
+                    continue
+
+                # ✅ СОХРАНЯЕМ ТОЛЬКО СЕГМЕНТЫ НОВЕЕ last_mtime
+                for seg in all_segments:
+                    try:
+                        seg_mtime = os.path.getmtime(seg)
+                    except:
+                        continue
+
+                    # ПРОПУСКАЕМ СТАРЫЕ (включая предзапись!)
+                    if seg_mtime <= data['last_mtime']:
+                        continue
+
+                    # Копируем
+                    seg_copy = os.path.join(data['temp_dir'], os.path.basename(seg))
+                    try:
+                        shutil.copy2(seg, seg_copy)
+                        data['saved_body'].append(seg_copy)
+                        data['last_mtime'] = seg_mtime  # Обновляем
+                    except:
+                        pass
+        except:
+            pass
+
+        time.sleep(0.5)
 
 
 # ════════════════════════════════════════════════════════════
@@ -998,9 +1144,9 @@ def main():
     for cam in cameras:
         if cam.get("enabled") and cam.get("stream_enabled", True):
             start_hls_stream(cam)
-
+    threading.Thread(target=save_body_segments, daemon=True).start()
     # Запускаем очистку старых сегментов
-    threading.Thread(target=cleanup_old_segments, daemon=True).start()
+    # threading.Thread(target=cleanup_old_segments, daemon=True).start()
 
     print(f"{ts()} [HLS] Streams: {len(stream_processes)}")
     print(f"{ts()} [Subscriptions] spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
