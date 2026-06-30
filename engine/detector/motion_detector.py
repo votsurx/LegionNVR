@@ -61,6 +61,8 @@ class MotionDetector:
         self._ai_miss_streak = 0
         self._ai_found_threshold = 2
         self._ai_miss_threshold = 4
+
+        self._last_ai_frame_time = 0
         self.frame_count = 0
 
     @property
@@ -286,23 +288,34 @@ class MotionDetector:
                         if self._ai_found_streak >= self._ai_found_threshold:
                             self._trigger_motion(motion_percent, ai_result, frame, boxes)
                     else:
+                        # Тревога активна — сбрасываем таймер остановки
                         if self.motion_end_timer:
                             self.motion_end_timer.cancel()
                             self.motion_end_timer = None
                             send_mqtt_command(self.camera['id'], 'extend_recording')
 
-                        self.recording.save_motion_boxes(boxes, time.time())
-                        self.recording.save_ai_frame(frame, boxes)
+                        # ✅ Сохраняем AI-кадр не чаще 1 раза в секунду
+                        now = time.time()
+                        if now - self._last_ai_frame_time >= 1.0:
+                            self._last_ai_frame_time = now
+                            frame_time = now - 5.0  # ← СДВИГ НА 2 СЕК НАЗАД
 
-                        desc = []
-                        if ai_result.get('person', 0) > 0:
-                            desc.append(f"👤 x{ai_result['person']}")
-                        if ai_result.get('car', 0) > 0:
-                            desc.append(f"🚗 x{ai_result['car']}")
-                        if desc:
-                            print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
+                            # Просто сохраняем с текущим временем (без смещений!)
+                            self.recording.save_ai_frame(frame, boxes)
+                            self.recording.save_motion_boxes(boxes, now)
+
+                            # Логируем обновление
+                            desc = []
+                            if ai_result.get('person', 0) > 0:
+                                desc.append(f"👤 x{ai_result['person']}")
+                            if ai_result.get('car', 0) > 0:
+                                desc.append(f"🚗 x{ai_result['car']}")
+                            if desc:
+                                print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
                 else:
+                    # AI не нашёл объекты
                     self._ai_found_streak = 0
+
                     if motion_percent < self.threshold:
                         self._ai_miss_streak += 1
                     else:
@@ -320,18 +333,25 @@ class MotionDetector:
                         if motion_percent > 0:
                             print(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
             else:
+                # Пропущенный кадр — если движение очень сильное, проверяем AI
                 if motion_percent > self.threshold * 3:
                     try:
                         ai_result, boxes = self.ai_detector.detect(frame)
                     except:
                         ai_result, boxes = None, None
+
                     if ai_result and boxes:
                         if not self.motion_active:
                             self._trigger_motion(motion_percent, ai_result, frame, boxes)
                         else:
-                            self.recording.save_motion_boxes(boxes, time.time())
-                            self.recording.save_ai_frame(frame, boxes)
+                            now = time.time()
+                            if now - self._last_ai_frame_time >= 1.0:
+                                self._last_ai_frame_time = now
+                                frame_time = now - 5.0  # ← СДВИГ НА 2 СЕК НАЗАД
+                                self.recording.save_ai_frame(frame, boxes)
+                                self.recording.save_motion_boxes(boxes, now)
         else:
+            # AI выключен — просто MOG2
             try:
                 self._trigger_motion(motion_percent, None)
             except:
@@ -348,20 +368,24 @@ class MotionDetector:
                 self.motion_end_timer.start()
 
     def _trigger_motion(self, motion_percent, ai_result, frame=None, boxes=None):
-        """Триггерит тревогу"""
-        if self.motion_end_timer:
-            self.motion_end_timer.cancel()
-            self.motion_end_timer = None
+            if self.motion_end_timer:
+                self.motion_end_timer.cancel()
+                self.motion_end_timer = None
 
-        if not self.motion_active:
-            self.motion_active = True
-            self.motion_start_time = time.time()
-            self.recording.reset()
+            if not self.motion_active:
+                self.motion_active = True
+                self.motion_start_time = time.time()
+                self._last_ai_frame_time = time.time()
+                self.motion_boxes = []
+                self.recording.reset()
 
-            if frame is not None and boxes:
-                self.recording.save_alert_snapshot(frame, boxes)
-                self.recording.save_motion_boxes(boxes, time.time())
-                self.recording.save_ai_frame(frame, boxes)
+                if frame is not None and boxes:
+                    # ✅ СДВИГ НА 2 СЕК НАЗАД
+                    frame_time = time.time() - 5.0
+
+                    self.recording.save_alert_snapshot(frame, boxes)
+                    self.recording.save_ai_frame(frame, boxes)
+                    self.recording.save_motion_boxes(boxes, frame_time)
 
             if ai_result:
                 desc = []
