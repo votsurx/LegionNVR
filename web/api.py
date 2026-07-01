@@ -31,6 +31,10 @@ def send_mqtt_command(camera_id, action, params=None):
 
 api_bp = Blueprint('api', __name__)
 
+# ============================================================
+# API: Камеры
+# ============================================================
+
 @api_bp.route('/api/cameras', methods=['POST'])
 @login_required
 def add_camera():
@@ -116,7 +120,7 @@ def save_mqtt():
         conn.commit()
     return jsonify({'success': True, 'message': 'MQTT настройки сохранены'})
 # ============================================================
-# API: 
+# API: USERS
 # ============================================================
 @api_bp.route('/api/users', methods=['GET'])
 @login_required
@@ -252,7 +256,7 @@ def get_cameras_list():
     return jsonify({'success': True, 'cameras': cameras})
 
 # ============================================================
-# API: 
+# API: Location
 # ============================================================
 @api_bp.route('/api/locations', methods=['GET'])
 @login_required
@@ -312,6 +316,10 @@ def delete_location(loc_id):
         conn.commit()
     return jsonify({'success': True, 'message': 'Локация удалена'})
 
+# ============================================================
+# API: Zones
+# ============================================================
+
 @api_bp.route('/api/cameras/<int:camera_id>/zones', methods=['GET'])
 @login_required
 def get_zones(camera_id):
@@ -323,20 +331,17 @@ def save_zone(camera_id):
     data = request.get_json()
     Camera.save_zone(camera_id, data)
 
-    # ✅ ПЕРЕЗАГРУЖАЕМ ДЕТЕКТОР
-    send_mqtt_command(camera_id, 'reload_config')
-
     return jsonify({'success': True})
 
 @api_bp.route('/api/cameras/<int:camera_id>/zones/<int:zone_id>', methods=['DELETE'])
 def delete_zone(camera_id, zone_id):
     Camera.delete_zone(zone_id)
 
-    # ✅ ПЕРЕЗАГРУЖАЕМ ДЕТЕКТОР
-    send_mqtt_command(camera_id, 'reload_config')
-
     return jsonify({'success': True})
 
+# ============================================================
+# API: ЗАПИСИ
+# ============================================================
 @api_bp.route('/api/settings/recordings_path', methods=['GET', 'POST'])
 @login_required
 def recordings_path():

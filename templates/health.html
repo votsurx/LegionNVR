@@ -44,10 +44,17 @@
 
 <!-- Сервисы + Камеры -->
 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+
+    <!-- Сервисы -->
     <div class="health-card">
         <h3 style="margin:0 0 12px 0;">📡 Сервисы</h3>
         <div id="servicesList">Загрузка...</div>
+        <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
+            🔄 = жёсткий перезапуск (kill + старт)
+        </div>
     </div>
+
+    <!-- Камеры -->
     <div class="health-card">
         <h3 style="margin:0 0 12px 0;">📷 Камеры <span id="camerasCount"></span></h3>
         <div id="camerasList">Загрузка...</div>
@@ -122,6 +129,24 @@
         border-bottom: 1px solid var(--border-color);
         color: var(--text-secondary);
     }
+    .btn-restart {
+        background: #e94560;
+        color: #fff;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .btn-restart:hover {
+        background: #c0392b;
+    }
+    .btn-restart:disabled {
+        background: #666;
+        cursor: not-allowed;
+    }
 </style>
 
 <script>
@@ -153,21 +178,50 @@
                 // Uptime
                 document.getElementById('uptimeValue').textContent = d.system.uptime;
 
-                // Сервисы
-                var sHtml = '';
-                for (var s in d.services) {
-                    var serv = d.services[s];
-                    var dot = serv.status === 'running' ? 'dot-green' : 'dot-red';
-                    sHtml += '<div class="service-row"><div class="service-dot ' + dot + '"></div><span>' + s + '</span><span style="flex:1"></span><span style="color:var(--text-secondary)">' + serv.status + '</span></div>';
+                // Сервисы (с кнопками перезапуска для ВСЕХ кроме MQTT!)
+            var sHtml = '';
+            // ✅ ФИКСИРОВАННЫЙ ПОРЯДОК
+            var serviceOrder = ['web_server', 'detector', 'streamer', 'mqtt'];
+
+            for (var i = 0; i < serviceOrder.length; i++) {
+                var s = serviceOrder[i];
+                var serv = d.services[s];
+                if (!serv) continue;  // Пропускаем если сервис не найден
+
+                var dot = serv.status === 'running' ? 'dot-green' : 'dot-red';
+                var icon = '';
+                if (s === 'web_server') icon = '🖥️ ';
+                else if (s === 'detector') icon = '🤖 ';
+                else if (s === 'streamer') icon = '🎥 ';
+                else if (s === 'mqtt') icon = '📡 ';
+
+                sHtml += '<div class="service-row">';
+                sHtml += '<div class="service-dot ' + dot + '"></div>';
+                sHtml += '<span style="flex:1;">' + icon + s + '</span>';
+                sHtml += '<span style="color:var(--text-secondary); margin-right:8px;">' + serv.status + '</span>';
+
+                // Кнопка перезапуска для всех кроме MQTT
+                if (s !== 'mqtt') {
+                    sHtml += '<button onclick="restartService(\'' + s + '\', this)" class="btn-restart">🔄</button>';
                 }
-                document.getElementById('servicesList').innerHTML = sHtml;
+
+                sHtml += '</div>';
+            }
+            document.getElementById('servicesList').innerHTML = sHtml;
 
                 // Камеры
                 document.getElementById('camerasCount').textContent = '(' + d.cameras.online + '/' + d.cameras.total + ')';
                 var cHtml = '';
                 d.cameras.list.forEach(cam => {
                     var dot = cam.online ? 'dot-green' : 'dot-red';
-                    cHtml += '<div class="camera-row"><div class="service-dot ' + dot + '"></div><span>' + cam.name + '</span></div>';
+                    var badges = [];
+                    if (cam.ai_enabled) badges.push('🤖');
+                    if (cam.motion_enabled) badges.push('🔍');
+                    cHtml += '<div class="camera-row">';
+                    cHtml += '<div class="service-dot ' + dot + '"></div>';
+                    cHtml += '<span style="flex:1;">' + cam.name + '</span>';
+                    cHtml += '<span>' + badges.join(' ') + '</span>';
+                    cHtml += '</div>';
                 });
                 document.getElementById('camerasList').innerHTML = cHtml || 'Нет камер';
 
@@ -186,6 +240,34 @@
                     eHtml += '<div class="event-row">' + icon + ' ' + e.timestamp + ' ' + e.event_type + '</div>';
                 });
                 document.getElementById('eventsList').innerHTML = eHtml || 'Нет событий';
+            });
+    }
+
+    function restartService(name, btn) {
+        if (!confirm('Жёстко перезапустить ' + name + '?\n\nСервис будет убит и запущен заново.')) return;
+
+        // Блокируем кнопку
+        btn.disabled = true;
+        btn.textContent = '⏳';
+
+        fetch('/api/service/restart/' + name, { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    console.log('✅ ' + d.message);
+                    // Для web_server — ждём дольше (он перезапускается через скрипт)
+                    var delay = name === 'web_server' ? 5000 : 3000;
+                    setTimeout(loadHealth, delay);
+                } else {
+                    alert('❌ ' + (d.error || 'Ошибка перезапуска'));
+                    btn.disabled = false;
+                    btn.textContent = '🔄';
+                }
+            })
+            .catch(function(err) {
+                alert('❌ Ошибка сети: ' + err);
+                btn.disabled = false;
+                btn.textContent = '🔄';
             });
     }
 

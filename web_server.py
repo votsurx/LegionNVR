@@ -163,7 +163,7 @@ def check_rtsp_available(rtsp_url):
 
 
 # ============================================================
-# API КАМЕРЫ
+# API HEALTH
 # ============================================================
 
 @app.route('/api/health/full')
@@ -334,6 +334,103 @@ def reset_health_stats():
         return jsonify({'success': True, 'message': f'Статистика сброшена'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/service/restart/<service_name>', methods=['POST'])
+def restart_service(service_name):
+    """Жёсткий перезапуск сервиса (выборочное убийство)"""
+    import subprocess
+
+    if service_name not in ('detector', 'streamer', 'web_server'):
+        return jsonify({'success': False, 'error': 'Неизвестный сервис'}), 400
+
+    if service_name == 'web_server':
+        return restart_web_server()
+
+    script = f'engine/{service_name}/main.py'
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    current_pid = os.getpid()
+    killed_count = 0
+
+    try:
+        # ✅ Используем PowerShell Get-CimInstance (работает!)
+        ps_cmd = f'Get-CimInstance Win32_Process -Filter "name=\'python.exe\'" | Select-Object ProcessId, CommandLine | ConvertTo-Json'
+        result = subprocess.run(
+            ['powershell', '-Command', ps_cmd],
+            capture_output=True, text=True, timeout=10
+        )
+
+        print(f"🔄 Поиск процессов {service_name}...")
+        print(f"🔄 Вывод PowerShell:\n{result.stdout[:500]}")
+
+        # Парсим JSON
+        import json
+        try:
+            processes = json.loads(result.stdout)
+            # Если один процесс — оборачиваем в список
+            if isinstance(processes, dict):
+                processes = [processes]
+        except:
+            print(f"⚠️ Не удалось распарсить JSON")
+            processes = []
+
+        for proc in processes:
+            pid = proc.get('ProcessId', 0)
+            cmd = proc.get('CommandLine', '')
+
+            if not pid:
+                continue
+
+            print(f"🔄 Найден: PID={pid}, CMD={cmd[:150]}")
+
+            # Не убиваем web_server (себя)
+            if pid == current_pid or 'web_server' in cmd:
+                print(f"🔄 Пропускаю web_server")
+                continue
+
+            # Убиваем по ключевым словам
+            if service_name in cmd:
+                print(f"🔄 Убиваю {service_name} (PID {pid})...")
+                kill_result = subprocess.run(
+                    ['taskkill', '/F', '/T', '/PID', str(pid)],  # ← ДОБАВИЛ /T
+                    capture_output=True, text=True, timeout=5
+                )
+                if kill_result.returncode == 0:
+                    print(f"🔄 PID {pid} убит")
+                    killed_count += 1
+
+        time.sleep(2)
+
+        # ✅ Запускаем новый процесс (CMD окно, не PowerShell)
+        subprocess.Popen(
+            ['cmd', '/c', 'start', 'python', script],
+            cwd=project_root
+        )
+
+        message = f'{service_name} перезапущен (убито {killed_count})'
+        print(f"🔄 {message}")
+        return jsonify({'success': True, 'message': message, 'killed': killed_count})
+
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def restart_web_server():
+    """Перезапуск веб-сервера через внешний скрипт"""
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'restart_web.ps1')
+
+    try:
+        subprocess.Popen(
+            ['powershell', '-ExecutionPolicy', 'Bypass', '-File', script_path, '-PIDtoKill', str(os.getpid())],
+            creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == 'win32' else 0
+        )
+        return jsonify({'success': True, 'message': 'Web Server перезапускается...'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+# ============================================================
+# API КАМЕРЫ
+# ============================================================
 
 @app.route('/api/cameras', methods=['GET'])
 def api_get_cameras():

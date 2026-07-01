@@ -297,7 +297,7 @@ class MotionDetector:
 
                         # ✅ Сохраняем AI-кадр не чаще 1 раза в секунду
                         now = time.time()
-                        if now - self._last_ai_frame_time >= 1.0:
+                        if now - self._last_ai_frame_time >= 0.5:
                             self._last_ai_frame_time = now
 
                             # ✅ ПРИМЕНЯЕМ СДВИГ И ПРОВЕРЯЕМ ГАЛОЧКУ
