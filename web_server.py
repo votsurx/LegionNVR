@@ -443,6 +443,35 @@ def restart_web_server():
 # API КАМЕРЫ
 # ============================================================
 
+@app.route('/api/cameras/<int:camera_id>/status')
+def camera_status(camera_id):
+    """Возвращает статус камеры для оверлея"""
+    cam = Camera.get_by_id(camera_id)
+    if not cam:
+        return jsonify({'success': False}), 404
+
+    # Проверяем RTSP
+    online = check_rtsp_available(cam['rtsp_main'])
+
+    # Получаем последнее событие
+    with get_db() as conn:
+        last_event = conn.execute(
+            "SELECT * FROM events WHERE camera_id=? ORDER BY timestamp DESC LIMIT 1",
+            (camera_id,)
+        ).fetchone()
+
+    return jsonify({
+        'success': True,
+        'online': online,
+        'name': cam['name'],
+        'enabled': cam.get('enabled', 0),
+        'motion_enabled': cam.get('motion_enabled', 0),
+        'record_enabled': cam.get('record_enabled', 0),
+        'ai_enabled': cam.get('ai_enabled', 0),
+        'last_event': dict(last_event) if last_event else None,
+        'server_time': time.strftime('%H:%M:%S')
+    })
+
 @app.route('/api/cameras', methods=['GET'])
 def api_get_cameras():
     """Возвращает список всех камер с проверкой доступности"""

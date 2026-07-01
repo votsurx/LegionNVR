@@ -76,7 +76,12 @@
 <!-- ============================================================ -->
 <!-- ПОЛНОЭКРАННЫЙ ПРОСМОТР -->
 <!-- ============================================================ -->
-<div id="fullscreenModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999;">
+<div id="fullscreenModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999; overflow:hidden;">
+
+    <!-- Контейнер для зума -->
+    <div id="fullscreenZoomContainer" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; transform-origin:center center; transition: transform 0.1s ease;">
+        <img id="fullscreenImage" src="" style="max-width:100%; max-height:100%; display:none;">
+    </div>
 
     <!-- Панель управления -->
     <div style="position:absolute; top:10px; right:10px; display:flex; gap:8px; z-index:10000; flex-wrap:wrap;">
@@ -84,20 +89,32 @@
         <button onclick="changeQuality('med')" id="q-med" class="btn btn-sm btn-green">640p</button>
         <button onclick="changeQuality('high')" id="q-high" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">720p</button>
         <button onclick="changeQuality('ultra')" id="q-ultra" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">1080p</button>
+        <button onclick="resetZoom()" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">🔍 Сброс</button>
         <button onclick="closeFullscreen()" class="btn btn-sm btn-red" style="font-size:16px;">✕</button>
     </div>
 
-    <!-- Изображение -->
-    <img id="fullscreenImage" src="" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); max-width:100%; max-height:100%; display:none;">
+    <!-- Оверлей с информацией -->
+    <div id="fullscreenOverlay" style="position:absolute; bottom:10px; left:10px; right:10px; z-index:10000; display:flex; justify-content:space-between; align-items:flex-end; pointer-events:none;">
+        <!-- Левая часть: информация о камере -->
+        <div style="background:rgba(0,0,0,0.7); padding:8px 16px; border-radius:6px; color:#fff; font-size:13px; backdrop-filter:blur(4px);">
+            <div id="overlayCamName" style="font-weight:bold; margin-bottom:4px;">📷 Камера</div>
+            <div id="overlayStatus" style="color:#4caf50;">🟢 Онлайн</div>
+            <div id="overlayDetector" style="color:#aaa;">🔍 Детектор: ---</div>
+            <div id="overlayRecording" style="color:#aaa;">📼 Запись: ---</div>
+        </div>
+
+        <!-- Правая часть: время и FPS -->
+        <div style="background:rgba(0,0,0,0.7); padding:8px 16px; border-radius:6px; color:#fff; font-size:24px; font-weight:bold; text-align:right; backdrop-filter:blur(4px);">
+            <div id="overlayTime">--:--:--</div>
+            <div id="overlayZoom" style="font-size:13px; color:#aaa;">Zoom: 1.0x</div>
+        </div>
+    </div>
 
     <!-- Загрузка -->
     <div id="fullscreenLoading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#fff; font-size:20px; text-align:center;">
         <div style="font-size:48px;">📷</div>
         <div style="margin-top:8px;">Загрузка...</div>
     </div>
-
-    <!-- Информация о камере -->
-    <div id="fullscreenInfo" style="position:absolute; bottom:10px; left:10px; color:#fff; font-size:14px; z-index:10000; background:rgba(0,0,0,0.7); padding:4px 12px; border-radius:4px;"></div>
 </div>
 
 
@@ -174,25 +191,26 @@ function toggleRecord(camId) {
 }
 
 // ============================================================
-// ПОЛНОЭКРАННЫЙ РЕЖИМ
+// ПОЛНОЭКРАННЫЙ РЕЖИМ (с зумом и оверлеем)
 // ============================================================
 var currentFullscreenCam = null;
 var currentQuality = 'med';
+var currentZoom = 1.0;
+var overlayTimer = null;
 
 function openFullscreen(camId) {
     currentFullscreenCam = camId;
     currentQuality = 'med';
+    currentZoom = 1.0;
 
     document.getElementById('fullscreenModal').style.display = 'block';
     document.getElementById('fullscreenLoading').style.display = 'block';
     document.getElementById('fullscreenImage').style.display = 'none';
-
-    // Показываем название камеры
-    var camName = document.querySelector('.card[data-camera="' + camId + '"] .card-title').textContent;
-    document.getElementById('fullscreenInfo').textContent = '📷 ' + camName;
+    document.getElementById('fullscreenZoomContainer').style.transform = 'scale(1.0)';
 
     loadFullscreenStream();
     updateQualityButtons();
+    startOverlayUpdates();
 }
 
 function changeQuality(quality) {
@@ -211,10 +229,8 @@ function updateQualityButtons() {
     qMed.className = 'btn btn-sm ' + (currentQuality === 'med' ? 'btn-green' : 'btn-outline');
     qHigh.className = 'btn btn-sm ' + (currentQuality === 'high' ? 'btn-green' : 'btn-outline');
     qUltra.className = 'btn btn-sm ' + (currentQuality === 'ultra' ? 'btn-green' : 'btn-outline');
-    qUltra.style.color = '#fff';
-    qUltra.style.borderColor = '#fff';
 
-    [qLow, qMed, qHigh].forEach(function(btn) {
+    [qLow, qMed, qHigh, qUltra].forEach(function(btn) {
         btn.style.color = '#fff';
         btn.style.borderColor = '#fff';
     });
@@ -237,15 +253,111 @@ function loadFullscreenStream() {
     };
 }
 
+// ============================================================
+// ЦИФРОВОЙ ЗУМ
+// ============================================================
+var zoomContainer = document.getElementById('fullscreenZoomContainer');
+
+zoomContainer.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var rect = zoomContainer.getBoundingClientRect();
+    var mouseX = e.clientX - rect.left;
+    var mouseY = e.clientY - rect.top;
+    var originX = (mouseX / rect.width) * 100;
+    var originY = (mouseY / rect.height) * 100;
+    var delta = e.deltaY > 0 ? -0.15 : 0.15;
+    currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
+    zoomContainer.style.transformOrigin = originX + '% ' + originY + '%';
+    zoomContainer.style.transform = 'scale(' + currentZoom + ')';
+    document.getElementById('overlayZoom').textContent = 'Zoom: ' + currentZoom.toFixed(1) + 'x';
+}, {passive: false});
+
+function resetZoom() {
+    currentZoom = 1.0;
+    zoomContainer.style.transformOrigin = 'center center';
+    zoomContainer.style.transform = 'scale(1.0)';
+    document.getElementById('overlayZoom').textContent = 'Zoom: 1.0x';
+}
+
+// ============================================================
+// ОВЕРЛЕЙ
+// ============================================================
+function startOverlayUpdates() {
+    updateOverlay();
+    overlayTimer = setInterval(updateOverlay, 2000);
+}
+
+function updateOverlay() {
+    if (!currentFullscreenCam) return;
+
+    var now = new Date();
+    var timeEl = document.getElementById('overlayTime');
+    if (timeEl) {
+        timeEl.textContent = now.getHours().toString().padStart(2,'0') + ':' +
+                            now.getMinutes().toString().padStart(2,'0') + ':' +
+                            now.getSeconds().toString().padStart(2,'0');
+    }
+
+    fetch('/api/cameras/' + currentFullscreenCam + '/status')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) return;
+
+            var nameEl = document.getElementById('overlayCamName');
+            if (nameEl) nameEl.textContent = '📷 ' + d.name;
+
+            var statusEl = document.getElementById('overlayStatus');
+            if (statusEl) {
+                statusEl.innerHTML = d.online ? '🟢 Онлайн' : '🔴 Офлайн';
+                statusEl.style.color = d.online ? '#4caf50' : '#f44336';
+            }
+
+            var detEl = document.getElementById('overlayDetector');
+            if (detEl) {
+                if (d.motion_enabled) {
+                    detEl.innerHTML = '🔍 Детектор: ВКЛ' + (d.ai_enabled ? ' (🤖 AI)' : '');
+                    detEl.style.color = '#4caf50';
+                } else {
+                    detEl.innerHTML = '🔍 Детектор: ВЫКЛ';
+                    detEl.style.color = '#aaa';
+                }
+            }
+
+            var recEl = document.getElementById('overlayRecording');
+            if (recEl) {
+                if (d.record_enabled) {
+                    var recText = '📼 Запись: ВКЛ';
+                    if (d.last_event && d.last_event.event_type && d.last_event.event_type.includes('start')) {
+                        recText += ' | Тревога: ' + (d.last_event.timestamp || '---');
+                    }
+                    recEl.innerHTML = recText;
+                    recEl.style.color = '#4caf50';
+                } else {
+                    recEl.innerHTML = '📼 Запись: ВЫКЛ';
+                    recEl.style.color = '#aaa';
+                }
+            }
+        })
+        .catch(function() {
+            var statusEl = document.getElementById('overlayStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '🟠 Нет связи';
+                statusEl.style.color = '#ff9800';
+            }
+        });
+}
+
 function closeFullscreen() {
     document.getElementById('fullscreenModal').style.display = 'none';
     document.getElementById('fullscreenImage').src = '';
+    if (overlayTimer) { clearInterval(overlayTimer); overlayTimer = null; }
+    currentFullscreenCam = null;
+    currentZoom = 1.0;
 }
 
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeFullscreen();
-    }
+    if (e.key === 'Escape') closeFullscreen();
+    if (e.key === 'r' || e.key === 'R') resetZoom();
 });
 </script>
 {% endblock %}
