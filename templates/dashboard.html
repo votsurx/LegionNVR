@@ -18,15 +18,15 @@
             <span class="card-icon">📷</span>
             <span class="card-title">{{ cam.name }}</span>
         </div>
-        
-        <!-- Тело карточки — MJPEG поток -->
-        <div class="card-body">
-            <img src="/camera/{{ cam.id }}/mjpeg" 
+
+        <!-- Тело карточки — MJPEG поток (кликабельный!) -->
+        <div class="card-body" onclick="openFullscreen({{ cam.id }})" style="cursor:pointer;" title="Нажмите для полноэкранного просмотра">
+            <img src="/camera/{{ cam.id }}/mjpeg"
                  alt="Поток {{ cam.name }}"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22240%22><rect fill=%22%23111%22 width=%22320%22 height=%22240%22/><text fill=%22%23666%22 x=%22120%22 y=%22125%22 font-size=%2214%22>Нет сигнала</text></svg>'"
                  style="width:100%;">
         </div>
-        
+
         <!-- Футер — статусы -->
         <div class="card-footer">
             <span class="card-badge {% if cam.enabled %}badge-online{% else %}badge-offline{% endif %}">
@@ -39,29 +39,29 @@
                 📼 {% if cam.record_enabled %}Запись{% else %}Выкл{% endif %}
             </span>
         </div>
-        
+
         <!-- Быстрые кнопки -->
         <div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">
-            <button onclick="toggleCamera({{ cam.id }})" id="btn-cam-{{ cam.id }}" 
-                class="btn btn-sm {% if cam.enabled %}btn-green{% else %}btn-red{% endif %}">
+            <button onclick="event.stopPropagation(); toggleCamera({{ cam.id }})" id="btn-cam-{{ cam.id }}"
+                    class="btn btn-sm {% if cam.enabled %}btn-green{% else %}btn-red{% endif %}">
                 {% if cam.enabled %}🟢 Вкл{% else %}🔴 Выкл{% endif %}
             </button>
-            <button onclick="toggleDetector({{ cam.id }})" id="btn-det-{{ cam.id }}" 
-                class="btn btn-sm {% if cam.motion_enabled %}btn-green{% else %}btn-outline{% endif %}">
+            <button onclick="event.stopPropagation(); toggleDetector({{ cam.id }})" id="btn-det-{{ cam.id }}"
+                    class="btn btn-sm {% if cam.motion_enabled %}btn-green{% else %}btn-outline{% endif %}">
                 🔍
             </button>
-            <button onclick="toggleRecord({{ cam.id }})" id="btn-rec-{{ cam.id }}"
-                class="btn btn-sm {% if cam.record_enabled %}btn-green{% else %}btn-outline{% endif %}">
+            <button onclick="event.stopPropagation(); toggleRecord({{ cam.id }})" id="btn-rec-{{ cam.id }}"
+                    class="btn btn-sm {% if cam.record_enabled %}btn-green{% else %}btn-outline{% endif %}">
                 📼
             </button>
-            <a href="/cameras/{{ cam.id }}/zones" 
-                class="btn btn-sm btn-outline" style="text-decoration:none;">
+            <a href="/cameras/{{ cam.id }}/zones"
+               class="btn btn-sm btn-outline" style="text-decoration:none;" onclick="event.stopPropagation();">
                 🎯
             </a>
         </div>
     </div>
     {% endfor %}
-    
+
     {% if not cameras %}
     <div class="card" style="align-items:center; justify-content:center; min-height:200px;">
         <div style="text-align:center;">
@@ -73,12 +73,40 @@
     {% endif %}
 </div>
 
+<!-- ============================================================ -->
+<!-- ПОЛНОЭКРАННЫЙ ПРОСМОТР -->
+<!-- ============================================================ -->
+<div id="fullscreenModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999;">
+
+    <!-- Панель управления -->
+    <div style="position:absolute; top:10px; right:10px; display:flex; gap:8px; z-index:10000; flex-wrap:wrap;">
+        <button onclick="changeQuality('low')" id="q-low" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">320p</button>
+        <button onclick="changeQuality('med')" id="q-med" class="btn btn-sm btn-green">640p</button>
+        <button onclick="changeQuality('high')" id="q-high" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">720p</button>
+        <button onclick="changeQuality('ultra')" id="q-ultra" class="btn btn-sm btn-outline" style="color:#fff; border-color:#fff;">1080p</button>
+        <button onclick="closeFullscreen()" class="btn btn-sm btn-red" style="font-size:16px;">✕</button>
+    </div>
+
+    <!-- Изображение -->
+    <img id="fullscreenImage" src="" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); max-width:100%; max-height:100%; display:none;">
+
+    <!-- Загрузка -->
+    <div id="fullscreenLoading" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#fff; font-size:20px; text-align:center;">
+        <div style="font-size:48px;">📷</div>
+        <div style="margin-top:8px;">Загрузка...</div>
+    </div>
+
+    <!-- Информация о камере -->
+    <div id="fullscreenInfo" style="position:absolute; bottom:10px; left:10px; color:#fff; font-size:14px; z-index:10000; background:rgba(0,0,0,0.7); padding:4px 12px; border-radius:4px;"></div>
+</div>
+
+
 <script>
 // === Фильтр по камерам ===
 function filterCameras(filter, chip) {
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
-    
+
     document.querySelectorAll('.card[data-camera]').forEach(card => {
         if (filter === 'all') {
             card.style.display = '';
@@ -96,7 +124,7 @@ function toggleCamera(camId) {
     var btn = document.getElementById('btn-cam-' + camId);
     var isOn = btn.classList.contains('btn-green');
     var newState = isOn ? 0 : 1;
-    
+
     fetch('/api/cameras/' + camId, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
@@ -114,7 +142,7 @@ function toggleDetector(camId) {
     var btn = document.getElementById('btn-det-' + camId);
     var isOn = btn.classList.contains('btn-green');
     var newState = isOn ? 0 : 1;
-    
+
     fetch('/api/cameras/' + camId, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
@@ -132,7 +160,7 @@ function toggleRecord(camId) {
     var btn = document.getElementById('btn-rec-' + camId);
     var isOn = btn.classList.contains('btn-green');
     var newState = isOn ? 0 : 1;
-    
+
     fetch('/api/cameras/' + camId, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
@@ -144,5 +172,80 @@ function toggleRecord(camId) {
         }
     });
 }
+
+// ============================================================
+// ПОЛНОЭКРАННЫЙ РЕЖИМ
+// ============================================================
+var currentFullscreenCam = null;
+var currentQuality = 'med';
+
+function openFullscreen(camId) {
+    currentFullscreenCam = camId;
+    currentQuality = 'med';
+
+    document.getElementById('fullscreenModal').style.display = 'block';
+    document.getElementById('fullscreenLoading').style.display = 'block';
+    document.getElementById('fullscreenImage').style.display = 'none';
+
+    // Показываем название камеры
+    var camName = document.querySelector('.card[data-camera="' + camId + '"] .card-title').textContent;
+    document.getElementById('fullscreenInfo').textContent = '📷 ' + camName;
+
+    loadFullscreenStream();
+    updateQualityButtons();
+}
+
+function changeQuality(quality) {
+    currentQuality = quality;
+    updateQualityButtons();
+    loadFullscreenStream();
+}
+
+function updateQualityButtons() {
+    var qLow = document.getElementById('q-low');
+    var qMed = document.getElementById('q-med');
+    var qHigh = document.getElementById('q-high');
+    var qUltra = document.getElementById('q-ultra');
+
+    qLow.className = 'btn btn-sm ' + (currentQuality === 'low' ? 'btn-green' : 'btn-outline');
+    qMed.className = 'btn btn-sm ' + (currentQuality === 'med' ? 'btn-green' : 'btn-outline');
+    qHigh.className = 'btn btn-sm ' + (currentQuality === 'high' ? 'btn-green' : 'btn-outline');
+    qUltra.className = 'btn btn-sm ' + (currentQuality === 'ultra' ? 'btn-green' : 'btn-outline');
+    qUltra.style.color = '#fff';
+    qUltra.style.borderColor = '#fff';
+
+    [qLow, qMed, qHigh].forEach(function(btn) {
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#fff';
+    });
+}
+
+function loadFullscreenStream() {
+    var img = document.getElementById('fullscreenImage');
+    document.getElementById('fullscreenLoading').style.display = 'block';
+    img.style.display = 'none';
+
+    img.src = '/camera/' + currentFullscreenCam + '/mjpeg-full?quality=' + currentQuality + '&t=' + Date.now();
+
+    img.onload = function() {
+        document.getElementById('fullscreenLoading').style.display = 'none';
+        img.style.display = 'block';
+    };
+
+    img.onerror = function() {
+        document.getElementById('fullscreenLoading').innerHTML = '<div style="font-size:48px;">⚠️</div><div>Ошибка загрузки потока</div>';
+    };
+}
+
+function closeFullscreen() {
+    document.getElementById('fullscreenModal').style.display = 'none';
+    document.getElementById('fullscreenImage').src = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeFullscreen();
+    }
+});
 </script>
 {% endblock %}

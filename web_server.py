@@ -586,6 +586,86 @@ def segment(id, segment):
 # MJPEG-ЭНДПОИНТ
 # ============================================================
 
+@app.route('/camera/<id>/mjpeg-full')
+def mjpeg_full_stream(id):
+    """MJPEG-поток высокого качества для полноэкранного режима"""
+    cam = Camera.get_by_id(int(id))
+    if not cam or not cam.get('enabled', True):
+        return "Камера отключена", 403
+
+    quality = request.args.get('quality', 'med')
+
+    quality_settings = {
+        'low': {'scale': '320:240', 'fps': '8', 'q': '8'},
+        'med': {'scale': '640:360', 'fps': '15', 'q': '5'},
+        'high': {'scale': '1280:720', 'fps': '25', 'q': '3'},
+        'ultra': {'scale': '1920:1080', 'fps': '25', 'q': '2'},
+    }
+
+    settings = quality_settings.get(quality, quality_settings['med'])
+
+    ffmpeg = "ffmpeg"
+    if shutil.which(ffmpeg) is None:
+        for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
+            if os.path.exists(p):
+                ffmpeg = p
+                break
+
+    import tempfile
+
+    def generate():
+        tmpfile = os.path.join(tempfile.gettempdir(), f"mjpeg_full_{id}_{int(time.time())}.mjpeg")
+
+        cmd = [
+            ffmpeg,
+            "-loglevel", "error",
+            "-rtsp_transport", "tcp",
+            "-fflags", "nobuffer",
+            "-flags", "low_delay",
+            "-i", cam["rtsp_sub"] or cam["rtsp_main"],
+            "-vf", f"fps={settings['fps']},scale={settings['scale']}",
+            "-f", "mjpeg",
+            "-q:v", settings['q'],
+            "-avioflags", "direct",
+            "-flush_packets", "1",
+            "-y",
+            tmpfile
+        ]
+
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        try:
+            time.sleep(1)
+            last_size = 0
+            while proc.poll() is None:
+                if os.path.exists(tmpfile) and os.path.getsize(tmpfile) > last_size:
+                    with open(tmpfile, 'rb') as f:
+                        f.seek(last_size)
+                        data = f.read()
+                        if data:
+                            start = 0
+                            while start < len(data):
+                                soi = data.find(b'\xff\xd8', start)
+                                if soi == -1: break
+                                eoi = data.find(b'\xff\xd9', soi)
+                                if eoi == -1: break
+                                frame = data[soi:eoi+2]
+                                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                                start = eoi + 2
+                    last_size = os.path.getsize(tmpfile)
+                else:
+                    time.sleep(0.05)
+        except GeneratorExit:
+            pass
+        finally:
+            proc.terminate()
+            try: proc.wait(timeout=3)
+            except: proc.kill()
+            try: os.remove(tmpfile)
+            except: pass
+
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 @app.route('/camera/<id>/mjpeg')
 def mjpeg_stream(id):
     """MJPEG-поток для браузера"""
@@ -616,7 +696,7 @@ def mjpeg_stream(id):
             "-fflags", "nobuffer",
             "-flags", "low_delay",
             "-i", cam["rtsp_sub"] or cam["rtsp_main"],
-            "-vf", "fps=8,scale=640:360",
+            "-vf", "fps=8,scale=320:240",
             "-f", "mjpeg",
             "-q:v", "5",
             "-avioflags", "direct",
