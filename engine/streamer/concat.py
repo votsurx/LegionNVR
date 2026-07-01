@@ -47,9 +47,28 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
         cmd_concat = [ffmpeg, "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", "-y", temp_video]
         result = subprocess.run(cmd_concat, timeout=60, capture_output=True)
 
+
         if result.returncode != 0 or not os.path.exists(temp_video):
-            print(f"{ts()} {C_RED}❌ Ошибка быстрой склейки{C_RESET}")
-            return False
+            error_msg = result.stderr.decode('utf-8', errors='ignore')[:500] if result.stderr else 'No stderr'
+            print(f"{ts()} {C_RED}❌ Ошибка быстрой склейки: {error_msg}{C_RESET}")
+
+            # Попробуем перекодировать
+            print(f"{ts()} {C_YELLOW}⚠️ Пробую перекодирование...{C_RESET}")
+            cmd_concat2 = [
+                ffmpeg, "-loglevel", "error",
+                "-f", "concat", "-safe", "0",
+                "-i", concat_file,
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                "-y", temp_video
+            ]
+            result2 = subprocess.run(cmd_concat2, timeout=120, capture_output=True)
+
+            if result2.returncode != 0 or not os.path.exists(temp_video):
+                error_msg2 = result2.stderr.decode('utf-8', errors='ignore')[:500] if result2.stderr else 'No stderr'
+                print(f"{ts()} {C_RED}❌ И перекодирование не удалось: {error_msg2}{C_RESET}")
+                return False
+
+            print(f"{ts()} {C_GREEN}✅ Перекодирование удалось{C_RESET}")
 
         print(f"{ts()} ✅ Склейка готова: {os.path.getsize(temp_video):,} байт")
 

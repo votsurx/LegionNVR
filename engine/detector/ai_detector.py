@@ -21,6 +21,8 @@ class AIDetector:
         self.frame_skip = camera.get("ai_frame_skip", 5)
         self._frame_counter = 0
         self._ai_frames_list = []
+        self.boxes_enabled = camera.get("ai_boxes_enabled", 1)
+        self.boxes_shift = camera.get("ai_boxes_shift", 0)
 
         if self.enabled:
             self._init_model()

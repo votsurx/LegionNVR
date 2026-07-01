@@ -45,7 +45,10 @@ def _handle_reload_config(client, userdata, cam_id):
         if str(det.camera["id"]) == str(cam_id):
             found = True
             print(f"{ts()} ⏹️ [{det.camera['name']}] Перезагружаю настройки...")
-            det.stop()
+            try:
+                det.stop()
+            except Exception as e:
+                print(f"{ts()} {C_YELLOW}⚠️ [{det.camera['name']}] Ошибка остановки: {e}{C_RESET}")
 
             det.camera = cam_dict
             det.threshold = cam_dict.get("motion_threshold", 2.0)

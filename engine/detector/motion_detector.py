@@ -2,6 +2,7 @@
 Основной класс MotionDetector
 """
 import os
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|timeout;5000000|threads;1"
 import cv2
 import numpy as np
 import json
@@ -298,20 +299,26 @@ class MotionDetector:
                         now = time.time()
                         if now - self._last_ai_frame_time >= 1.0:
                             self._last_ai_frame_time = now
-                            frame_time = now - 5.0  # ← СДВИГ НА 2 СЕК НАЗАД
 
-                            # Просто сохраняем с текущим временем (без смещений!)
-                            self.recording.save_ai_frame(frame, boxes)
-                            self.recording.save_motion_boxes(boxes, now)
+                            # ✅ ПРИМЕНЯЕМ СДВИГ И ПРОВЕРЯЕМ ГАЛОЧКУ
+                            if self.ai_detector.boxes_enabled:
+                                shift = self.ai_detector.boxes_shift
+                                frame_time = now + shift
+                                self.recording.save_ai_frame(frame, boxes)
+                            else:
+                                frame_time = now
 
-                            # Логируем обновление
-                            desc = []
-                            if ai_result.get('person', 0) > 0:
-                                desc.append(f"👤 x{ai_result['person']}")
-                            if ai_result.get('car', 0) > 0:
-                                desc.append(f"🚗 x{ai_result['car']}")
-                            if desc:
-                                print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
+                            self.recording.save_motion_boxes(boxes, frame_time)
+
+                            # Логируем обновление (только если рамки включены)
+                            if self.ai_detector.boxes_enabled:
+                                desc = []
+                                if ai_result.get('person', 0) > 0:
+                                    desc.append(f"👤 x{ai_result['person']}")
+                                if ai_result.get('car', 0) > 0:
+                                    desc.append(f"🚗 x{ai_result['car']}")
+                                if desc:
+                                    print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
                 else:
                     # AI не нашёл объекты
                     self._ai_found_streak = 0
@@ -347,9 +354,15 @@ class MotionDetector:
                             now = time.time()
                             if now - self._last_ai_frame_time >= 1.0:
                                 self._last_ai_frame_time = now
-                                frame_time = now - 5.0  # ← СДВИГ НА 2 СЕК НАЗАД
-                                self.recording.save_ai_frame(frame, boxes)
-                                self.recording.save_motion_boxes(boxes, now)
+
+                                if self.ai_detector.boxes_enabled:
+                                    shift = self.ai_detector.boxes_shift
+                                    frame_time = now + shift
+                                    self.recording.save_ai_frame(frame, boxes)
+                                else:
+                                    frame_time = now
+
+                                self.recording.save_motion_boxes(boxes, frame_time)
         else:
             # AI выключен — просто MOG2
             try:
@@ -368,6 +381,7 @@ class MotionDetector:
                 self.motion_end_timer.start()
 
     def _trigger_motion(self, motion_percent, ai_result, frame=None, boxes=None):
+            """Триггерит тревогу"""
             if self.motion_end_timer:
                 self.motion_end_timer.cancel()
                 self.motion_end_timer = None
@@ -379,27 +393,37 @@ class MotionDetector:
                 self.motion_boxes = []
                 self.recording.reset()
 
+                # ✅ ПЕРВЫЙ AI-КАДР СРАЗУ ПРИ СТАРТЕ (с учётом сдвига и галочки)
                 if frame is not None and boxes:
-                    # ✅ СДВИГ НА 2 СЕК НАЗАД
-                    frame_time = time.time() - 5.0
+                    # Проверяем, включены ли рамки
+                    if self.ai_detector.boxes_enabled:
+                        # Применяем сдвиг из настроек
+                        shift = self.ai_detector.boxes_shift
+                        frame_time = time.time() + shift
+                    else:
+                        frame_time = time.time()
 
                     self.recording.save_alert_snapshot(frame, boxes)
-                    self.recording.save_ai_frame(frame, boxes)
+
+                    # AI-кадр сохраняем только если рамки включены
+                    if self.ai_detector.boxes_enabled:
+                        self.recording.save_ai_frame(frame, boxes)
+
                     self.recording.save_motion_boxes(boxes, frame_time)
 
-            if ai_result:
-                desc = []
-                if ai_result.get('person', 0) > 0:
-                    desc.append(f"👤 x{ai_result['person']}")
-                if ai_result.get('car', 0) > 0:
-                    desc.append(f"🚗 x{ai_result['car']}")
-                print(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
-            else:
-                print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
+                if ai_result:
+                    desc = []
+                    if ai_result.get('person', 0) > 0:
+                        desc.append(f"👤 x{ai_result['person']}")
+                    if ai_result.get('car', 0) > 0:
+                        desc.append(f"🚗 x{ai_result['car']}")
+                    print(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
+                else:
+                    print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
 
-            self._publish("motion_start", motion_percent, ai_result)
-            result = send_mqtt_command(self.camera['id'], 'start_recording')
-            print(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
+                self._publish("motion_start", motion_percent, ai_result)
+                result = send_mqtt_command(self.camera['id'], 'start_recording')
+                print(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
 
     def _stop_motion(self):
         """Останавливает тревогу"""

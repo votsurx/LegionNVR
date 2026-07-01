@@ -57,6 +57,7 @@ class Camera:
             'location_id',
             # 🤖 AI
             'ai_enabled', 'ai_classes', 'ai_confidence', 'ai_frame_skip'
+            'boxes_enabled', 'boxes_shift'
         ]
         updates = {k: data[k] for k in allowed if k in data}
         if not updates:

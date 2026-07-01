@@ -188,70 +188,60 @@ def delete_user(user_id):
     
     User.delete(user_id)
     return jsonify({'success': True, 'message': ' '})
+# ============================================================
+# ЗАПИСИ:
+# ============================================================
 
 @api_bp.route('/api/recordings', methods=['DELETE'])
 @login_required
 def delete_recordings_bulk():
-    """    """
+    """Удаление записей"""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': '  '}), 403
-    
-    from models.database import get_db
-    
+        return jsonify({'success': False, 'error': 'Только для админов'}), 403
+
     camera_id = request.args.get('camera_id')
     date = request.args.get('date')
-    date_before = request.args.get('date_before')
     all_records = request.args.get('all')
-    
-    conn = get_db()
-    
-    #        
+
+    # ✅ Определяем query и params ДО with
     query = "SELECT filename FROM recordings WHERE 1=1"
     params = []
-    
+
     if all_records:
-        pass
+        pass  # Удаляем всё
     elif camera_id:
         query += " AND camera_id = ?"
         params.append(camera_id)
     elif date:
         query += " AND date(start_time) = ?"
         params.append(date)
-    elif date_before:
-        query += " AND date(start_time) < ?"
-        params.append(date_before)
     else:
-        conn.close()
-        return jsonify({'success': False, 'error': '   all=true'}), 400
-    
-    #  
-    rows = conn.execute(query, params).fetchall()
-    deleted_files = 0
-    
-    for row in rows:
-        try:
-            if os.path.exists(row['filename']):
-                os.remove(row['filename'])
-                deleted_files += 1
-        except:
-            pass
-    
-    #   
-    if all_records:
-        cursor = conn.execute("DELETE FROM recordings")
-    else:
-        delete_query = "DELETE FROM recordings" + query.replace("SELECT filename FROM recordings", "")
-        cursor = conn.execute(delete_query, params)
-    
-    deleted_rows = cursor.rowcount
-    conn.commit()
-    conn.close()
-    
+        return jsonify({'success': False, 'error': 'Укажите параметры или all=true'}), 400
+
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
+        deleted_files = 0
+
+        for row in rows:
+            try:
+                if os.path.exists(row['filename']):
+                    os.remove(row['filename'])
+                    deleted_files += 1
+            except:
+                pass
+
+        if all_records:
+            conn.execute("DELETE FROM recordings")
+        else:
+            delete_query = query.replace("SELECT filename FROM recordings", "DELETE FROM recordings")
+            conn.execute(delete_query, params)
+
+        conn.commit()
+
     return jsonify({
-        'success': True, 
-        'deleted_rows': deleted_rows,
+        'success': True,
         'deleted_files': deleted_files,
-        'message': f' : {deleted_rows}, : {deleted_files}'
+        'message': f'Удалено файлов: {deleted_files}'
     })
 
 @api_bp.route('/api/cameras', methods=['GET'])

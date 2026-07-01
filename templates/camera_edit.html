@@ -49,8 +49,8 @@
                 <option value="medium" {% if camera.stream_quality == 'medium' %}selected{% endif %}>Среднее (640x360)</option>
                 <option value="low" {% if camera.stream_quality == 'low' %}selected{% endif %}>Низкое (320x240)</option>
             </select>
-            <label>Длительность HLS-сегмента (сек):</label>
-            <input type="number" id="stream_hls_time" value="{{ camera.stream_hls_time or 1 }}" min="1" max="5" class="input-full">
+            <!-- HLS время зашито жёстко, поле оставлено для совместимости -->
+            <input type="hidden" id="stream_hls_time" value="1">
         </div>
 
         <!-- Детектор -->
@@ -140,6 +140,24 @@
                 <p style="color:#888; font-size:12px; margin-top:4px;">
                     1 = каждый кадр (макс нагрузка) | 10 = каждый 10-й (минимальная нагрузка)
                 </p>
+
+                <!-- ✅ НАСТРОЙКИ РАМОК НА РОЛИКЕ -->
+                <div style="background:#1a1a2e; padding:16px; border-radius:8px; margin-top:16px;">
+                    <h3 style="margin:0 0 12px 0;">🎬 Рамки на ролике</h3>
+
+                    <label><input type="checkbox" id="ai_boxes_enabled" {% if camera.ai_boxes_enabled|default(1) %}checked{% endif %}>
+                        Рисовать рамки на записи
+                    </label>
+
+                    <br><br>
+
+                    <label>⏪ Сдвиг рамок (секунд):</label>
+                    <input type="number" id="ai_boxes_shift" value="{{ camera.ai_boxes_shift|default(0) }}"
+                           step="0.5" min="-10" max="10" class="input-full" style="width:150px;">
+                    <p style="color:#888; font-size:12px; margin-top:4px;">
+                        -2 = на 2 сек раньше (в предзапись) | 0 = без сдвига | +2 = на 2 сек позже
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -163,7 +181,6 @@
         document.getElementById('tab-' + name + '-content').style.display = 'block';
         document.getElementById('tab-' + name).classList.add('active');
 
-        // Показываем/скрываем настройки AI
         if (name === 'ai') {
             updateAiSettings();
         }
@@ -174,7 +191,6 @@
         document.getElementById('aiSettings').style.display = aiEnabled ? 'block' : 'none';
     }
 
-    // Обработчик чекбокса AI
     document.getElementById('ai_enabled').addEventListener('change', updateAiSettings);
 
     function updateAiClasses() {
@@ -185,7 +201,6 @@
         document.getElementById('ai_classes').value = JSON.stringify(classes);
     }
 
-    // Инициализация AI классов при загрузке
     function initAiClasses() {
         var savedClasses = document.getElementById('ai_classes').value;
         try {
@@ -195,7 +210,6 @@
             });
             updateAiClasses();
         } catch(e) {
-            // По умолчанию — только люди
             document.querySelectorAll('.ai-class').forEach(cb => {
                 cb.checked = cb.value === '0';
             });
@@ -232,7 +246,7 @@
             enabled: document.getElementById('enabled').checked ? 1 : 0,
             stream_enabled: document.getElementById('stream_enabled').checked ? 1 : 0,
             stream_quality: document.getElementById('stream_quality').value,
-            stream_hls_time: parseInt(document.getElementById('stream_hls_time').value),
+            stream_hls_time: 1,
             motion_enabled: document.getElementById('motion_enabled').checked ? 1 : 0,
             motion_threshold: parseFloat(document.getElementById('motion_threshold').value),
             motion_cooldown: parseInt(document.getElementById('motion_cooldown').value),
@@ -247,7 +261,10 @@
             ai_enabled: document.getElementById('ai_enabled').checked ? 1 : 0,
             ai_classes: document.getElementById('ai_classes').value,
             ai_confidence: parseFloat(document.getElementById('ai_confidence').value),
-            ai_frame_skip: parseInt(document.getElementById('ai_frame_skip').value)
+            ai_frame_skip: parseInt(document.getElementById('ai_frame_skip').value),
+            // 🎬 Рамки
+            ai_boxes_enabled: document.getElementById('ai_boxes_enabled').checked ? 1 : 0,
+            ai_boxes_shift: parseFloat(document.getElementById('ai_boxes_shift').value) || 0
         };
 
         fetch('/api/cameras/' + id, {
@@ -269,13 +286,10 @@
         });
     }
 
-    // Показываем первую вкладку
     showTab('basic');
-    // Инициализируем AI классы
     initAiClasses();
 </script>
 <script>
-    // Загружаем локации для выпадающего списка
     fetch('/api/locations')
         .then(r => r.json())
         .then(d => {
