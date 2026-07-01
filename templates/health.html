@@ -47,10 +47,13 @@
 
     <!-- Сервисы -->
     <div class="health-card">
-        <h3 style="margin:0 0 12px 0;">📡 Сервисы</h3>
+        <h3 style="margin:0 0 12px 0;">
+            📡 Сервисы
+            <span id="autoHealCount" style="font-size:13px; color:var(--text-secondary);"></span>
+        </h3>
         <div id="servicesList">Загрузка...</div>
         <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
-            🔄 = жёсткий перезапуск (kill + старт)
+            🔄 = жёсткий перезапуск | ♻️ = авто-перезапуск при падении
         </div>
     </div>
 
@@ -140,13 +143,8 @@
         transition: all 0.2s;
         flex-shrink: 0;
     }
-    .btn-restart:hover {
-        background: #c0392b;
-    }
-    .btn-restart:disabled {
-        background: #666;
-        cursor: not-allowed;
-    }
+    .btn-restart:hover { background: #c0392b; }
+    .btn-restart:disabled { background: #666; cursor: not-allowed; }
 </style>
 
 <script>
@@ -178,36 +176,35 @@
                 // Uptime
                 document.getElementById('uptimeValue').textContent = d.system.uptime;
 
-                // Сервисы (с кнопками перезапуска для ВСЕХ кроме MQTT!)
-            var sHtml = '';
-            // ✅ ФИКСИРОВАННЫЙ ПОРЯДОК
-            var serviceOrder = ['web_server', 'detector', 'streamer', 'mqtt'];
+                // Сервисы (фиксированный порядок + кнопки перезапуска)
+                var sHtml = '';
+                var serviceOrder = ['web_server', 'detector', 'streamer', 'mqtt'];
 
-            for (var i = 0; i < serviceOrder.length; i++) {
-                var s = serviceOrder[i];
-                var serv = d.services[s];
-                if (!serv) continue;  // Пропускаем если сервис не найден
+                for (var i = 0; i < serviceOrder.length; i++) {
+                    var s = serviceOrder[i];
+                    var serv = d.services[s];
+                    if (!serv) continue;
 
-                var dot = serv.status === 'running' ? 'dot-green' : 'dot-red';
-                var icon = '';
-                if (s === 'web_server') icon = '🖥️ ';
-                else if (s === 'detector') icon = '🤖 ';
-                else if (s === 'streamer') icon = '🎥 ';
-                else if (s === 'mqtt') icon = '📡 ';
+                    var dot = serv.status === 'running' ? 'dot-green' : 'dot-red';
+                    var icon = '';
+                    if (s === 'web_server') icon = '🖥️ ';
+                    else if (s === 'detector') icon = '🤖 ';
+                    else if (s === 'streamer') icon = '🎥 ';
+                    else if (s === 'mqtt') icon = '📡 ';
 
-                sHtml += '<div class="service-row">';
-                sHtml += '<div class="service-dot ' + dot + '"></div>';
-                sHtml += '<span style="flex:1;">' + icon + s + '</span>';
-                sHtml += '<span style="color:var(--text-secondary); margin-right:8px;">' + serv.status + '</span>';
+                    sHtml += '<div class="service-row">';
+                    sHtml += '<div class="service-dot ' + dot + '"></div>';
+                    sHtml += '<span style="flex:1;">' + icon + s + '</span>';
+                    sHtml += '<span style="color:var(--text-secondary); margin-right:8px;">' + serv.status + '</span>';
 
-                // Кнопка перезапуска для всех кроме MQTT
-                if (s !== 'mqtt') {
-                    sHtml += '<button onclick="restartService(\'' + s + '\', this)" class="btn-restart">🔄</button>';
+                    // Кнопка перезапуска для всех кроме MQTT
+                    if (s !== 'mqtt') {
+                        sHtml += '<button onclick="restartService(\'' + s + '\', this)" class="btn-restart">🔄</button>';
+                    }
+
+                    sHtml += '</div>';
                 }
-
-                sHtml += '</div>';
-            }
-            document.getElementById('servicesList').innerHTML = sHtml;
+                document.getElementById('servicesList').innerHTML = sHtml;
 
                 // Камеры
                 document.getElementById('camerasCount').textContent = '(' + d.cameras.online + '/' + d.cameras.total + ')';
@@ -236,17 +233,62 @@
                 // События
                 var eHtml = '';
                 d.events.forEach(e => {
-                    var icon = e.event_type.includes('start') ? '🔴' : '🟢';
-                    eHtml += '<div class="event-row">' + icon + ' ' + e.timestamp + ' ' + e.event_type + '</div>';
+                    var icon = '🔴';
+                    if (e.event_type === 'auto_heal') {
+                        icon = '🔄';
+                    } else if (e.event_type.includes('end')) {
+                        icon = '🟢';
+                    }
+
+                    // ✅ Для auto_heal показываем сервис
+                    var eventText = e.event_type;
+                    if (e.event_type === 'auto_heal') {
+                        try {
+                            var details = JSON.parse(e.details || '{}');
+                            eventText = '♻️ Авто-перезапуск ' + (details.service || '?');
+                        } catch(ex) {}
+                    }
+
+                    eHtml += '<div class="event-row">' + icon + ' ' + e.timestamp + ' ' + eventText + '</div>';
                 });
                 document.getElementById('eventsList').innerHTML = eHtml || 'Нет событий';
+
+                // ✅ ЗАПУСКАЕМ АВТО-ПРОВЕРКУ
+                checkAutoHeal();
             });
     }
 
+    // ============================================================
+    // АВТО-ПЕРЕЗАПУСК УПАВШИХ СЕРВИСОВ
+    // ============================================================
+    function checkAutoHeal() {
+        fetch('/api/service/auto-heal', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    // Обновляем счётчик авто-перезапусков
+                    if (d.today_heals > 0) {
+                        document.getElementById('autoHealCount').textContent =
+                            '| ♻️ Авто-перезапусков сегодня: ' + d.today_heals;
+                    } else {
+                        document.getElementById('autoHealCount').textContent = '';
+                    }
+
+                    // Если были перезапуски — обновляем статус
+                    if (d.healed && d.healed.length > 0) {
+                        console.log('♻️ Авто-перезапущены: ' + d.healed.join(', '));
+                        setTimeout(loadHealth, 3000);
+                    }
+                }
+            });
+    }
+
+    // ============================================================
+    // РУЧНОЙ ПЕРЕЗАПУСК
+    // ============================================================
     function restartService(name, btn) {
         if (!confirm('Жёстко перезапустить ' + name + '?\n\nСервис будет убит и запущен заново.')) return;
 
-        // Блокируем кнопку
         btn.disabled = true;
         btn.textContent = '⏳';
 
@@ -255,7 +297,6 @@
             .then(d => {
                 if (d.success) {
                     console.log('✅ ' + d.message);
-                    // Для web_server — ждём дольше (он перезапускается через скрипт)
                     var delay = name === 'web_server' ? 5000 : 3000;
                     setTimeout(loadHealth, delay);
                 } else {
@@ -281,7 +322,10 @@
             });
     }
 
+    // Первая загрузка
     loadHealth();
+
+    // Автообновление каждые 5 секунд (включая авто-heal)
     setInterval(loadHealth, 5000);
 </script>
 {% endblock %}

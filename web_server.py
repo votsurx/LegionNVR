@@ -23,6 +23,8 @@ import psutil
 import glob
 from models.database import get_db
 
+last_restart_time = {}
+
 # Отключаем логи HTTP-запросов
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -870,6 +872,135 @@ def delete_recording(recording_id):
 # ============================================================
 # Health-check
 # ============================================================
+
+def restart_service_internal(service_name):
+    """Внутренний перезапуск сервиса"""
+    import subprocess
+    import os as os_module
+
+    if service_name not in ('detector', 'streamer'):
+        return {'success': False, 'error': 'Неизвестный сервис'}
+
+    script = f'engine/{service_name}/main.py'
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    killed_count = 0
+
+    try:
+        print(f"🔍 Авто-heal: поиск старых процессов {service_name}...")
+
+        # ✅ Используем PowerShell для точного поиска
+        ps_cmd = f"Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object {{ $_.CommandLine -like '*{service_name}*' -and $_.CommandLine -notlike '*web_server*' }} | Select-Object ProcessId, CommandLine | ConvertTo-Json"
+
+        result = subprocess.run(
+            ['powershell', '-Command', ps_cmd],
+            capture_output=True, text=True, timeout=10
+        )
+
+        print(f"   Вывод PowerShell: {result.stdout[:300]}")
+
+        # Парсим JSON
+        try:
+            import json
+            processes = json.loads(result.stdout)
+            if isinstance(processes, dict):
+                processes = [processes]
+        except:
+            processes = []
+
+        for proc in processes:
+            pid = proc.get('ProcessId', 0)
+            cmd = proc.get('CommandLine', '')
+
+            if not pid:
+                continue
+
+            print(f"   🔄 Убиваю {service_name}: PID {pid}")
+            kill_result = subprocess.run(['taskkill', '/F', '/PID', str(pid)], capture_output=True)
+            if kill_result.returncode == 0:
+                print(f"   ✅ PID {pid} убит")
+                killed_count += 1
+
+        if killed_count == 0:
+            print(f"   ℹ️ Старых процессов {service_name} не найдено")
+
+        time.sleep(2)
+
+        # Запускаем новый
+        print(f"   🚀 Запуск нового {service_name}...")
+        subprocess.Popen(
+            ['python', script],
+            cwd=project_root,
+            creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == 'win32' else 0
+        )
+
+        return {'success': True, 'killed': killed_count}
+
+    except Exception as e:
+        print(f"   ❌ Ошибка: {e}")
+        return {'success': False, 'error': str(e)}
+
+@app.route('/api/service/auto-heal', methods=['POST'])
+def auto_heal_services():
+    """Автоматический перезапуск упавших сервисов (без блокировки!)"""
+    healed = []
+
+    for service_name in ['detector', 'streamer']:
+        cooldown = 30
+        if service_name in last_restart_time:
+            elapsed = time.time() - last_restart_time[service_name]
+            print(f"⏳ {service_name}: elapsed={elapsed:.0f}с, cooldown={cooldown}с")
+            if elapsed < cooldown:
+                continue
+
+        alive = check_service_mqtt(service_name)
+         # print(f"🔍 {service_name}: alive={alive}")
+
+        if not alive:
+            print(f"🔄 Авто-перезапуск {service_name}")
+
+            # Перезапускаем (без ожидания!)
+            result = restart_service_internal(service_name)
+
+            if result['success']:
+                healed.append(service_name)
+                last_restart_time[service_name] = time.time()
+
+                # ✅ Статус будет проверен в следующий раз (через 30 сек)
+                status = "pending"  # Пока неизвестно
+
+                try:
+                    with get_db() as conn:
+                        conn.execute(
+                            "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
+                            (0, "auto_heal", json.dumps({
+                                "service": service_name,
+                                "action": "restart",
+                                "status": status,
+                                "killed": result.get('killed', 0),
+                                "timestamp": int(time.time())
+                            }))
+                        )
+                        conn.commit()
+                except:
+                    pass
+        else:
+            # Сервис жив — если был статус pending, обновляем на success
+            if service_name in last_restart_time:
+                elapsed = time.time() - last_restart_time[service_name]
+                if elapsed >= cooldown:
+                    print(f"✅ {service_name} отвечает после перезапуска!")
+                    last_restart_time.pop(service_name, None)
+
+    with get_db() as conn:
+        today_heals = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type='auto_heal' AND date(timestamp)=date('now','localtime')"
+        ).fetchone()[0]
+
+    return jsonify({
+        'success': True,
+        'healed': healed,
+        'today_heals': today_heals
+    })
 
 @app.route('/api/health')
 def health():
