@@ -132,8 +132,13 @@ class AIDetector:
         return frame
 
     def create_overlay_png(self, frame, boxes):
-        """Создаёт PNG с прозрачным фоном и рамками для overlay"""
         try:
+            # ✅ Парсим classes если строка
+            classes = self.classes
+            if isinstance(classes, str):
+                import json
+                classes = json.loads(classes)
+
             h, w = frame.shape[:2]
             overlay = np.zeros((h, w, 4), dtype=np.uint8)
 
@@ -146,7 +151,9 @@ class AIDetector:
 
             for box in boxes:
                 cls = box.get('class', 0)
-                if cls not in self.classes:
+
+                # ✅ Теперь classes — список!
+                if cls not in classes:
                     continue
 
                 conf = box.get('confidence', 0)
@@ -170,6 +177,7 @@ class AIDetector:
 
             cv2.imwrite(filepath, overlay, [cv2.IMWRITE_PNG_COMPRESSION, 3])
             return filepath
+
         except Exception as e:
             print(f"{ts()} {C_RED}❌ Ошибка создания overlay: {e}{C_RESET}")
             return None

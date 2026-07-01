@@ -251,15 +251,20 @@ def health_full():
 
     # ✅ AI СТАТИСТИКА + ЗАПИСИ ИЗ БД
     with get_db() as conn:
+        # Всего тревог (и подтверждённых, и отфильтрованных)
         total_events = conn.execute(
-            "SELECT COUNT(*) FROM events WHERE event_type='motion_start'"
+            "SELECT COUNT(*) FROM events WHERE event_type LIKE '%motion_start%' OR event_type='motion_filtered'"
         ).fetchone()[0]
 
-        ai_events = conn.execute("""
-            SELECT COUNT(*) FROM events
-            WHERE event_type='motion_start'
-            AND (details LIKE '%\"ai\"%' OR details LIKE '%person%' OR details LIKE '%car%')
-        """).fetchone()[0]
+        # AI-подтверждённых (те что с ai_result)
+        ai_events = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type LIKE '%motion_start%' AND details LIKE '%\"ai\"%'"
+        ).fetchone()[0]
+
+        # Отфильтрованных (ложные тревоги)
+        filtered_events = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type='motion_filtered'"
+        ).fetchone()[0]
 
         # ✅ ЗАПИСИ ЗА СЕГОДНЯ (ИЗ БД — ТОЧНЕЕ)
         today_recordings_db = conn.execute(
@@ -270,7 +275,6 @@ def health_full():
         last_events = conn.execute(
             "SELECT e.*, c.name as camera_name FROM events e LEFT JOIN cameras c ON e.camera_id=c.id ORDER BY e.timestamp DESC LIMIT 10"
         ).fetchall()
-        events_list = [dict(r) for r in last_events]
 
     # ✅ ИСПОЛЬЗУЕМ БД ДЛЯ "СЕГОДНЯ" (точнее), или файлы (если БД пустая)
     final_today = today_recordings_db if today_recordings_db > 0 else today_count
@@ -310,8 +314,8 @@ def health_full():
         'ai': {
             'total_events': total_events,
             'ai_events': ai_events,
-            'filtered': total_events - ai_events,
-            'filter_rate': round((total_events - ai_events) / total_events * 100, 1) if total_events > 0 else 0
+            'filtered': filtered_events,
+            'filter_rate': round(ai_events / total_events * 100, 1) if total_events > 0 else 0
         },
         'recordings': {
             'total': recordings_count,

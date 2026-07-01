@@ -56,8 +56,9 @@ class Camera:
             'stream_quality', 'stream_hls_time',
             'location_id',
             # 🤖 AI
-            'ai_enabled', 'ai_classes', 'ai_confidence', 'ai_frame_skip'
-            'boxes_enabled', 'boxes_shift'
+            'ai_enabled', 'ai_classes', 'ai_confidence',
+            'ai_frame_skip',
+            'ai_boxes_enabled', 'ai_boxes_shift'
         ]
         updates = {k: data[k] for k in allowed if k in data}
         if not updates:

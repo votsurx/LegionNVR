@@ -45,8 +45,8 @@ class MotionDetector:
         self.warmup_frames = 0
         self.WARMUP_NEEDED = 25
         self._reconnect_attempts = 0
-        self._max_reconnect_attempts = 5
-        self._reconnect_delay = 2
+        self._max_reconnect_attempts = 10
+        self._reconnect_delay = 3
         self._last_mog2_log = 0
 
         # AI детектор
@@ -110,6 +110,10 @@ class MotionDetector:
             for attempt in range(self._max_reconnect_attempts):
                 try:
                     self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+                    # ✅ Сбрасываем буфер
+                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    # ✅ Устанавливаем TCP транспорт
+                    self.cap.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_NONE)
                     if self.cap.isOpened():
                         break
                 except Exception as e:
@@ -339,6 +343,20 @@ class MotionDetector:
                     else:
                         if motion_percent > 0:
                             print(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
+                            try:
+                                from models.database import get_db
+                                with get_db() as conn:
+                                    conn.execute(
+                                        "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
+                                        (self.camera["id"], "motion_filtered", json.dumps({
+                                            "percent": round(motion_percent, 2),
+                                            "filtered": True,
+                                            "timestamp": int(time.time())
+                                        }))
+                                    )
+                                    conn.commit()
+                            except:
+                                pass
             else:
                 # Пропущенный кадр — если движение очень сильное, проверяем AI
                 if motion_percent > self.threshold * 3:
