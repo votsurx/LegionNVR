@@ -400,11 +400,18 @@ def restart_service(service_name):
 
         time.sleep(2)
 
-        # ✅ Запускаем новый процесс (CMD окно, не PowerShell)
-        subprocess.Popen(
-            ['cmd', '/c', 'start', 'python', script],
-            cwd=project_root
-        )
+        # ✅ Запуск в НОВОМ окне PowerShell
+        if sys.platform == 'win32':
+            subprocess.Popen(
+                ['pwsh', '-NoExit', '-Command', f'cd {project_root}; python {script}'],
+                cwd=project_root,
+                creationflags=subprocess.CREATE_NEW_CONSOLE  # ← ВОТ ЭТО ВАЖНО!
+            )
+        else:
+            subprocess.Popen(
+                ['python', script],
+                cwd=project_root
+            )
 
         message = f'{service_name} перезапущен (убито {killed_count})'
         print(f"🔄 {message}")

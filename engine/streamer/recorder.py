@@ -7,6 +7,7 @@ import glob
 import shutil
 import tempfile
 import threading
+from engine.shared.constants import *
 from engine.shared.constants import HLS_DIR
 from engine.shared.utils import ts, get_recordings_path
 
@@ -15,7 +16,7 @@ motion_recordings = {}
 recording_lock = threading.Lock()
 
 
-def start_motion_recording(camera):
+def start_motion_recording(camera, motion_start_time=None):
     """Запускает запись по тревоге"""
     cam_id = str(camera["id"])
 
@@ -33,9 +34,16 @@ def start_motion_recording(camera):
 
     record_pre_sec = camera.get('record_pre_sec', 5)
     record_post_sec = camera.get('record_post_sec', 10)
-    alarm_time = time.time()
 
-    # Копируем предзапись
+    # ✅ ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ВРЕМЯ НАЧАЛА ДВИЖЕНИЯ (от MOG2!)
+    if motion_start_time:
+        alarm_time = motion_start_time
+        print(f"{ts()} {C_GREEN}📼 Тревога! Время MOG2: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
+    else:
+        alarm_time = time.time()
+        print(f"{ts()} {C_YELLOW}📼 Тревога! Время (текущее): {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
+
+    # ✅ КОПИРУЕМ ПРЕДЗАПИСЬ (сегменты от alarm_time - pre_sec до alarm_time)
     all_segments = []
     for seg in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
         try:
@@ -45,17 +53,32 @@ def start_motion_recording(camera):
             pass
 
     all_segments.sort(key=lambda x: x[0])
-    pre_segments = [s[1] for s in all_segments[-record_pre_sec:]] if len(all_segments) >= record_pre_sec else [s[1] for s in all_segments]
 
+    # Берём сегменты в диапазоне [alarm_time - pre_sec - 1, alarm_time + 1]
+    start_time = alarm_time - record_pre_sec
+    pre_segments = []
+    for mtime, seg in all_segments:
+        if start_time - 1 <= mtime <= alarm_time + 1:
+            pre_segments.append(seg)
+
+    if not pre_segments and all_segments:
+        # Fallback: берём последние pre_sec сегментов
+        pre_segments = [s[1] for s in all_segments[-record_pre_sec:]]
+
+    # Копируем во временную папку
     temp_dir = os.path.join(tempfile.gettempdir(), f"motion_{cam_id}_{int(time.time())}")
     os.makedirs(temp_dir, exist_ok=True)
 
     saved_pre = []
     for seg in pre_segments:
         seg_copy = os.path.join(temp_dir, os.path.basename(seg))
-        shutil.copy2(seg, seg_copy)
-        saved_pre.append(seg_copy)
+        try:
+            shutil.copy2(seg, seg_copy)
+            saved_pre.append(seg_copy)
+        except:
+            pass
 
+    # Запоминаем mtime последнего сегмента предзаписи
     last_mtime = os.path.getmtime(pre_segments[-1]) if pre_segments else 0
 
     motion_recordings[cam_id] = {
@@ -70,9 +93,14 @@ def start_motion_recording(camera):
         'last_mtime': last_mtime
     }
 
-    print(f"{ts()} 📼 Тревога! Время: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}")
-    print(f"{ts()} 🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек")
-    print(f"{ts()} 📁 Сохранено {len(saved_pre)} сегментов предзаписи")
+    print(f"{ts()} {C_BLUE}🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек{C_RESET}")
+    print(f"{ts()} {C_GREEN}📁 Сохранено {len(saved_pre)} сегментов предзаписи{C_RESET}")
+
+    # Логируем время первого и последнего сегмента
+    if saved_pre:
+        first_time = os.path.getmtime(saved_pre[0])
+        last_time = os.path.getmtime(saved_pre[-1])
+        print(f"{ts()} 📁 Предзапись: {time.strftime('%H:%M:%S', time.localtime(first_time))} → {time.strftime('%H:%M:%S', time.localtime(last_time))}")
 
 
 def extend_recording(cam_id):
@@ -121,10 +149,17 @@ def stop_motion_recording(camera_id):
         return
 
     # Сортировка
+    # Убираем дубликаты
     all_saved = list(set(all_saved))
-    all_saved_sorted = sorted(all_saved)
 
-    print(f"{ts()} 📊 Сегментов: {len(all_saved_sorted)}")
+    # ✅ СОРТИРУЕМ ПО РЕАЛЬНОМУ ВРЕМЕНИ СОЗДАНИЯ ФАЙЛА
+    all_saved_sorted = sorted(all_saved, key=lambda f: os.path.getmtime(f))
+
+    # Логируем для проверки
+    print(f"{ts()} 📊 Сегментов после сортировки по времени: {len(all_saved_sorted)}")
+    for i, seg in enumerate(all_saved_sorted[:5]):
+        seg_time = os.path.getmtime(seg)
+        print(f"{ts()}   #{i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
     for i, seg in enumerate(all_saved_sorted[:3]):
         seg_time = os.path.getmtime(seg)
         print(f"{ts()}   #{i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")

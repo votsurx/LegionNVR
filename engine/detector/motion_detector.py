@@ -297,7 +297,7 @@ class MotionDetector:
 
                         # ✅ Сохраняем AI-кадр не чаще 1 раза в секунду
                         now = time.time()
-                        if now - self._last_ai_frame_time >= 0.5:
+                        if now - self._last_ai_frame_time >= 1.0:
                             self._last_ai_frame_time = now
 
                             # ✅ ПРИМЕНЯЕМ СДВИГ И ПРОВЕРЯЕМ ГАЛОЧКУ
@@ -381,49 +381,50 @@ class MotionDetector:
                 self.motion_end_timer.start()
 
     def _trigger_motion(self, motion_percent, ai_result, frame=None, boxes=None):
-            """Триггерит тревогу"""
-            if self.motion_end_timer:
-                self.motion_end_timer.cancel()
-                self.motion_end_timer = None
+        if self.motion_end_timer:
+            self.motion_end_timer.cancel()
+            self.motion_end_timer = None
 
-            if not self.motion_active:
-                self.motion_active = True
-                self.motion_start_time = time.time()
-                self._last_ai_frame_time = time.time()
-                self.motion_boxes = []
-                self.recording.reset()
+        if not self.motion_active:
+            self.motion_active = True
+            self.motion_start_time = time.time()  # ← Время когда MOG2 сработал!
+            self._last_ai_frame_time = time.time()
+            self.motion_boxes = []
+            self.recording.reset()
 
-                # ✅ ПЕРВЫЙ AI-КАДР СРАЗУ ПРИ СТАРТЕ (с учётом сдвига и галочки)
-                if frame is not None and boxes:
-                    # Проверяем, включены ли рамки
-                    if self.ai_detector.boxes_enabled:
-                        # Применяем сдвиг из настроек
-                        shift = self.ai_detector.boxes_shift
-                        frame_time = time.time() + shift
-                    else:
-                        frame_time = time.time()
-
-                    self.recording.save_alert_snapshot(frame, boxes)
-
-                    # AI-кадр сохраняем только если рамки включены
-                    if self.ai_detector.boxes_enabled:
-                        self.recording.save_ai_frame(frame, boxes)
-
-                    self.recording.save_motion_boxes(boxes, frame_time)
-
-                if ai_result:
-                    desc = []
-                    if ai_result.get('person', 0) > 0:
-                        desc.append(f"👤 x{ai_result['person']}")
-                    if ai_result.get('car', 0) > 0:
-                        desc.append(f"🚗 x{ai_result['car']}")
-                    print(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
+            # ✅ ПЕРВЫЙ AI-КАДР СРАЗУ ПРИ СТАРТЕ (с учётом сдвига и галочки)
+            if frame is not None and boxes:
+                # Проверяем, включены ли рамки
+                if self.ai_detector.boxes_enabled:
+                    # Применяем сдвиг из настроек
+                    shift = self.ai_detector.boxes_shift
+                    frame_time = time.time() + shift
                 else:
-                    print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
+                    frame_time = time.time()
 
-                self._publish("motion_start", motion_percent, ai_result)
-                result = send_mqtt_command(self.camera['id'], 'start_recording')
-                print(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
+                self.recording.save_alert_snapshot(frame, boxes)
+
+                # AI-кадр сохраняем только если рамки включены
+                if self.ai_detector.boxes_enabled:
+                    self.recording.save_ai_frame(frame, boxes)
+
+                self.recording.save_motion_boxes(boxes, frame_time)
+
+            if ai_result:
+                desc = []
+                if ai_result.get('person', 0) > 0:
+                    desc.append(f"👤 x{ai_result['person']}")
+                if ai_result.get('car', 0) > 0:
+                    desc.append(f"🚗 x{ai_result['car']}")
+                print(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
+            else:
+                print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
+
+            self._publish("motion_start", motion_percent, ai_result)
+            result = send_mqtt_command(self.camera['id'], 'start_recording', {
+                                 'motion_start_time': self.motion_start_time
+                             })
+            print(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
 
     def _stop_motion(self):
         """Останавливает тревогу"""

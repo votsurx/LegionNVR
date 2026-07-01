@@ -28,15 +28,9 @@ def on_motion(client, userdata, msg):
         cam_id = str(data.get("camera_id"))
 
         if data.get("event") == "motion_start":
-            if cam_id in motion_recordings:
-                print(f"{ts()} {C_YELLOW}📡 [MOTION] Запись уже активна для камеры {cam_id}, продлеваю{C_RESET}")
-                extend_recording(cam_id)
-            else:
-                print(f"{ts()} {C_BLUE}📡 [MOTION] Старт записи для камеры {cam_id}{C_RESET}")
-                with get_db() as conn:
-                    cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
-                if cam:
-                    start_motion_recording(dict(cam))
+            # ✅ ПРОСТО ЛОГИРУЕМ, НЕ ВЫЗЫВАЕМ start_motion_recording!
+            # Запись запускается через on_cmd (start_recording)
+            print(f"{ts()} 📡 [MOTION] Движение: камера {cam_id}")
     except Exception as e:
         print(f"{ts()} ⚠️ Ошибка обработки motion: {e}")
 
@@ -58,7 +52,10 @@ def on_cmd(client, userdata, msg):
                 with get_db() as conn:
                     cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
                 if cam:
-                    start_motion_recording(dict(cam))
+                    cam_dict = dict(cam)
+                    # ✅ Передаём motion_start_time из параметров
+                    motion_start_time = data.get('motion_start_time', None)
+                    start_motion_recording(cam_dict, motion_start_time)
 
         # Продление записи
         elif action == "extend_recording" and cam_id:
