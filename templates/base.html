@@ -2,38 +2,57 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
     <title>🛡️ Legion NVR</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    <style>
+        /* Адаптивные стили */
+        @media (max-width: 600px) {
+            .hide-mobile {
+                display: none !important;
+            }
+            .appbar {
+                padding: 8px 12px;
+            }
+            .appbar-title {
+                font-size: 16px;
+            }
+            .btn-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+        }
+    </style>
 </head>
 <body>
-    {% if current_user.is_authenticated %}
-    <!-- AppBar как в SHomeDART -->
-    <header class="appbar">
-        <a href="/dashboard" class="appbar-title" style="text-decoration:none; color:inherit;">
-            🛡️ Legion NVR
-        </a>
-        <div class="appbar-actions">
-            <a href="/health" class="btn-icon" title="Health Monitor">🫀</a>
-            <span class="appbar-user">👤 {{ current_user.username }}</span>
-            <a href="{{ url_for('main.settings') }}" class="btn-icon" title="Меню">⚙️</a>
-        </div>
-    </header>
+{% if current_user.is_authenticated %}
+<!-- AppBar -->
+<header class="appbar">
+    <a href="/dashboard" class="appbar-title" style="text-decoration:none; color:inherit;">
+        🛡️ <span class="hide-mobile">Legion NVR</span>
+    </a>
+    <div class="appbar-actions">
+        <a href="/health" class="btn-icon hide-mobile" title="Health Monitor">🫀</a>
+        <span class="appbar-user hide-mobile">👤 {{ current_user.username }}</span>
+        <a href="{{ url_for('main.settings') }}" class="btn-icon" title="Настройки">⚙️</a>
+    </div>
+</header>
+{% endif %}
+
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
     {% endif %}
-    
-    <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
-    </main>
-    
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}?v=3"></script>
 </body>
 </html>

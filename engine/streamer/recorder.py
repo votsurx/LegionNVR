@@ -139,8 +139,6 @@ def _merge_minute_segments(cam_id, minute_str, recordings_path, ffmpeg):
             escaped = os.path.abspath(seg).replace('\\', '/')
             f.write(f"file '{escaped}'\n")
 
-    print(f"{ts()} 🔧 Склейка {len(segments)} сегментов за минуту {minute_str}...")
-
     cmd = [
         ffmpeg,
         "-loglevel", "error",

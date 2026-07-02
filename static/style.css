@@ -466,3 +466,115 @@ tr:hover td {
 .card, .menu-tile {
   animation: fadeIn 0.3s ease;
 }
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
+/* Телефон (до 600px) */
+@media (max-width: 600px) {
+
+    /* Вертикальный режим */
+    @media (orientation: portrait) {
+        .menu-grid {
+            grid-template-columns: repeat(2, 1fr) !important;  /* 3 плитка в ряд */
+        }
+    }
+
+    /* Горизонтальный режим */
+    @media (orientation: landscape) {
+        .menu-grid {
+            grid-template-columns: repeat(3, 1fr) !important;  /* 3 плитки */
+        }
+    }
+
+    .cam-table {
+        font-size: 11px;
+        display: block;
+        overflow-x: auto;  /* Горизонтальный скролл */
+    }
+
+    .tab-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .appbar-title {
+        font-size: 14px;
+    }
+
+    .health-card {
+        padding: 10px;
+    }
+
+    /* Полноэкранный режим */
+    #fullscreenModal .btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    #fullscreenOverlay {
+        font-size: 11px !important;
+    }
+
+    #overlayTime {
+        font-size: 16px !important;
+    }
+}
+
+/* Планшет (600px - 1024px) */
+@media (min-width: 601px) and (max-width: 1024px) {
+    @media (orientation: portrait) {
+        .menu-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+        }
+    }
+
+    @media (orientation: landscape) {
+        .menu-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+    }
+}
+
+/* Десктоп (1024px+) */
+@media (min-width: 1025px) {
+    .grid {
+        grid-template-columns: repeat(4, 1fr) !important;  /* 4 карточки */
+    }
+
+    .menu-grid {
+        grid-template-columns: repeat(5, 1fr) !important;  /* 5 плиток */
+    }
+}
+
+/* Общие адаптивные стили */
+.cam-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+    /* Таблицы с горизонтальным скроллом */
+    .tab-content {
+        overflow-x: auto;
+    }
+
+    /* Кнопки крупнее для пальцев */
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    /* Инпуты крупнее */
+    .input-inline, .input-full {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    /* Чипсы прокручиваются */
+    .chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+}
