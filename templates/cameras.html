@@ -1,97 +1,469 @@
 {% extends "base.html" %}
 {% block content %}
-<a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад в настройки</a>
+<a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад к настройкам</a>
 <h1 style="margin:12px 0;">📷 Камеры</h1>
 
-<div style="margin-bottom:16px;">
-    <button onclick="showAddForm()" style="background:#e94560; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
-        + Добавить камеру
-    </button>
-    <button onclick="restartStreams()" style="background:#0d47a1; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; margin-left:8px;">
-        🔄 Перезапустить стримы
-    </button>
-    <span id="restartStatus" style="color:#aaa; margin-left:8px;"></span>
+<!-- Вкладки -->
+<div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+    <button onclick="showTab('basic')" class="tab-btn active" id="tab-basic">📷 Основное</button>
+    <button onclick="showTab('status')" class="tab-btn" id="tab-status">📊 Состояние</button>
+    <button onclick="showTab('stream')" class="tab-btn" id="tab-stream">🎥 Стриминг</button>
+    <button onclick="showTab('detector')" class="tab-btn" id="tab-detector">🔍 Детектор</button>
+    <button onclick="showTab('record')" class="tab-btn" id="tab-record">📼 Запись</button>
+    <button onclick="showTab('ai')" class="tab-btn" id="tab-ai">🤖 AI</button>
+    <button onclick="addCamera()" class="tab-btn" style="background:#e94560; color:#fff;">+ Добавить камеру</button>
 </div>
 
-<div id="addForm" style="display:none; background:#16213e; padding:20px; border-radius:8px; margin-bottom:16px;">
-    <h3>Новая камера</h3>
-    <input type="text" id="camName" placeholder="Название" style="width:100%; padding:8px; margin:4px 0; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-    <input type="text" id="camRtspMain" placeholder="RTSP основной поток" style="width:100%; padding:8px; margin:4px 0; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-    <input type="text" id="camRtspSub" placeholder="RTSP сабстрим (необязательно)" style="width:100%; padding:8px; margin:4px 0; background:#1a1a2e; color:#fff; border:1px solid #333; border-radius:4px;">
-    <button onclick="addCamera()" style="background:#e94560; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">💾 Сохранить</button>
-    <button onclick="hideAddForm()" style="background:#333; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-left:8px;">Отмена</button>
+<!-- Таблицы для каждой вкладки -->
+<div id="tab-basic-content" class="tab-content">
+    <table class="cam-table">
+        <thead><tr><th>ID</th><th>Название</th><th>RTSP основной</th><th>RTSP саб</th><th>Локация</th><th colspan="3">Действия</th></tr></thead>
+        <tbody id="basicRows"></tbody>
+        <tbody>
+        <tr id="newCameraRow" style="display:none;">
+            <td>+</td>
+            <td><input type="text" id="newName" placeholder="Название" class="input-inline"></td>
+            <td><input type="text" id="newRtsp" placeholder="rtsp://" class="input-inline"></td>
+            <td><input type="text" id="newSub" placeholder="rtsp://" class="input-inline"></td>
+            <td><select id="newLocation" class="input-inline"><option value="">🏠 Все</option></select></td>
+            <td><button onclick="testNewCamera()" class="btn-icon" title="Тест RTSP">🔍</button></td>
+            <td><button onclick="saveNewCamera()" class="btn-icon" title="Сохранить">💾</button></td>
+            <td></td>
+        </tr>
+        </tbody>
+    </table>
 </div>
 
-<table style="width:100%; border-collapse:collapse;">
-    <tr style="background:#16213e;">
-        <th style="padding:10px; text-align:left;">Название</th>
-        <th style="padding:10px; text-align:left;">RTSP</th>
-        <th style="padding:10px; text-align:left;">Статус</th>
-        <th style="padding:10px; text-align:left;">Детектор</th>
-        <th style="padding:10px; text-align:left;">Запись</th>
-        <th style="padding:10px; text-align:left;">Действия</th>
-    </tr>
-    {% for cam in cameras %}
-    <tr style="border-bottom:1px solid #333;">
-        <td style="padding:10px;">{{ cam.name }}</td>
-        <td style="padding:10px; font-size:12px; color:#aaa; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ cam.rtsp_main }}</td>
-        <td style="padding:10px;">{% if cam.enabled %}🟢{% else %}🔴{% endif %}</td>
-        <td style="padding:10px;">{% if cam.motion_enabled %}✅{% else %}❌{% endif %}</td>
-        <td style="padding:10px;">{% if cam.record_enabled %}✅{% else %}❌{% endif %}</td>
-        <td style="padding:10px;">
-            <a href="/cameras/{{ cam.id }}/edit" style="color:#e94560; margin-right:8px;">✏️</a>
-            <a href="/cameras/{{ cam.id }}/delete" style="color:#ff6b81;" onclick="return confirm('Удалить камеру {{ cam.name }}?')">🗑️</a>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+<div id="tab-status-content" class="tab-content" style="display:none;">
+    <table class="cam-table">
+        <thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Детектор</th><th>Запись</th><th>AI</th></tr></thead>
+        <tbody id="statusRows"></tbody>
+    </table>
+</div>
 
-{% if not cameras %}
-<p style="color:#aaa; margin-top:16px;">Камер пока нет. Добавьте первую!</p>
-{% endif %}
+<div id="tab-stream-content" class="tab-content" style="display:none;">
+    <table class="cam-table">
+        <thead><tr><th>ID</th><th>Название</th><th>Качество</th><th></th></tr></thead>
+        <tbody id="streamRows"></tbody>
+    </table>
+</div>
+
+<div id="tab-detector-content" class="tab-content" style="display:none;">
+    <table class="cam-table">
+        <thead><tr><th>ID</th><th>Название</th><th>Вкл</th><th>Порог %</th><th>FPS</th><th>Пауза (сек)</th><th>Зоны</th><th></th></tr></thead>
+        <tbody id="detectorRows"></tbody>
+    </table>
+</div>
+
+<div id="tab-record-content" class="tab-content" style="display:none;">
+    <table class="cam-table">
+        <thead><tr><th>ID</th><th>Название</th><th>Режим</th><th>Настройки</th><th></th></tr></thead>
+        <tbody id="recordRows"></tbody>
+    </table>
+</div>
+
+<div id="tab-ai-content" class="tab-content" style="display:none;">
+    <table class="cam-table">
+        <thead><tr><th>ID</th><th>Название</th><th>Вкл</th><th>Увер-ть</th><th>Пропуск</th><th>Рамки</th><th>Сдвиг (сек)</th><th>Интервал (сек)</th><th></th></tr></thead>
+        <tbody id="aiRows"></tbody>
+    </table>
+</div>
+
+<style>
+    .cam-table { width:100%; border-collapse:collapse; }
+    .cam-table th { text-align:left; padding:8px; background:var(--bg-card); font-size:13px; color:var(--text-secondary); }
+    .cam-table td { padding:8px; border-bottom:1px solid var(--border-color); font-size:13px; }
+    .input-inline { width:100%; padding:4px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; font-size:13px; }
+    .tab-btn { background:#333; color:#aaa; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-size:13px; }
+    .tab-btn.active { background:#e94560; color:#fff; }
+    .btn-icon { background:transparent; border:none; cursor:pointer; font-size:16px; padding:4px 8px; }
+    .btn-icon:hover { opacity:0.7; }
+    .schedule-grid {
+        background: var(--bg-input);
+        padding: 12px;
+        border-radius: 8px;
+        margin: 4px 0;
+    }
+    .schedule-day {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+        font-size: 13px;
+    }
+</style>
 
 <script>
-function showAddForm() { document.getElementById('addForm').style.display = 'block'; }
-function hideAddForm() { document.getElementById('addForm').style.display = 'none'; }
+    var cameras = {{ cameras | tojson | safe }};
 
-function addCamera() {
-    var name = document.getElementById('camName').value;
-    var rtsp_main = document.getElementById('camRtspMain').value;
-    var rtsp_sub = document.getElementById('camRtspSub').value;
-    
-    if (!name || !rtsp_main) { alert('Заполните название и RTSP!'); return; }
-    
-    fetch('/api/cameras', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: name, rtsp_main: rtsp_main, rtsp_sub: rtsp_sub})
-    }).then(r => r.json()).then(data => {
-        if (data.success) location.reload();
-        else alert(data.error);
-    });
-}
+    function showTab(name) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + name + '-content').style.display = 'block';
+        document.getElementById('tab-' + name).classList.add('active');
+        if (name === 'basic') loadBasicTab();
+        if (name === 'status') loadStatusTab();
+        if (name === 'stream') loadStreamTab();
+        if (name === 'detector') loadDetectorTab();
+        if (name === 'record') loadRecordTab();
+        if (name === 'ai') loadAITab();
+    }
 
-function restartStreams() {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '⏳ Перезапуск...';
-    document.getElementById('restartStatus').textContent = '';
-    
-    fetch('/api/streams/restart', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.textContent = '🔄 Перезапустить стримы';
-            document.getElementById('restartStatus').textContent = '✅ Перезапущено стримов: ' + data.restarted;
-            setTimeout(function() {
-                document.getElementById('restartStatus').textContent = '';
-            }, 5000);
-        })
-        .catch(function() {
-            btn.disabled = false;
-            btn.textContent = '🔄 Перезапустить стримы';
-            document.getElementById('restartStatus').textContent = '❌ Ошибка';
+    // ============================================================
+    // ОСНОВНОЕ
+    // ============================================================
+    function loadBasicTab() {
+        var html = '';
+        cameras.forEach(function(cam) {
+            html += '<tr><td>' + cam.id + '</td>' +
+                '<td><input type="text" value="' + (cam.name || '') + '" onchange="updateCam(' + cam.id + ', \'name\', this.value)" class="input-inline"></td>' +
+                '<td><input type="text" value="' + (cam.rtsp_main || '') + '" onchange="updateCam(' + cam.id + ', \'rtsp_main\', this.value)" class="input-inline"></td>' +
+                '<td><input type="text" value="' + (cam.rtsp_sub || '') + '" onchange="updateCam(' + cam.id + ', \'rtsp_sub\', this.value)" class="input-inline"></td>' +
+                '<td><select id="loc-' + cam.id + '" onchange="updateCam(' + cam.id + ', \'location_id\', this.value)" class="input-inline"><option value="">🏠 Все</option></select></td>' +
+                '<td><button onclick="testRtsp(' + cam.id + ')" class="btn-icon">🔍</button></td>' +
+                '<td><button onclick="saveCam(' + cam.id + ')" class="btn-icon">💾</button></td>' +
+                '<td><button onclick="deleteCam(' + cam.id + ')" class="btn-icon">🗑️</button></td></tr>';
         });
-}
+        document.getElementById('basicRows').innerHTML = html;
+
+        // ✅ Загружаем локации и потом устанавливаем значения
+        loadLocations().then(function() {
+            cameras.forEach(function(cam) {
+                if (cam.location_id) {
+                    var sel = document.getElementById('loc-' + cam.id);
+                    if (sel) sel.value = cam.location_id;
+                }
+            });
+        });
+    }
+
+    function addCamera() {
+        // ✅ Переключаем на вкладку Основное
+        showTab('basic');
+
+        // Показываем строку новой камеры
+        document.getElementById('newCameraRow').style.display = 'table-row';
+        document.getElementById('newName').focus();
+        loadLocations();
+    }
+
+    function saveNewCamera() {
+        var data = {
+            name: document.getElementById('newName').value,
+            rtsp_main: document.getElementById('newRtsp').value,
+            rtsp_sub: document.getElementById('newSub').value,
+            location_id: document.getElementById('newLocation').value || null
+        };
+        fetch('/api/cameras', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)})
+            .then(r => r.json()).then(d => { if(d.success) location.reload(); });
+    }
+
+    function testNewCamera() {
+        var rtsp = document.getElementById('newRtsp').value;
+        if(!rtsp) { alert('Введите RTSP URL'); return; }
+        // Временно: просто проверяем что URL не пустой
+        alert('Тест RTSP: ' + rtsp + '\n(функция в разработке)');
+    }
+
+    function testRtsp(id) {
+        fetch('/api/cameras/' + id + '/test', {method:'POST'})
+            .then(r => r.json()).then(d => alert(d.success ? '✅ OK' : '❌ ' + d.error));
+    }
+
+    function updateCam(id, field, value) {
+        // Обновляем локальный кэш
+        var cam = cameras.find(c => c.id == id);
+        if (cam) cam[field] = value;
+    }
+
+    function saveCam(id) {
+        var cam = cameras.find(c => c.id == id);
+        if (!cam) return;
+
+        // ✅ Собираем ВСЕ данные из DOM для этой камеры
+        var data = {
+            name: cam.name,
+            rtsp_main: cam.rtsp_main,
+            rtsp_sub: cam.rtsp_sub,
+            location_id: cam.location_id,
+            enabled: cam.enabled,
+            stream_enabled: cam.stream_enabled,
+            stream_quality: cam.stream_quality,
+            motion_enabled: cam.motion_enabled,
+            motion_threshold: cam.motion_threshold,
+            motion_cooldown: cam.motion_cooldown,
+            motion_fps: cam.motion_fps,
+            record_enabled: cam.record_enabled,
+            record_mode: cam.record_mode,
+            record_pre_sec: cam.record_pre_sec,
+            record_post_sec: cam.record_post_sec,
+            record_retention_days: cam.record_retention_days,
+            record_schedule: cam.record_schedule,  // ← Вот это должно быть заполнено!
+            ai_enabled: cam.ai_enabled,
+            ai_classes: cam.ai_classes,
+            ai_confidence: cam.ai_confidence,
+            ai_frame_skip: cam.ai_frame_skip,
+            ai_boxes_enabled: cam.ai_boxes_enabled,
+            ai_boxes_shift: cam.ai_boxes_shift,
+            ai_frame_interval: cam.ai_frame_interval
+        };
+
+        console.log('Сохраняю камеру ' + id + ':', data);  // ← Для отладки
+
+        fetch('/api/cameras/' + id, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(d => {
+            if(d.success) {
+                alert('✅ Сохранено!');
+                // Отправляем reload_config для применения настроек
+                fetch('/api/cameras/' + id + '/apply', {method:'POST'});
+            } else {
+                alert('❌ Ошибка: ' + (d.error || ''));
+            }
+        });
+    }
+
+    function deleteCam(id) {
+        if (!confirm('Удалить камеру ' + id + '?')) return;
+        fetch('/api/cameras/' + id, {method:'DELETE'})
+            .then(r => r.json()).then(d => { if(d.success) location.reload(); });
+    }
+
+    // ============================================================
+    // СОСТОЯНИЕ
+    // ============================================================
+    function loadStatusTab() {
+        var html = '';
+        cameras.forEach(function(cam) {
+            html += '<tr><td>' + cam.id + '</td><td>' + cam.name + '</td>' +
+                '<td>' + (cam.enabled ? '🟢 Онлайн' : '🔴 Офлайн') + '</td>' +
+                '<td>' + (cam.motion_enabled ? '✅ ВКЛ' : '❌ ВЫКЛ') + '</td>' +
+                '<td>' + (cam.record_enabled ? '✅ ВКЛ' : '❌ ВЫКЛ') + '</td>' +
+                '<td>' + (cam.ai_enabled ? '🤖 ВКЛ' : '❌ ВЫКЛ') + '</td></tr>';
+        });
+        document.getElementById('statusRows').innerHTML = html;
+    }
+
+    // ============================================================
+    // СТРИМИНГ
+    // ============================================================
+    function loadStreamTab() {
+        var html = '';
+        cameras.forEach(function(cam) {
+            html += '<tr><td>' + cam.id + '</td><td>' + cam.name + '</td>' +
+                '<td><select onchange="updateCam(' + cam.id + ', \'stream_quality\', this.value)" class="input-inline">' +
+                '<option value="copy" ' + (cam.stream_quality=='copy'?'selected':'') + '>Оригинал</option>' +
+                '<option value="medium" ' + (cam.stream_quality=='medium'?'selected':'') + '>Среднее</option>' +
+                '<option value="low" ' + (cam.stream_quality=='low'?'selected':'') + '>Низкое</option>' +
+                '</select></td>' +
+                '<td><button onclick="saveCam(' + cam.id + ')" class="btn-icon">💾</button></td></tr>';
+        });
+        document.getElementById('streamRows').innerHTML = html;
+    }
+
+    // ============================================================
+    // ДЕТЕКТОР
+    // ============================================================
+    function loadDetectorTab() {
+        var html = '';
+        cameras.forEach(function(cam) {
+            html += '<tr><td>' + cam.id + '</td><td>' + cam.name + '</td>' +
+                '<td><input type="checkbox" ' + (cam.motion_enabled?'checked':'') + ' onchange="updateCam(' + cam.id + ', \'motion_enabled\', this.checked?1:0)" class="input-inline"></td>' +
+                '<td><input type="number" value="' + (cam.motion_threshold||2.0) + '" onchange="updateCam(' + cam.id + ', \'motion_threshold\', this.value)" class="input-inline" style="width:70px;"></td>' +
+                '<td><input type="number" value="' + (cam.motion_fps||5) + '" onchange="updateCam(' + cam.id + ', \'motion_fps\', this.value)" class="input-inline" style="width:60px;"></td>' +
+                '<td><input type="number" value="' + (cam.motion_cooldown||5) + '" onchange="updateCam(' + cam.id + ', \'motion_cooldown\', this.value)" class="input-inline" style="width:60px;"></td>' +
+                '<td><a href="/cameras/' + cam.id + '/zones" class="btn-icon">🎯</a></td>' +
+                '<td><button onclick="saveCam(' + cam.id + ')" class="btn-icon">💾</button></td></tr>';
+        });
+        document.getElementById('detectorRows').innerHTML = html;
+    }
+
+    // ============================================================
+    // ЗАПИСЬ (с раскрывающимся расписанием!)
+    // ============================================================
+    function loadRecordTab() {
+        var html = '';
+        cameras.forEach(function(cam) {
+            var mode = cam.record_mode || 'motion_ai';
+            var settingsHtml = '';
+            var detailHtml = '';
+            var showSchedule = mode === 'schedule_noai' || mode === 'schedule_ai';
+
+            if (mode === 'motion_ai') {
+                settingsHtml = 'Пред:<input type="number" id="pre-' + cam.id + '" value="' + (cam.record_pre_sec||5) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_pre_sec\',this.value)"> сек ' +
+                              'Пост:<input type="number" id="post-' + cam.id + '" value="' + (cam.record_post_sec||10) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_post_sec\',this.value)"> сек ' +
+                              'Дней:<input type="number" id="ret-' + cam.id + '" value="' + (cam.record_retention_days||7) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_retention_days\',this.value)">';
+            } else if (mode === 'continuous_noai') {
+                settingsHtml = 'Дней:<input type="number" id="ret-' + cam.id + '" value="' + (cam.record_retention_days||3) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_retention_days\',this.value)">';
+            } else if (showSchedule) {
+                var sched = cam.record_schedule || {};
+                var summary = getScheduleSummary(sched);
+                settingsHtml = '<span onclick="toggleScheduleDetail(' + cam.id + ')" style="cursor:pointer;color:#e94560;">📅 ' + summary + ' ▼</span>';
+
+                // Детали расписания
+                detailHtml = '<tr id="schedule-' + cam.id + '" style="display:none;"><td colspan="5"><div class="schedule-grid">';
+                var days = ['mon','tue','wed','thu','fri','sat','sun'];
+                var dayNames = {'mon':'Пн','tue':'Вт','wed':'Ср','thu':'Чт','fri':'Пт','sat':'Сб','sun':'Вс'};
+
+                days.forEach(function(day) {
+                    var d = sched[day] || {enabled: (day !== 'sun'), start: '09:00', end: '18:00'};
+                    detailHtml += '<div class="schedule-day" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+                        '<label style="width:30px;"><input type="checkbox" class="sch-enabled" data-day="' + day + '" data-cam="' + cam.id + '" ' + (d.enabled ? 'checked' : '') + ' onchange="updateScheduleField(' + cam.id + ')"> ' + dayNames[day] + '</label>' +
+                        '<input type="time" class="sch-start" data-day="' + day + '" data-cam="' + cam.id + '" value="' + (d.start||'09:00') + '" onchange="updateScheduleField(' + cam.id + ')" style="width:130px;">' +
+                        '<span>—</span>' +
+                        '<input type="time" class="sch-end" data-day="' + day + '" data-cam="' + cam.id + '" value="' + (d.end||'18:00') + '" onchange="updateScheduleField(' + cam.id + ')" style="width:130px;">' +
+                        '</div>';
+                });
+
+                detailHtml += '<div style="margin-top:8px;">' +
+                    'Пред:<input type="number" id="pre-' + cam.id + '" value="' + (cam.record_pre_sec||5) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_pre_sec\',this.value)"> сек ' +
+                    'Пост:<input type="number" id="post-' + cam.id + '" value="' + (cam.record_post_sec||10) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_post_sec\',this.value)"> сек ' +
+                    'Дней:<input type="number" id="ret-' + cam.id + '" value="' + (cam.record_retention_days||7) + '" style="width:50px;" onchange="updateCam(' + cam.id + ',\'record_retention_days\',this.value)">' +
+                    '</div></div></td></tr>';
+            }
+
+            html += '<tr class="cam-row" data-cam-id="' + cam.id + '">' +
+                '<td>' + cam.id + '</td><td>' + cam.name + '</td>' +
+                '<td><select onchange="changeRecordMode(' + cam.id + ', this.value)" class="input-inline">' +
+                '<option value="motion_ai" ' + (mode=='motion_ai'?'selected':'') + '>По тревоге + AI</option>' +
+                '<option value="continuous_noai" ' + (mode=='continuous_noai'?'selected':'') + '>24/7 без AI</option>' +
+                '<option value="schedule_noai" ' + (mode=='schedule_noai'?'selected':'') + '>По расписанию без AI</option>' +
+                '<option value="schedule_ai" ' + (mode=='schedule_ai'?'selected':'') + '>По расписанию + AI</option>' +
+                '</select></td>' +
+                '<td>' + settingsHtml + '</td>' +
+                '<td><button onclick="saveCam(' + cam.id + ')" class="btn-icon">💾</button></td></tr>';
+
+            if (detailHtml) html += detailHtml;
+        });
+        document.getElementById('recordRows').innerHTML = html;
+    }
+
+    // Получить краткое описание расписания
+    function getScheduleSummary(sched) {
+        if (!sched || Object.keys(sched).length === 0) return 'Не настроено';
+
+        var patterns = [];
+        var days = ['mon','tue','wed','thu','fri','sat','sun'];
+        var dayNames = {'mon':'Пн','tue':'Вт','wed':'Ср','thu':'Чт','fri':'Пт','sat':'Сб','sun':'Вс'};
+
+        // Группируем одинаковые дни
+        var groups = [];
+        var currentGroup = null;
+
+        days.forEach(function(day) {
+            var d = sched[day];
+            if (!d || !d.enabled) {
+                if (currentGroup) { groups.push(currentGroup); currentGroup = null; }
+                return;
+            }
+            var key = d.start + '-' + d.end;
+            if (!currentGroup || currentGroup.key !== key) {
+                if (currentGroup) groups.push(currentGroup);
+                currentGroup = {key: key, start: d.start, end: d.end, days: []};
+            }
+            currentGroup.days.push(dayNames[day]);
+        });
+        if (currentGroup) groups.push(currentGroup);
+
+        if (groups.length === 0) return 'Нет активных дней';
+
+        return groups.map(function(g) {
+            return g.days.join(',') + ' ' + g.start + '-' + g.end;
+        }).join(' | ');
+    }
+
+    // Переключение режима записи
+    function changeRecordMode(camId, mode) {
+        updateCam(camId, 'record_mode', mode);
+        loadRecordTab();
+    }
+
+    // Раскрыть/скрыть детали расписания
+    function toggleScheduleDetail(camId) {
+        var row = document.getElementById('schedule-' + camId);
+        if (row) {
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+        }
+    }
+
+    // Обновить поле расписания в кэше
+    function updateScheduleField(camId) {
+        var cam = cameras.find(c => c.id == camId);
+        if (!cam) return;
+
+        var sched = {};
+        document.querySelectorAll('.sch-enabled[data-cam="' + camId + '"]').forEach(function(cb) {
+            var day = cb.dataset.day;
+            var startEl = document.querySelector('.sch-start[data-day="' + day + '"][data-cam="' + camId + '"]');
+            var endEl = document.querySelector('.sch-end[data-day="' + day + '"][data-cam="' + camId + '"]');
+            sched[day] = {
+                enabled: cb.checked,
+                start: startEl ? startEl.value : '09:00',
+                end: endEl ? endEl.value : '18:00'
+            };
+        });
+
+        // ✅ Обновляем кэш камеры
+        cam.record_schedule = sched;
+
+        // ✅ Обновляем сводку в строке
+        var summary = getScheduleSummary(sched);
+        var summaryEl = document.querySelector('.cam-row[data-cam-id="' + camId + '"] .schedule-summary');
+        // Ищем span с расписанием
+        var spans = document.querySelectorAll('.cam-row[data-cam-id="' + camId + '"] td span');
+        spans.forEach(function(span) {
+            if (span.textContent.includes('📅')) {
+                span.textContent = '📅 ' + summary + ' ▼';
+            }
+        });
+
+        console.log('Расписание обновлено для камеры ' + camId + ':', sched);
+    }
+
+    // ============================================================
+    // AI
+    // ============================================================
+    function loadAITab() {
+        var html = '';
+        cameras.forEach(function(cam) {
+            html += '<tr><td>' + cam.id + '</td><td>' + cam.name + '</td>' +
+                '<td><input type="checkbox" ' + (cam.ai_enabled?'checked':'') + ' onchange="updateCam(' + cam.id + ',\'ai_enabled\',this.checked?1:0)" class="input-inline"></td>' +
+                '<td><input type="number" value="' + (cam.ai_confidence||0.5) + '" onchange="updateCam(' + cam.id + ',\'ai_confidence\',this.value)" class="input-inline" style="width:60px;" step="0.05"></td>' +
+                '<td><input type="number" value="' + (cam.ai_frame_skip||5) + '" onchange="updateCam(' + cam.id + ',\'ai_frame_skip\',this.value)" class="input-inline" style="width:60px;"></td>' +
+                '<td><input type="checkbox" ' + (cam.ai_boxes_enabled?'checked':'') + ' onchange="updateCam(' + cam.id + ',\'ai_boxes_enabled\',this.checked?1:0)" class="input-inline"></td>' +
+                '<td><input type="number" value="' + (cam.ai_boxes_shift||0) + '" onchange="updateCam(' + cam.id + ',\'ai_boxes_shift\',this.value)" class="input-inline" style="width:60px;" step="0.5"></td>' +
+                '<td><input type="number" value="' + (cam.ai_frame_interval||1.0) + '" onchange="updateCam(' + cam.id + ',\'ai_frame_interval\',this.value)" class="input-inline" style="width:60px;" step="0.1"></td>' +
+                '<td><button onclick="saveCam(' + cam.id + ')" class="btn-icon">💾</button></td></tr>';
+        });
+        document.getElementById('aiRows').innerHTML = html;
+    }
+
+    // ============================================================
+    // ОБЩЕЕ
+    // ============================================================
+    function loadLocations() {
+        return fetch('/api/locations').then(r => r.json()).then(d => {
+            if (d.success) {
+                var opts = '<option value="">🏠 Все</option>';
+                d.locations.forEach(function(loc) {
+                    opts += '<option value="' + loc.id + '">' + (loc.icon||'📍') + ' ' + loc.name + '</option>';
+                });
+                // Заполняем все select'ы локаций
+                document.querySelectorAll('select[id^="loc-"], #newLocation').forEach(function(sel) {
+                    var currentVal = sel.value;
+                    sel.innerHTML = opts;
+                    sel.value = currentVal; // Восстанавливаем выбранное значение
+                });
+            }
+        });
+    }
+
+    // Загружаем первую вкладку
+    showTab('basic');
+    loadLocations();
 </script>
 {% endblock %}

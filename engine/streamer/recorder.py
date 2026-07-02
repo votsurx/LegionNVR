@@ -10,10 +10,165 @@ import threading
 from engine.shared.constants import *
 from engine.shared.constants import HLS_DIR
 from engine.shared.utils import ts, get_recordings_path
+from engine.shared.utils import find_ffmpeg
 
 # Глобальные переменные
 motion_recordings = {}
 recording_lock = threading.Lock()
+
+def start_continuous_recording(camera):
+    """Запускает непрерывную запись (24/7 или по расписанию)"""
+    cam_id = str(camera["id"])
+
+    if not camera.get("record_enabled", False):
+        return
+
+    mode = camera.get('record_mode', 'motion_ai')
+    if mode not in ('continuous_noai', 'schedule_noai', 'schedule_ai'):
+        return
+
+    retention_days = camera.get('record_retention_days', 7)
+
+    print(f"{ts()} 📼 Запуск непрерывной записи для {camera['name']} (хранение {retention_days} дн)")
+
+    # Запускаем в фоновом потоке
+    import threading
+    thread = threading.Thread(
+        target=_continuous_record_loop,
+        args=(camera,),
+        daemon=True
+    )
+    thread.start()
+
+
+def _continuous_record_loop(camera):
+    """Фоновый цикл непрерывной записи"""
+    import subprocess
+    import time
+    import os
+    import shutil
+
+    cam_id = str(camera["id"])
+    mode = camera.get('record_mode', 'motion_ai')
+    retention_days = camera.get('record_retention_days', 7)
+    recordings_path = "recordings"
+
+    ffmpeg = find_ffmpeg()
+    if not ffmpeg:
+        return
+
+    proc = None
+    current_date = time.strftime("%Y-%m-%d")
+    current_hour = time.strftime("%H")
+
+    while True:
+        # Проверяем расписание
+        if mode in ('schedule_noai', 'schedule_ai'):
+            if not _is_in_schedule(camera):
+                # Не время для записи — останавливаем ffmpeg
+                if proc and proc.poll() is None:
+                    proc.terminate()
+                    proc = None
+                    print(f"{ts()} ⏸️ Пауза непрерывной записи {camera['name']} (нерасписание)")
+                time.sleep(30)
+                continue
+
+        # Время для записи — запускаем если не запущен
+        if proc is None or proc.poll() is not None:
+            now = time.strftime("%Y-%m-%d_%H-%M-%S")
+            date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
+            os.makedirs(date_dir, exist_ok=True)
+
+            output_file = os.path.join(date_dir, f"{now}_continuous.mp4")
+
+            # Пишем сегментами по 5 минут (300 сек)
+            cmd = [
+                ffmpeg,
+                "-loglevel", "error",
+                "-rtsp_transport", "tcp",
+                "-i", camera["rtsp_main"],
+                "-c:v", "copy",
+                "-an",
+                "-f", "segment",
+                "-segment_time", "300",  # 5 минут
+                "-reset_timestamps", "1",
+                "-strftime", "1",
+                os.path.join(date_dir, f"%Y-%m-%d_%H-%M-%S_continuous.mp4"),
+                "-y"
+            ]
+
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"{ts()} 🔴 Непрерывная запись {camera['name']} → {date_dir}")
+
+        # Очистка старых файлов (каждые 60 минут)
+        if int(time.strftime("%M")) == 0:  # В начале часа
+            _cleanup_old_recordings(cam_id, retention_days, recordings_path)
+
+        time.sleep(30)  # Проверяем каждые 30 секунд
+
+
+def _cleanup_old_recordings(cam_id, retention_days, recordings_path):
+    """Удаляет файлы старше N дней"""
+    import glob
+    import os
+
+    cam_dir = os.path.join(recordings_path, f"camera_{cam_id}")
+    if not os.path.exists(cam_dir):
+        return
+
+    cutoff_time = time.time() - (retention_days * 86400)
+    deleted_count = 0
+
+    for root, dirs, files in os.walk(cam_dir):
+        for f in files:
+            if '_continuous.mp4' in f or '_motion.mp4' in f:
+                filepath = os.path.join(root, f)
+                if os.path.getmtime(filepath) < cutoff_time:
+                    try:
+                        os.remove(filepath)
+                        deleted_count += 1
+                    except:
+                        pass
+
+    if deleted_count > 0:
+        print(f"{ts()} 🗑️ Удалено {deleted_count} старых записей (>{retention_days} дн) для камеры {cam_id}")
+
+def _should_record_continuous(camera):
+    """Нужно ли писать непрерывно?"""
+    mode = camera.get('record_mode', 'motion_ai')
+
+    if mode == 'continuous_noai':
+        return True  # Всегда
+    elif mode in ('schedule_noai', 'schedule_ai'):
+        return _is_in_schedule(camera)  # По расписанию
+    return False  # motion_ai — только по тревоге
+
+def _is_in_schedule(camera):
+    """Проверяет расписание"""
+    schedule = camera.get('record_schedule', {})
+    if isinstance(schedule, str):
+        import json
+        try:
+            schedule = json.loads(schedule)
+        except:
+            return False
+
+    if not schedule:
+        return False
+
+    now = time.localtime()
+    day_names = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+    today = day_names[now.tm_wday]
+
+    day_schedule = schedule.get(today, {})
+    if not day_schedule.get('enabled', False):
+        return False
+
+    current_time = time.strftime('%H:%M')
+    start = day_schedule.get('start', '00:00')
+    end = day_schedule.get('end', '00:00')
+
+    return start <= current_time <= end
 
 
 def start_motion_recording(camera, motion_start_time=None):

@@ -55,6 +55,14 @@ def main():
         if cam.get("enabled") and cam.get("stream_enabled", True):
             start_hls_stream(cam)
 
+    from engine.streamer.recorder import start_continuous_recording
+    for cam in cameras:
+        mode = cam.get('record_mode', 'motion_ai')
+        if cam.get("record_enabled") and mode in ('continuous_noai', 'schedule_noai', 'schedule_ai'):
+            start_continuous_recording(cam)
+            print(f"{ts()} 📼 Непрерывная запись: {cam['name']} (режим: {mode})")
+
+
     # Запускаем фоновое сохранение сегментов
     threading.Thread(target=save_body_segments, daemon=True).start()
 

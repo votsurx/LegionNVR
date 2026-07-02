@@ -366,17 +366,14 @@ def restart_service(service_name):
         )
 
         print(f"🔄 Поиск процессов {service_name}...")
-        print(f"🔄 Вывод PowerShell:\n{result.stdout[:500]}")
 
         # Парсим JSON
         import json
         try:
             processes = json.loads(result.stdout)
-            # Если один процесс — оборачиваем в список
             if isinstance(processes, dict):
                 processes = [processes]
         except:
-            print(f"⚠️ Не удалось распарсить JSON")
             processes = []
 
         for proc in processes:
@@ -386,18 +383,15 @@ def restart_service(service_name):
             if not pid:
                 continue
 
-            print(f"🔄 Найден: PID={pid}, CMD={cmd[:150]}")
-
             # Не убиваем web_server (себя)
             if pid == current_pid or 'web_server' in cmd:
-                print(f"🔄 Пропускаю web_server")
                 continue
 
             # Убиваем по ключевым словам
             if service_name in cmd:
                 print(f"🔄 Убиваю {service_name} (PID {pid})...")
                 kill_result = subprocess.run(
-                    ['taskkill', '/F', '/T', '/PID', str(pid)],  # ← ДОБАВИЛ /T
+                    ['taskkill', '/F', '/T', '/PID', str(pid)],
                     capture_output=True, text=True, timeout=5
                 )
                 if kill_result.returncode == 0:
@@ -406,18 +400,24 @@ def restart_service(service_name):
 
         time.sleep(2)
 
+        # ✅ ЗАПОМИНАЕМ ВРЕМЯ ДО ЗАПУСКА
+        last_restart_time[service_name] = time.time()
+
         # ✅ Запуск в НОВОМ окне PowerShell
         if sys.platform == 'win32':
             subprocess.Popen(
                 ['pwsh', '-NoExit', '-Command', f'cd {project_root}; python {script}'],
                 cwd=project_root,
-                creationflags=subprocess.CREATE_NEW_CONSOLE  # ← ВОТ ЭТО ВАЖНО!
+                creationflags=subprocess.CREATE_NEW_CONSOLE
             )
         else:
             subprocess.Popen(
                 ['python', script],
                 cwd=project_root
             )
+
+        # ✅ ЗАПОМИНАЕМ ВРЕМЯ ПЕРЕЗАПУСКА (чтобы авто-heal не трогал)
+        last_restart_time[service_name] = time.time()
 
         message = f'{service_name} перезапущен (убито {killed_count})'
         print(f"🔄 {message}")
@@ -960,6 +960,7 @@ def auto_heal_services():
 
             # Перезапускаем (без ожидания!)
             result = restart_service_internal(service_name)
+            print(f"⏳ last_restart_time: {last_restart_time}")
 
             if result['success']:
                 healed.append(service_name)

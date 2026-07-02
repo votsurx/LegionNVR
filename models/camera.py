@@ -1,6 +1,7 @@
 from models.database import get_db
 from models.database import get_db
 from datetime import datetime
+import json
 
 class Camera:
     @staticmethod
@@ -9,6 +10,20 @@ class Camera:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM cameras ORDER BY id")
             cameras = [dict(row) for row in cursor.fetchall()]
+
+        # ✅ Преобразуем JSON-строки обратно в словари/списки
+        for cam in cameras:
+            if cam.get('record_schedule') and isinstance(cam['record_schedule'], str):
+                try:
+                    cam['record_schedule'] = json.loads(cam['record_schedule'])
+                except:
+                    cam['record_schedule'] = {}
+            if cam.get('ai_classes') and isinstance(cam['ai_classes'], str):
+                try:
+                    cam['ai_classes'] = json.loads(cam['ai_classes'])
+                except:
+                    cam['ai_classes'] = [0]
+
         return cameras
 
     @staticmethod
@@ -34,7 +49,7 @@ class Camera:
     @staticmethod
     def update(camera_id, **kwargs):
         allowed = ['name', 'rtsp_main', 'rtsp_sub', 'enabled', 'motion_enabled',
-                   'record_enabled', 'record_mode', 'record_retention_days']
+                   'record_enabled', 'record_mode', 'record_schedule', 'record_retention_days']
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
@@ -53,9 +68,9 @@ class Camera:
             'enabled', 'stream_enabled', 'motion_enabled', 'record_enabled',
             'motion_threshold', 'motion_cooldown', 'motion_fps',
             'record_mode', 'record_pre_sec', 'record_post_sec', 'record_retention_days',
+            'record_schedule',  # ← Есть!
             'stream_quality', 'stream_hls_time',
             'location_id',
-            # 🤖 AI
             'ai_enabled', 'ai_classes', 'ai_confidence',
             'ai_frame_skip',
             'ai_boxes_enabled', 'ai_boxes_shift'
@@ -63,6 +78,14 @@ class Camera:
         updates = {k: data[k] for k in allowed if k in data}
         if not updates:
             return
+
+        # ✅ Преобразуем словарь в JSON-строку
+        if 'record_schedule' in updates and isinstance(updates['record_schedule'], dict):
+            updates['record_schedule'] = json.dumps(updates['record_schedule'])
+
+        # ✅ Преобразуем ai_classes если это список
+        if 'ai_classes' in updates and isinstance(updates['ai_classes'], list):
+            updates['ai_classes'] = json.dumps(updates['ai_classes'])
 
         with get_db() as conn:
             cursor = conn.cursor()

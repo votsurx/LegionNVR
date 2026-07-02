@@ -1,48 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
-
-<h1 style="margin:12px 0;">Настройки</h1>
-<!-- Сетка плиток как MenuScreen в SHomeDART -->
+<style>
+    .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 12px;
+    }
+</style>
+<!-- Сетка плиток — 5×2 -->
 <div class="menu-grid">
-    
+
     <a href="/dashboard" class="menu-tile">
         <span class="menu-tile-icon">📊</span>
-        <span class="menu-tile-label">Дашборд</span>
+        <span class="menu-tile-label" style="font-size:18px;">Главный экран</span>
     </a>
-    
+
     <a href="/cameras" class="menu-tile">
         <span class="menu-tile-icon">📷</span>
-        <span class="menu-tile-label">Камеры</span>
+        <span class="menu-tile-label" style="font-size:18px;">Камеры</span>
     </a>
-    
+
     <a href="/recordings" class="menu-tile">
         <span class="menu-tile-icon">📼</span>
-        <span class="menu-tile-label">Записи</span>
+        <span class="menu-tile-label" style="font-size:18px;">Архив видео</span>
     </a>
-    
+
     <a href="/settings/locations" class="menu-tile">
         <span class="menu-tile-icon">🏠</span>
-        <span class="menu-tile-label">Локации</span>
+        <span class="menu-tile-label" style="font-size:18px;">Локации</span>
     </a>
-    
+
     <a href="/settings/users" class="menu-tile">
         <span class="menu-tile-icon">👤</span>
-        <span class="menu-tile-label">Пользователи</span>
+        <span class="menu-tile-label" style="font-size:18px;">Пользователи</span>
     </a>
-    
+
     <a href="/settings/mqtt" class="menu-tile">
         <span class="menu-tile-icon">📡</span>
-        <span class="menu-tile-label">MQTT Брокер</span>
+        <span class="menu-tile-label" style="font-size:18px;">MQTT Брокер</span>
     </a>
-    
+
     <a href="/settings/storage" class="menu-tile">
         <span class="menu-tile-icon">💾</span>
-        <span class="menu-tile-label">Хранилище</span>
+        <span class="menu-tile-label" style="font-size:18px;">Хранилище</span>
     </a>
-    
+
+    <!-- Заглушки -->
+    <div class="menu-tile" style="opacity:0.5; cursor:default;">
+        <span class="menu-tile-icon">🔔</span>
+        <span class="menu-tile-label" style="font-size:18px;">Уведомления</span>
+        <span style="font-size:11px; color:var(--text-secondary);">Скоро</span>
+    </div>
+
+    <div class="menu-tile" style="opacity:0.5; cursor:default;">
+        <span class="menu-tile-icon">☁️</span>
+        <span class="menu-tile-label" style="font-size:18px;">Облачное хранилище</span>
+        <span style="font-size:11px; color:var(--text-secondary);">Скоро</span>
+    </div>
+
     <a href="/logout" class="menu-tile">
         <span class="menu-tile-icon">🚪</span>
-        <span class="menu-tile-label">Выйти</span>
+        <span class="menu-tile-label" style="font-size:18px;">Выйти</span>
     </a>
 </div>
 {% endblock %}

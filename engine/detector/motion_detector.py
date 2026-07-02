@@ -160,6 +160,17 @@ class MotionDetector:
         if not self.running or not self.enabled:
             return
 
+        # ✅ ПРОВЕРКА РАСПИСАНИЯ
+        if not self._should_detect():
+            return  # Не время для детекции по расписанию
+
+        if self.cap is None:
+            self._reconnect_attempts += 1
+            if self._reconnect_attempts <= self._max_reconnect_attempts:
+                self.start()
+            return
+
+
         if self.cap is None:
             self._reconnect_attempts += 1
             if self._reconnect_attempts <= self._max_reconnect_attempts:
@@ -456,6 +467,50 @@ class MotionDetector:
             send_mqtt_command(self.camera['id'], 'stop_recording')
             print(f"{ts()} {C_GREEN}🟢 [{self.camera['name']}] Запись остановлена{C_RESET}")
         self.motion_end_timer = None
+
+    def _should_detect(self):
+        """Нужно ли сейчас детектировать?"""
+        mode = self.camera.get('record_mode', 'motion_ai')
+
+        if mode in ('motion_ai', 'continuous_noai'):
+            return True  # Всегда детектим
+
+        elif mode in ('schedule_noai', 'schedule_ai'):
+            return self._is_in_schedule()  # Только по расписанию
+
+        return True
+
+    def _should_use_ai(self):
+        """Нужно ли использовать AI?"""
+        mode = self.camera.get('record_mode', 'motion_ai')
+        return mode in ('motion_ai', 'schedule_ai')  # AI только в этих режимах
+
+    def _is_in_schedule(self):
+        """Проверяет, находимся ли мы в периоде расписания"""
+        schedule = self.camera.get('record_schedule', {})
+        if isinstance(schedule, str):
+            import json
+            try:
+                schedule = json.loads(schedule)
+            except:
+                return False
+
+        if not schedule:
+            return False
+
+        now = time.localtime()
+        day_names = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+        today = day_names[now.tm_wday]
+
+        day_schedule = schedule.get(today, {})
+        if not day_schedule.get('enabled', False):
+            return False
+
+        current_time = time.strftime('%H:%M')
+        start = day_schedule.get('start', '00:00')
+        end = day_schedule.get('end', '00:00')
+
+        return start <= current_time <= end
 
     def _publish(self, event_type, percent, ai_result=None):
         """Публикует MQTT событие"""

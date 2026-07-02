@@ -389,23 +389,6 @@ def apply_camera_config(camera_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@api_bp.route('/api/streams/restart', methods=['POST'])
-@login_required
-def restart_streams():
-    """    MQTT"""
-    try:
-        import paho.mqtt.client as mqtt
-        import json
-        
-        client = mqtt.Client()
-        client.connect("127.0.0.1", 1883, 5)
-        client.publish("spartan/streams/reload", json.dumps({"action": "reload_all"}))
-        client.disconnect()
-        
-        return jsonify({'success': True, 'message': ' '})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @api_bp.route('/api/recordings', methods=['GET'])
 @login_required
