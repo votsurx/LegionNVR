@@ -119,297 +119,282 @@
 
 
 <script>
-// === Фильтр по камерам ===
-function filterCameras(filter, chip) {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
+    // === Фильтр по камерам ===
+    function filterCameras(filter, chip) {
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
 
-    document.querySelectorAll('.card[data-camera]').forEach(card => {
-        if (filter === 'all') {
-            card.style.display = '';
-        } else if (filter.startsWith('loc_')) {
-            var locId = filter.replace('loc_', '');
-            card.style.display = card.dataset.location === locId ? '' : 'none';
-        } else {
-            card.style.display = card.dataset.camera === filter ? '' : 'none';
-        }
-    });
-}
-
-// === Вкл/выкл камеру ===
-function toggleCamera(camId) {
-    var btn = document.getElementById('btn-cam-' + camId);
-    var isOn = btn.classList.contains('btn-green');
-    var newState = isOn ? 0 : 1;
-
-    fetch('/api/cameras/' + camId, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({enabled: newState})
-    }).then(r => r.json()).then(d => {
-        if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
-            location.reload();
-        }
-    });
-}
-
-// === Детектор ===
-function toggleDetector(camId) {
-    var btn = document.getElementById('btn-det-' + camId);
-    var isOn = btn.classList.contains('btn-green');
-    var newState = isOn ? 0 : 1;
-
-    fetch('/api/cameras/' + camId, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({motion_enabled: newState})
-    }).then(r => r.json()).then(d => {
-        if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
-            location.reload();
-        }
-    });
-}
-
-// === Запись ===
-function toggleRecord(camId) {
-    var btn = document.getElementById('btn-rec-' + camId);
-    var isOn = btn.classList.contains('btn-green');
-    var newState = isOn ? 0 : 1;
-
-    fetch('/api/cameras/' + camId, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({record_enabled: newState})
-    }).then(r => r.json()).then(d => {
-        if (d.success) {
-            fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
-            location.reload();
-        }
-    });
-}
-
-// ============================================================
-// ПОЛНОЭКРАННЫЙ РЕЖИМ (с зумом и оверлеем)
-// ============================================================
-var currentFullscreenCam = null;
-var currentQuality = 'med';
-var currentZoom = 1.0;
-var overlayTimer = null;
-
-function openFullscreen(camId) {
-    currentFullscreenCam = camId;
-    currentQuality = 'med';
-    currentZoom = 1.0;
-
-    document.getElementById('fullscreenModal').style.display = 'block';
-    document.getElementById('fullscreenLoading').style.display = 'block';
-    document.getElementById('fullscreenImage').style.display = 'none';
-    document.getElementById('fullscreenZoomContainer').style.transform = 'scale(1.0)';
-
-    loadFullscreenStream();
-    updateQualityButtons();
-    startOverlayUpdates();
-}
-
-function changeQuality(quality) {
-    currentQuality = quality;
-    updateQualityButtons();
-    loadFullscreenStream();
-}
-
-function updateQualityButtons() {
-    var qLow = document.getElementById('q-low');
-    var qMed = document.getElementById('q-med');
-    var qHigh = document.getElementById('q-high');
-    var qUltra = document.getElementById('q-ultra');
-
-    qLow.className = 'btn btn-sm ' + (currentQuality === 'low' ? 'btn-green' : 'btn-outline');
-    qMed.className = 'btn btn-sm ' + (currentQuality === 'med' ? 'btn-green' : 'btn-outline');
-    qHigh.className = 'btn btn-sm ' + (currentQuality === 'high' ? 'btn-green' : 'btn-outline');
-    qUltra.className = 'btn btn-sm ' + (currentQuality === 'ultra' ? 'btn-green' : 'btn-outline');
-
-    [qLow, qMed, qHigh, qUltra].forEach(function(btn) {
-        btn.style.color = '#fff';
-        btn.style.borderColor = '#fff';
-    });
-}
-
-function loadFullscreenStream() {
-    var img = document.getElementById('fullscreenImage');
-    document.getElementById('fullscreenLoading').style.display = 'block';
-    img.style.display = 'none';
-
-    img.src = '/camera/' + currentFullscreenCam + '/mjpeg-full?quality=' + currentQuality + '&t=' + Date.now();
-
-    img.onload = function() {
-        document.getElementById('fullscreenLoading').style.display = 'none';
-        img.style.display = 'block';
-    };
-
-    img.onerror = function() {
-        document.getElementById('fullscreenLoading').innerHTML = '<div style="font-size:48px;">⚠️</div><div>Ошибка загрузки потока</div>';
-    };
-}
-
-// ============================================================
-// ТАЧ-ЖЕСТЫ ДЛЯ ПЛАНШЕТОВ (pinch-to-zoom + двойной тап)
-// ============================================================
-var touchStartDistance = 0;
-var touchStartZoom = 1.0;
-var lastTapTime = 0;
-
-zoomContainer.addEventListener('touchstart', function(e) {
-    if (e.touches.length === 2) {
-        // Начало щипка — запоминаем расстояние между пальцами
-        var dx = e.touches[0].clientX - e.touches[1].clientX;
-        var dy = e.touches[0].clientY - e.touches[1].clientY;
-        touchStartDistance = Math.sqrt(dx * dx + dy * dy);
-        touchStartZoom = currentZoom;
-    }
-}, {passive: false});
-
-zoomContainer.addEventListener('touchmove', function(e) {
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        // Считаем новое расстояние
-        var dx = e.touches[0].clientX - e.touches[1].clientX;
-        var dy = e.touches[0].clientY - e.touches[1].clientY;
-        var newDistance = Math.sqrt(dx * dx + dy * dy);
-
-        // Вычисляем новый зум
-        var scale = newDistance / touchStartDistance;
-        currentZoom = Math.max(0.5, Math.min(3.0, touchStartZoom * scale));
-
-        // Центр зума — середина между пальцами
-        var centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        var centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        var rect = zoomContainer.getBoundingClientRect();
-        var originX = ((centerX - rect.left) / rect.width) * 100;
-        var originY = ((centerY - rect.top) / rect.height) * 100;
-
-        zoomContainer.style.transformOrigin = originX + '% ' + originY + '%';
-        zoomContainer.style.transform = 'scale(' + currentZoom + ')';
-        document.getElementById('overlayZoom').textContent = 'Zoom: ' + currentZoom.toFixed(1) + 'x';
-    }
-}, {passive: false});
-
-// Двойной тап — сброс зума
-zoomContainer.addEventListener('click', function(e) {
-    var now = Date.now();
-    if (now - lastTapTime < 300) {
-        // Двойной тап!
-        resetZoom();
-    }
-    lastTapTime = now;
-});
-
-// ============================================================
-// ЦИФРОВОЙ ЗУМ
-// ============================================================
-var zoomContainer = document.getElementById('fullscreenZoomContainer');
-
-zoomContainer.addEventListener('wheel', function(e) {
-    e.preventDefault();
-    var rect = zoomContainer.getBoundingClientRect();
-    var mouseX = e.clientX - rect.left;
-    var mouseY = e.clientY - rect.top;
-    var originX = (mouseX / rect.width) * 100;
-    var originY = (mouseY / rect.height) * 100;
-    var delta = e.deltaY > 0 ? -0.15 : 0.15;
-    currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
-    zoomContainer.style.transformOrigin = originX + '% ' + originY + '%';
-    zoomContainer.style.transform = 'scale(' + currentZoom + ')';
-    document.getElementById('overlayZoom').textContent = 'Zoom: ' + currentZoom.toFixed(1) + 'x';
-}, {passive: false});
-
-function resetZoom() {
-    currentZoom = 1.0;
-    zoomContainer.style.transformOrigin = 'center center';
-    zoomContainer.style.transform = 'scale(1.0)';
-    document.getElementById('overlayZoom').textContent = 'Zoom: 1.0x';
-}
-
-// ============================================================
-// ОВЕРЛЕЙ
-// ============================================================
-function startOverlayUpdates() {
-    updateOverlay();
-    overlayTimer = setInterval(updateOverlay, 2000);
-}
-
-function updateOverlay() {
-    if (!currentFullscreenCam) return;
-
-    var now = new Date();
-    var timeEl = document.getElementById('overlayTime');
-    if (timeEl) {
-        timeEl.textContent = now.getHours().toString().padStart(2,'0') + ':' +
-                            now.getMinutes().toString().padStart(2,'0') + ':' +
-                            now.getSeconds().toString().padStart(2,'0');
-    }
-
-    fetch('/api/cameras/' + currentFullscreenCam + '/status')
-        .then(r => r.json())
-        .then(d => {
-            if (!d.success) return;
-
-            var nameEl = document.getElementById('overlayCamName');
-            if (nameEl) nameEl.textContent = '📷 ' + d.name;
-
-            var statusEl = document.getElementById('overlayStatus');
-            if (statusEl) {
-                statusEl.innerHTML = d.online ? '🟢 Онлайн' : '🔴 Офлайн';
-                statusEl.style.color = d.online ? '#4caf50' : '#f44336';
-            }
-
-            var detEl = document.getElementById('overlayDetector');
-            if (detEl) {
-                if (d.motion_enabled) {
-                    detEl.innerHTML = '🔍 Детектор: ВКЛ' + (d.ai_enabled ? ' (🤖 AI)' : '');
-                    detEl.style.color = '#4caf50';
-                } else {
-                    detEl.innerHTML = '🔍 Детектор: ВЫКЛ';
-                    detEl.style.color = '#aaa';
-                }
-            }
-
-            var recEl = document.getElementById('overlayRecording');
-            if (recEl) {
-                if (d.record_enabled) {
-                    var recText = '📼 Запись: ВКЛ';
-                    if (d.last_event && d.last_event.event_type && d.last_event.event_type.includes('start')) {
-                        recText += ' | Тревога: ' + (d.last_event.timestamp || '---');
-                    }
-                    recEl.innerHTML = recText;
-                    recEl.style.color = '#4caf50';
-                } else {
-                    recEl.innerHTML = '📼 Запись: ВЫКЛ';
-                    recEl.style.color = '#aaa';
-                }
-            }
-        })
-        .catch(function() {
-            var statusEl = document.getElementById('overlayStatus');
-            if (statusEl) {
-                statusEl.innerHTML = '🟠 Нет связи';
-                statusEl.style.color = '#ff9800';
+        document.querySelectorAll('.card[data-camera]').forEach(card => {
+            if (filter === 'all') {
+                card.style.display = '';
+            } else if (filter.startsWith('loc_')) {
+                var locId = filter.replace('loc_', '');
+                card.style.display = card.dataset.location === locId ? '' : 'none';
+            } else {
+                card.style.display = card.dataset.camera === filter ? '' : 'none';
             }
         });
-}
+    }
 
-function closeFullscreen() {
-    document.getElementById('fullscreenModal').style.display = 'none';
-    document.getElementById('fullscreenImage').src = '';
-    if (overlayTimer) { clearInterval(overlayTimer); overlayTimer = null; }
-    currentFullscreenCam = null;
-    currentZoom = 1.0;
-}
+    // === Вкл/выкл камеру ===
+    function toggleCamera(camId) {
+        var btn = document.getElementById('btn-cam-' + camId);
+        var isOn = btn.classList.contains('btn-green');
+        var newState = isOn ? 0 : 1;
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeFullscreen();
-    if (e.key === 'r' || e.key === 'R') resetZoom();
-});
+        fetch('/api/cameras/' + camId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({enabled: newState})
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
+                location.reload();
+            }
+        });
+    }
+
+    // === Детектор ===
+    function toggleDetector(camId) {
+        var btn = document.getElementById('btn-det-' + camId);
+        var isOn = btn.classList.contains('btn-green');
+        var newState = isOn ? 0 : 1;
+
+        fetch('/api/cameras/' + camId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motion_enabled: newState})
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
+                location.reload();
+            }
+        });
+    }
+
+    // === Запись ===
+    function toggleRecord(camId) {
+        var btn = document.getElementById('btn-rec-' + camId);
+        var isOn = btn.classList.contains('btn-green');
+        var newState = isOn ? 0 : 1;
+
+        fetch('/api/cameras/' + camId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({record_enabled: newState})
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                fetch('/api/cameras/' + camId + '/apply', {method:'POST'});
+                location.reload();
+            }
+        });
+    }
+
+    // ============================================================
+    // ПОЛНОЭКРАННЫЙ РЕЖИМ (с зумом и оверлеем)
+    // ============================================================
+    var currentFullscreenCam = null;
+    var currentQuality = 'med';
+    var currentZoom = 1.0;
+    var overlayTimer = null;
+    var zoomContainer = null;
+    var touchStartDistance = 0;
+    var touchStartZoom = 1.0;
+    var lastTapTime = 0;
+
+    function initZoomHandlers() {
+        zoomContainer = document.getElementById('fullscreenZoomContainer');
+        if (!zoomContainer) return;
+
+        // Колёсико мыши
+        zoomContainer.addEventListener('wheel', zoomWheelHandler, {passive: false});
+        // Тач-жесты
+        zoomContainer.addEventListener('touchstart', touchStartHandler, {passive: false});
+        zoomContainer.addEventListener('touchmove', touchMoveHandler, {passive: false});
+        zoomContainer.addEventListener('click', tapHandler);
+    }
+
+    function zoomWheelHandler(e) {
+        e.preventDefault();
+        var rect = zoomContainer.getBoundingClientRect();
+        var mouseX = e.clientX - rect.left;
+        var mouseY = e.clientY - rect.top;
+        var originX = (mouseX / rect.width) * 100;
+        var originY = (mouseY / rect.height) * 100;
+        var delta = e.deltaY > 0 ? -0.15 : 0.15;
+        currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
+        zoomContainer.style.transformOrigin = originX + '% ' + originY + '%';
+        zoomContainer.style.transform = 'scale(' + currentZoom + ')';
+        var zoomEl = document.getElementById('overlayZoom');
+        if (zoomEl) zoomEl.textContent = 'Zoom: ' + currentZoom.toFixed(1) + 'x';
+    }
+
+    function touchStartHandler(e) {
+        if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            touchStartZoom = currentZoom;
+        }
+    }
+
+    function touchMoveHandler(e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            var newDistance = Math.sqrt(dx * dx + dy * dy);
+            var scale = newDistance / touchStartDistance;
+            currentZoom = Math.max(0.5, Math.min(3.0, touchStartZoom * scale));
+            var centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            var centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            var rect = zoomContainer.getBoundingClientRect();
+            var originX = ((centerX - rect.left) / rect.width) * 100;
+            var originY = ((centerY - rect.top) / rect.height) * 100;
+            zoomContainer.style.transformOrigin = originX + '% ' + originY + '%';
+            zoomContainer.style.transform = 'scale(' + currentZoom + ')';
+            var zoomEl = document.getElementById('overlayZoom');
+            if (zoomEl) zoomEl.textContent = 'Zoom: ' + currentZoom.toFixed(1) + 'x';
+        }
+    }
+
+    function tapHandler(e) {
+        var now = Date.now();
+        if (now - lastTapTime < 300) {
+            resetZoom();
+        }
+        lastTapTime = now;
+    }
+
+    function resetZoom() {
+        currentZoom = 1.0;
+        if (zoomContainer) {
+            zoomContainer.style.transformOrigin = 'center center';
+            zoomContainer.style.transform = 'scale(1.0)';
+        }
+        var zoomEl = document.getElementById('overlayZoom');
+        if (zoomEl) zoomEl.textContent = 'Zoom: 1.0x';
+    }
+
+    function openFullscreen(camId) {
+        currentFullscreenCam = camId;
+        currentQuality = 'med';
+        currentZoom = 1.0;
+
+        document.getElementById('fullscreenModal').style.display = 'block';
+        document.getElementById('fullscreenLoading').style.display = 'block';
+        document.getElementById('fullscreenImage').style.display = 'none';
+
+        initZoomHandlers();  // ← Инициализируем зум здесь!
+        loadFullscreenStream();
+        updateQualityButtons();
+        startOverlayUpdates();
+    }
+
+    function changeQuality(quality) {
+        currentQuality = quality;
+        updateQualityButtons();
+        loadFullscreenStream();
+    }
+
+    function updateQualityButtons() {
+        var qLow = document.getElementById('q-low');
+        var qMed = document.getElementById('q-med');
+        var qHigh = document.getElementById('q-high');
+        var qUltra = document.getElementById('q-ultra');
+
+        qLow.className = 'btn btn-sm ' + (currentQuality === 'low' ? 'btn-green' : 'btn-outline');
+        qMed.className = 'btn btn-sm ' + (currentQuality === 'med' ? 'btn-green' : 'btn-outline');
+        qHigh.className = 'btn btn-sm ' + (currentQuality === 'high' ? 'btn-green' : 'btn-outline');
+        qUltra.className = 'btn btn-sm ' + (currentQuality === 'ultra' ? 'btn-green' : 'btn-outline');
+
+        [qLow, qMed, qHigh, qUltra].forEach(function(btn) {
+            btn.style.color = '#fff';
+            btn.style.borderColor = '#fff';
+        });
+    }
+
+    function loadFullscreenStream() {
+        var img = document.getElementById('fullscreenImage');
+        document.getElementById('fullscreenLoading').style.display = 'block';
+        img.style.display = 'none';
+        img.src = '/camera/' + currentFullscreenCam + '/mjpeg-full?quality=' + currentQuality + '&t=' + Date.now();
+        img.onload = function() {
+            document.getElementById('fullscreenLoading').style.display = 'none';
+            img.style.display = 'block';
+        };
+        img.onerror = function() {
+            document.getElementById('fullscreenLoading').innerHTML = '<div style="font-size:48px;">⚠️</div><div>Ошибка загрузки потока</div>';
+        };
+    }
+
+    // ============================================================
+    // ОВЕРЛЕЙ
+    // ============================================================
+    function startOverlayUpdates() {
+        updateOverlay();
+        overlayTimer = setInterval(updateOverlay, 2000);
+    }
+
+    function updateOverlay() {
+        if (!currentFullscreenCam) return;
+
+        var now = new Date();
+        var timeEl = document.getElementById('overlayTime');
+        if (timeEl) {
+            timeEl.textContent = now.getHours().toString().padStart(2,'0') + ':' +
+                                now.getMinutes().toString().padStart(2,'0') + ':' +
+                                now.getSeconds().toString().padStart(2,'0');
+        }
+
+        fetch('/api/cameras/' + currentFullscreenCam + '/status')
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) return;
+                var nameEl = document.getElementById('overlayCamName');
+                if (nameEl) nameEl.textContent = '📷 ' + d.name;
+                var statusEl = document.getElementById('overlayStatus');
+                if (statusEl) {
+                    statusEl.innerHTML = d.online ? '🟢 Онлайн' : '🔴 Офлайн';
+                    statusEl.style.color = d.online ? '#4caf50' : '#f44336';
+                }
+                var detEl = document.getElementById('overlayDetector');
+                if (detEl) {
+                    detEl.innerHTML = d.motion_enabled ? '🔍 Детектор: ВКЛ' + (d.ai_enabled ? ' (🤖 AI)' : '') : '🔍 Детектор: ВЫКЛ';
+                    detEl.style.color = d.motion_enabled ? '#4caf50' : '#aaa';
+                }
+                var recEl = document.getElementById('overlayRecording');
+                if (recEl) {
+                    if (d.record_enabled) {
+                        var recText = '📼 Запись: ВКЛ';
+                        if (d.last_event && d.last_event.event_type && d.last_event.event_type.includes('start')) {
+                            recText += ' | Тревога: ' + (d.last_event.timestamp || '---');
+                        }
+                        recEl.innerHTML = recText;
+                        recEl.style.color = '#4caf50';
+                    } else {
+                        recEl.innerHTML = '📼 Запись: ВЫКЛ';
+                        recEl.style.color = '#aaa';
+                    }
+                }
+            })
+            .catch(function() {
+                var statusEl = document.getElementById('overlayStatus');
+                if (statusEl) { statusEl.innerHTML = '🟠 Нет связи'; statusEl.style.color = '#ff9800'; }
+            });
+    }
+
+    function closeFullscreen() {
+        document.getElementById('fullscreenModal').style.display = 'none';
+        document.getElementById('fullscreenImage').src = '';
+        if (overlayTimer) { clearInterval(overlayTimer); overlayTimer = null; }
+        currentFullscreenCam = null;
+        currentZoom = 1.0;
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeFullscreen();
+        if (e.key === 'r' || e.key === 'R') resetZoom();
+    });
 </script>
 {% endblock %}
