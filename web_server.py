@@ -945,7 +945,7 @@ def auto_heal_services():
     healed = []
 
     for service_name in ['detector', 'streamer']:
-        cooldown = 30
+        cooldown = 60
         if service_name in last_restart_time:
             elapsed = time.time() - last_restart_time[service_name]
             print(f"⏳ {service_name}: elapsed={elapsed:.0f}с, cooldown={cooldown}с")

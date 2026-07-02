@@ -42,11 +42,11 @@ def start_continuous_recording(camera):
 
 
 def _continuous_record_loop(camera):
-    """Фоновый цикл непрерывной записи"""
+    """Фоновый цикл непрерывной записи (с поминутной склейкой)"""
     import subprocess
     import time
     import os
-    import shutil
+    import glob as glob_module
 
     cam_id = str(camera["id"])
     mode = camera.get('record_mode', 'motion_ai')
@@ -58,30 +58,24 @@ def _continuous_record_loop(camera):
         return
 
     proc = None
-    current_date = time.strftime("%Y-%m-%d")
-    current_hour = time.strftime("%H")
+    last_merge_minute = None  # ← Меняем на минуты!
 
     while True:
         # Проверяем расписание
         if mode in ('schedule_noai', 'schedule_ai'):
             if not _is_in_schedule(camera):
-                # Не время для записи — останавливаем ffmpeg
                 if proc and proc.poll() is None:
                     proc.terminate()
                     proc = None
-                    print(f"{ts()} ⏸️ Пауза непрерывной записи {camera['name']} (нерасписание)")
                 time.sleep(30)
                 continue
 
-        # Время для записи — запускаем если не запущен
+        # Запускаем запись если не запущена
         if proc is None or proc.poll() is not None:
-            now = time.strftime("%Y-%m-%d_%H-%M-%S")
             date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
-            os.makedirs(date_dir, exist_ok=True)
+            raw_dir = os.path.join(date_dir, "raw")
+            os.makedirs(raw_dir, exist_ok=True)
 
-            output_file = os.path.join(date_dir, f"{now}_continuous.mp4")
-
-            # Пишем сегментами по 5 минут (300 сек)
             cmd = [
                 ffmpeg,
                 "-loglevel", "error",
@@ -90,21 +84,93 @@ def _continuous_record_loop(camera):
                 "-c:v", "copy",
                 "-an",
                 "-f", "segment",
-                "-segment_time", "300",  # 5 минут
+                "-segment_time", "1",
                 "-reset_timestamps", "1",
                 "-strftime", "1",
-                os.path.join(date_dir, f"%Y-%m-%d_%H-%M-%S_continuous.mp4"),
+                os.path.join(raw_dir, f"%Y-%m-%d_%H-%M-%S_cont.ts"),
                 "-y"
             ]
 
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"{ts()} 🔴 Непрерывная запись {camera['name']} → {date_dir}")
+            print(f"{ts()} 🔴 Непрерывная запись {camera['name']} → {raw_dir}")
+
+        # ✅ ПОМИНУТНАЯ СКЛЕЙКА (каждую минуту)
+        current_minute = time.strftime("%Y-%m-%d_%H-%M")
+        if current_minute != last_merge_minute:
+            if last_merge_minute is not None:
+                _merge_minute_segments(cam_id, last_merge_minute, recordings_path, ffmpeg)
+            last_merge_minute = current_minute
 
         # Очистка старых файлов (каждые 60 минут)
-        if int(time.strftime("%M")) == 0:  # В начале часа
+        if int(time.strftime("%M")) == 0:
             _cleanup_old_recordings(cam_id, retention_days, recordings_path)
 
-        time.sleep(30)  # Проверяем каждые 30 секунд
+        time.sleep(15)  # Проверяем каждые 15 секунд
+
+
+def _merge_minute_segments(cam_id, minute_str, recordings_path, ffmpeg):
+    """Склеивает сегменты за минуту в один MP4"""
+    import glob as glob_module
+    import os
+    import subprocess
+
+    # minute_str = "2026-07-02_14-05"
+    date_part = minute_str[:10]  # "2026-07-02"
+
+    raw_dir = os.path.join(recordings_path, f"camera_{cam_id}", date_part, "raw")
+    archive_dir = os.path.join(recordings_path, f"camera_{cam_id}", date_part)
+
+    if not os.path.exists(raw_dir):
+        return
+
+    # Ищем сегменты за эту минуту
+    pattern = f"{minute_str}*_cont.ts"
+    segments = sorted(glob_module.glob(os.path.join(raw_dir, pattern)))
+
+    if len(segments) < 10:  # Минимум 10 сегментов (10 секунд)
+        return
+
+    output_file = os.path.join(archive_dir, f"{minute_str}_merged.mp4")
+    concat_file = os.path.join(raw_dir, f"concat_{minute_str.replace(':', '-')}.txt")
+
+    # Создаём файл конкатенации
+    with open(concat_file, "w") as f:
+        for seg in segments:
+            escaped = os.path.abspath(seg).replace('\\', '/')
+            f.write(f"file '{escaped}'\n")
+
+    print(f"{ts()} 🔧 Склейка {len(segments)} сегментов за минуту {minute_str}...")
+
+    cmd = [
+        ffmpeg,
+        "-loglevel", "error",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", concat_file,
+        "-c", "copy",
+        "-y",
+        output_file
+    ]
+
+    result = subprocess.run(cmd, timeout=30, capture_output=True)
+
+    if result.returncode == 0 and os.path.exists(output_file):
+        file_size = os.path.getsize(output_file)
+
+        # Удаляем сырые сегменты
+        for seg in segments:
+            try:
+                os.remove(seg)
+            except:
+                pass
+
+        # Удаляем файл конкатенации
+        try:
+            os.remove(concat_file)
+        except:
+            pass
+    else:
+        print(f"{ts()} ❌ Ошибка склейки минуты {minute_str}")
 
 
 def _cleanup_old_recordings(cam_id, retention_days, recordings_path):
