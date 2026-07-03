@@ -111,7 +111,7 @@ def _continuous_record_loop(camera):
             print(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")
         
         # ✅ Добавляем #EXT-X-START в playlist (каждые 30 сек)
-        playlist_file = os.path.join(current_hls_dir, "playlist.m3u8")
+        playlist_file = os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
         if os.path.exists(playlist_file) and int(time.strftime("%S")) < 15:
             try:
                 with open(playlist_file, 'r') as f:

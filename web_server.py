@@ -148,7 +148,6 @@ def check_rtsp_available(rtsp_url):
 
     try:
         # Парсим хост и порт из RTSP URL
-        # rtsp://admin:pass@192.168.1.100:554/stream
         match = re.search(r'rtsp://(?:[^@]+@)?([^:/]+)(?::(\d+))?', rtsp_url)
         if match:
             host = match.group(1)
@@ -949,13 +948,9 @@ def player_hls(camera_id, date):
     start_hour = start_sec // 3600
     start_offset = start_sec % 3600  # Секунды внутри часа
 
-    print(f"🎬 player_hls: camera={camera_id}, date={date}, start={start_sec} ({start_hour}:{start_offset//60}:{start_offset%60})")
-
     # Ищем HLS папку для нужного часа
     hls_dir = os.path.join("recordings", f"camera_{camera_id}", date, f"hls_{str(start_hour).zfill(2)}")
-    playlist_file = os.path.join(hls_dir, "playlist.m3u8")
-
-    print(f"   📁 hls_dir={hls_dir}, exists={os.path.exists(hls_dir)}")
+    playlist_file = os.path.join(hls_dir, f"playlist_{start_hour}.m3u8")
 
     if os.path.exists(playlist_file):
         # Находим время первого сегмента

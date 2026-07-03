@@ -253,7 +253,7 @@ function startPlayback(seekTime) {
     var video = document.getElementById('playerVideo');
     var noData = document.getElementById('noPlayerData');
 
-    // ✅ Проверяем, есть ли запись в этом месте
+    // Проверяем есть ли запись
     var hasRecording = false;
     if (timelineData && timelineData.recordings) {
         hasRecording = timelineData.recordings.some(function(rec) {
@@ -264,7 +264,6 @@ function startPlayback(seekTime) {
     }
 
     if (!hasRecording) {
-        // Нет записи — чёрный экран
         if (hls) { hls.destroy(); hls = null; }
         video.pause();
         video.style.display = 'none';
@@ -274,13 +273,16 @@ function startPlayback(seekTime) {
         return;
     }
 
-    // Есть запись — запускаем плеер
+    // ✅ ОСТАНАВЛИВАЕМ СТАРОЕ ВИДЕО ПОЛНОСТЬЮ
     if (hls) { hls.destroy(); hls = null; }
     video.pause();
     video.removeAttribute('src');
     video.load();
-
+    
+    // ✅ СБРАСЫВАЕМ ВРЕМЯ
+    video.currentTime = 0;
     window._playbackStartTime = seekTime;
+    
     noData.style.display = 'none';
     video.style.display = 'block';
 
@@ -292,10 +294,8 @@ function startPlayback(seekTime) {
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
             video.play();
-            updateCursorPosition();
         });
         hls.on(Hls.Events.ERROR, function() {
-            // Если HLS не загрузился — тоже чёрный экран
             video.style.display = 'none';
             noData.style.display = 'block';
             noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Не удалось загрузить запись</p>';
@@ -303,13 +303,10 @@ function startPlayback(seekTime) {
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = hlsUrl;
         video.addEventListener('loadedmetadata', function() { video.play(); });
-        video.addEventListener('error', function() {
-            video.style.display = 'none';
-            noData.style.display = 'block';
-            noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Не удалось загрузить запись</p>';
-        });
     }
 
+    // ✅ УБИРАЕМ СТАРЫЙ ОБРАБОТЧИК, ВЕШАЕМ НОВЫЙ
+    video.removeEventListener('timeupdate', updateCursorPosition);
     video.addEventListener('timeupdate', updateCursorPosition);
 }
 
@@ -324,6 +321,8 @@ function updateCursorPosition() {
     var level = zoomLevels[timelineZoom];
     var rangeSeconds = level.hours * 3600;
     var startTime = timelineCenter - rangeSeconds / 2;
+    
+    // ✅ Текущее время = время начала + время от начала HLS
     var currentTime = (window._playbackStartTime || 0) + video.currentTime;
 
     if (currentTime >= startTime && currentTime <= startTime + rangeSeconds) {

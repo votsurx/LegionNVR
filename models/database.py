@@ -140,7 +140,6 @@ def init_db():
 
         conn.commit()
 
-    print("[OK] Database ready")
 
 def get_mqtt_config():
     with get_db() as conn:
