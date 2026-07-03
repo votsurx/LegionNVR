@@ -105,7 +105,7 @@ def _continuous_record_loop(camera):
                 "-hls_segment_filename", os.path.join(current_hls_dir, "seg_%H-%M-%S.ts"),
                 "-strftime", "1",
                 "-hls_flags", "omit_endlist+delete_segments",
-                "-y", os.path.join(current_hls_dir, "playlist.m3u8")
+                "-y", os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
             ]
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")

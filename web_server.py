@@ -949,8 +949,8 @@ def player_hls(camera_id, date):
     start_offset = start_sec % 3600  # Секунды внутри часа
 
     # Ищем HLS папку для нужного часа
-    hls_dir = os.path.join("recordings", f"camera_{camera_id}", date, f"hls_{str(start_hour).zfill(2)}")
-    playlist_file = os.path.join(hls_dir, f"playlist_{start_hour}.m3u8")
+    hls_dir = os.path.join("recordings", f"camera_{camera_id}", date, f"hls_{hour}")
+    playlist_file = os.path.join(hls_dir, f"playlist_{hour}.m3u8")
 
     if os.path.exists(playlist_file):
         # Находим время первого сегмента

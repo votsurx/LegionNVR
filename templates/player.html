@@ -286,7 +286,9 @@ function startPlayback(seekTime) {
     noData.style.display = 'none';
     video.style.display = 'block';
 
-    var hlsUrl = '/player/' + camId + '/' + date + '/playlist.m3u8?start=' + seekTime + '&t=' + Date.now();
+    // Вычисляем час из seekTime
+    var startHour = Math.floor(seekTime / 3600);
+    var hlsUrl = '/player/' + camId + '/' + date + '/playlist_' + String(startHour).padStart(2,'0') + '.m3u8?start=' + seekTime + '&t=' + Date.now();
 
     if (Hls.isSupported()) {
         hls = new Hls();
