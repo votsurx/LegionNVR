@@ -823,6 +823,200 @@ def camera_snapshot(camera_id):
         except:
             pass
 
+# ============================================================
+# ПЛЕЕР
+# ============================================================
+
+@app.route('/api/cameras/<int:camera_id>/timeline')
+def camera_timeline(camera_id):
+    """Возвращает данные для таймлайна: HLS-папки (зелёные) и тревоги (красные)"""
+    date = request.args.get('date', time.strftime('%Y-%m-%d'))
+    
+    recordings = []
+    alarms = []
+    
+    # Ищем HLS-папки (новый формат)
+    archive_dir = os.path.join("recordings", f"camera_{camera_id}", date)
+    if os.path.exists(archive_dir):
+        import glob as glob_module
+        
+        for hls_dir in sorted(glob_module.glob(os.path.join(archive_dir, "hls_*"))):
+            # ✅ Ищем сегменты с временными метками
+            segments = sorted(glob_module.glob(os.path.join(hls_dir, "seg_*.ts")))
+            
+            if not segments:
+                continue
+            
+            # Группируем последовательные сегменты
+            gaps = []
+            current_start = None
+            current_end = None
+            last_time = 0
+            
+            for seg in segments:
+                seg_name = os.path.basename(seg)
+                # ✅ Парсим время из имени: seg_13-05-30.ts
+                try:
+                    time_part = seg_name.replace("seg_", "").replace(".ts", "")
+                    parts = time_part.split("-")
+                    h, m, s = int(parts[0]), int(parts[1]), int(parts[2])
+                    seg_sec = h * 3600 + m * 60 + s
+                except:
+                    continue
+                
+                if current_start is None:
+                    current_start = seg_sec
+                    current_end = seg_sec
+                elif seg_sec - current_end <= 2:
+                    current_end = seg_sec
+                else:
+                    gaps.append({'start': current_start, 'end': current_end})
+                    current_start = seg_sec
+                    current_end = seg_sec
+            
+            if current_start is not None:
+                gaps.append({'start': current_start, 'end': current_end})
+            
+            for gap in gaps:
+                recordings.append({
+                    'start': f"{gap['start']//3600:02d}:{(gap['start']%3600)//60:02d}:{gap['start']%60:02d}",
+                    'end': f"{gap['end']//3600:02d}:{(gap['end']%3600)//60:02d}:{gap['end']%60:02d}",
+                    'type': 'continuous'
+                })
+        
+        # Если HLS-папок нет — ищем старые merged файлы
+        if not recordings:
+            merged_files = sorted(glob_module.glob(os.path.join(archive_dir, "*_merged.mp4")))
+            for mf in merged_files:
+                basename = os.path.basename(mf)
+                try:
+                    time_part = basename.split('_')[1]
+                    if '-' in time_part:
+                        h, m = time_part.split('-')
+                        start_time = f"{h}:{m}:00"
+                        end_min = int(m) + 1
+                        end_hour = int(h)
+                        if end_min >= 60:
+                            end_min = 0
+                            end_hour += 1
+                        end_time = f"{str(end_hour).zfill(2)}:{str(end_min).zfill(2)}:00"
+                    else:
+                        h = time_part
+                        start_time = f"{h}:00:00"
+                        end_time = f"{int(h)+1}:00:00"
+                    
+                    recordings.append({
+                        'start': start_time,
+                        'end': end_time,
+                        'type': 'continuous'
+                    })
+                except:
+                    pass
+    
+    # Ищем тревоги из БД
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT * FROM events WHERE camera_id=? AND event_type LIKE '%start%' AND date(timestamp)=? ORDER BY timestamp",
+                (camera_id, date)
+            ).fetchall()
+            
+            for row in rows:
+                alarms.append({
+                    'time': row['timestamp'].strftime('%H:%M:%S') if row['timestamp'] else '--:--:--',
+                    'event_type': row['event_type']
+                })
+    except:
+        pass
+    
+    return jsonify({
+        'success': True,
+        'recordings': recordings,
+        'alarms': alarms
+    })
+
+@app.route('/player/<camera_id>/<date>/playlist.m3u8')
+def player_hls(camera_id, date):
+    """
+    Отдаёт готовый HLS из часовой папки.
+    ?start=32405 — перемотать на 09:00:05
+    """
+    import re
+    import os
+    import glob as glob_module
+
+    start_sec = request.args.get('start', 0, type=int)
+    start_hour = start_sec // 3600
+    start_offset = start_sec % 3600  # Секунды внутри часа
+
+    print(f"🎬 player_hls: camera={camera_id}, date={date}, start={start_sec} ({start_hour}:{start_offset//60}:{start_offset%60})")
+
+    # Ищем HLS папку для нужного часа
+    hls_dir = os.path.join("recordings", f"camera_{camera_id}", date, f"hls_{str(start_hour).zfill(2)}")
+    playlist_file = os.path.join(hls_dir, "playlist.m3u8")
+
+    print(f"   📁 hls_dir={hls_dir}, exists={os.path.exists(hls_dir)}")
+
+    if os.path.exists(playlist_file):
+        # Находим время первого сегмента
+        segments = sorted(glob_module.glob(os.path.join(hls_dir, "seg_*.ts")))
+        if segments:
+            first_seg_time = os.path.getmtime(segments[0])
+            hls_start_sec = first_seg_time - time.mktime(time.strptime(date + " 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            hls_start_sec = max(0, int(hls_start_sec))
+        else:
+            hls_start_sec = start_hour * 3600
+        
+        # Корректируем offset от реального начала HLS
+        offset_in_hls = start_sec - hls_start_sec
+        if offset_in_hls < 0:
+            offset_in_hls = 0
+        
+        # Обновляем TIME-OFFSET
+        with open(playlist_file, 'r') as f:
+            content = f.read()
+        content = re.sub(r'#EXT-X-START:TIME-OFFSET=\d+', 
+                        f'#EXT-X-START:TIME-OFFSET={offset_in_hls}', 
+                        content)
+        content = content.replace('#EXTM3U\n', f'#EXTM3U\n#EXT-X-START:TIME-OFFSET={offset_in_hls}\n')
+        
+        return Response(content, mimetype='application/vnd.apple.mpegurl')
+
+    return "Нет записей за это время", 404
+
+
+@app.route('/player/<camera_id>/<date>/<segment>')
+def player_hls_segment(camera_id, date, segment):
+    """Отдаёт HLS-сегмент из часовой папки"""
+    import os
+    import glob as glob_module
+
+    # Ищем сегмент во всех hls_* папках
+    for hls_dir in sorted(glob_module.glob(os.path.join("recordings", f"camera_{camera_id}", date, "hls_*"))):
+        seg_path = os.path.join(hls_dir, segment)
+        if os.path.exists(seg_path):
+            return send_file(seg_path)
+
+    # Ищем во временных папках (для текущего часа)
+    import tempfile
+    pattern = os.path.join(tempfile.gettempdir(), f"player_hls_{camera_id}_{date}_*", segment)
+    matches = glob_module.glob(pattern)
+    if matches:
+        return send_file(matches[0])
+
+    return "Сегмент не найден", 404
+
+
+def find_ffmpeg():
+    """Ищет ffmpeg в системе"""
+    import shutil
+    import os
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe", "/usr/bin/ffmpeg"]:
+        if os.path.exists(p):
+            return p
+    return None
 
 # ============================================================
 # ЗАПИСИ
@@ -1024,6 +1218,8 @@ with app.app_context():
 
 
 if __name__ == '__main__':
-    print("[Legion NVR] Web Server")
+    print("=" * 50)
+    print("[Legion NVR] Web Server V6.0")
+    print("=" * 50)
     print("[Web] http://localhost:8080")
     app.run(host='0.0.0.0', port=8080, threaded=True)

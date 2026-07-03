@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block content %}
+
+<a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад к настройкам</a>
+<h1 style="margin:12px 0;">🎬 Плеер</h1>
+
+<!-- Выбор камеры и даты -->
+<div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+    <select id="playerCamera" onchange="loadTimeline()" style="background:var(--bg-input); color:var(--text-primary); padding:8px; border-radius:6px; border:1px solid var(--border-color);">
+        {% for cam in cameras %}
+        <option value="{{ cam.id }}">{{ cam.name }}</option>
+        {% endfor %}
+    </select>
+
+    <input type="date" id="playerDate" onchange="loadTimeline()" value="{{ today }}"
+           style="background:var(--bg-input); color:var(--text-primary); padding:8px; border-radius:6px; border:1px solid var(--border-color);">
+
+    <button onclick="loadTimeline()" style="background:#e94560; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">📂 Загрузить</button>
+
+    <span id="playerInfo" style="color:var(--text-secondary); font-size:13px; margin-left:auto;"></span>
+</div>
+
+<!-- Плеер -->
+<div id="playerContainer" style="background:#000; border-radius:12px; overflow:hidden; margin-bottom:12px; min-height:400px; display:flex; align-items:center; justify-content:center; position:relative;">
+    <div id="noPlayerData" style="color:var(--text-secondary); text-align:center;">
+        <div style="font-size:64px;">🎬</div>
+        <p>Выберите камеру и дату для просмотра записей</p>
+    </div>
+    <video id="playerVideo" controls style="width:100%; display:none;"></video>
+</div>
+
+<!-- Таймлайн -->
+<div style="background:var(--bg-card); padding:16px; border-radius:12px;">
+    
+    <!-- Кнопки зума -->
+    <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; align-items:center;">
+        <button onclick="setZoom(0)" id="zoom-24" class="btn btn-sm btn-green">24ч</button>
+        <button onclick="setZoom(1)" id="zoom-12" class="btn btn-sm btn-outline">12ч</button>
+        <button onclick="setZoom(2)" id="zoom-6" class="btn btn-sm btn-outline">6ч</button>
+        <button onclick="setZoom(3)" id="zoom-3" class="btn btn-sm btn-outline">3ч</button>
+        <button onclick="setZoom(4)" id="zoom-2" class="btn btn-sm btn-outline">2ч</button>
+        <button onclick="setZoom(5)" id="zoom-1" class="btn btn-sm btn-outline">1ч</button>
+        <button onclick="setZoom(6)" id="zoom-30" class="btn btn-sm btn-outline">30м</button>
+        <span id="timelineRange" style="margin-left:auto; font-size:11px; color:var(--text-secondary);"></span>
+    </div>
+
+    <!-- Шкала таймлайна -->
+    <div id="timelineContainer" style="position:relative; height:60px; background:var(--bg-input); border-radius:6px; cursor:pointer; overflow:hidden;" onclick="seekToPosition(event)">
+        <canvas id="timelineCanvas" style="width:100%; height:100%;"></canvas>
+        <div id="timelineCursor" style="position:absolute; top:0; left:0; width:2px; height:100%; background:#e94560; z-index:10; display:none;"></div>
+    </div>
+
+    <!-- Легенда -->
+    <div style="display:flex; gap:16px; margin-top:8px; font-size:11px; color:var(--text-secondary);">
+        <span>🟢 Непрерывная запись</span>
+        <span>🔴 Тревоги</span>
+        <span>🟡 Текущая позиция</span>
+        <span id="timelineTime" style="margin-left:auto;">🕐 --:--:--</span>
+    </div>
+</div>
+
+<style>
+.btn-green {
+    background: #4caf50;
+    color: #fff !important;
+    border: 1px solid #4caf50;
+}
+.btn-outline {
+    background: transparent;
+    color: #fff !important;
+    border: 1px solid #666;
+}
+.btn-sm {
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+}
+#timelineContainer:hover { opacity: 0.9; }
+</style>
+
+<script>
+var hls = null;
+var timelineData = null;
+var totalDuration = 86400; // 24 часа в секундах
+var timelineZoom = 0;
+var timelineCenter = 43200; // 12:00
+
+var zoomLevels = [
+    { hours: 24,  label: "24ч",  tickMinutes: 60 },
+    { hours: 12,  label: "12ч",  tickMinutes: 30 },
+    { hours: 6,   label: "6ч",   tickMinutes: 15 },
+    { hours: 3,   label: "3ч",   tickMinutes: 5 },
+    { hours: 2,   label: "2ч",   tickMinutes: 5 },
+    { hours: 1,   label: "1ч",   tickMinutes: 2 },
+    { hours: 0.5, label: "30м",  tickMinutes: 1 }
+];
+
+var zoomButtonIds = ['zoom-24', 'zoom-12', 'zoom-6', 'zoom-3', 'zoom-2', 'zoom-1', 'zoom-30'];
+
+// ============================================================
+// ЗУМ
+// ============================================================
+function setZoom(level) {
+    timelineZoom = Math.max(0, Math.min(6, level));
+    
+    zoomButtonIds.forEach(function(id, index) {
+        var btn = document.getElementById(id);
+        if (btn) {
+            btn.className = 'btn btn-sm ' + (index === timelineZoom ? 'btn-green' : 'btn-outline');
+        }
+    });
+    
+    drawTimeline();
+}
+
+// ============================================================
+// ЗАГРУЗКА ТАЙМЛАЙНА
+// ============================================================
+function loadTimeline() {
+    var camId = document.getElementById('playerCamera').value;
+    var date = document.getElementById('playerDate').value;
+    if (!camId || !date) return;
+
+    fetch('/api/cameras/' + camId + '/timeline?date=' + date)
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                timelineData = d;
+                setZoom(0);
+                timelineCenter = 43200;
+                drawTimeline();
+                document.getElementById('playerInfo').textContent =
+                    '📊 Записей: ' + (d.recordings ? d.recordings.length : 0) +
+                    ' | Тревог: ' + (d.alarms ? d.alarms.length : 0);
+            }
+        });
+}
+
+// ============================================================
+// ОТРИСОВКА ТАЙМЛАЙНА
+// ============================================================
+function drawTimeline() {
+    var canvas = document.getElementById('timelineCanvas');
+    var container = document.getElementById('timelineContainer');
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width;
+    var h = canvas.height;
+
+    var level = zoomLevels[timelineZoom];
+    var rangeSeconds = level.hours * 3600;
+    var startTime = timelineCenter - rangeSeconds / 2;
+    var endTime = timelineCenter + rangeSeconds / 2;
+
+    // Фон
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, w, h);
+
+    // Сетка
+    var tickSeconds = level.tickMinutes * 60;
+    var firstTick = Math.ceil(startTime / tickSeconds) * tickSeconds;
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+
+    for (var t = firstTick; t <= endTime; t += tickSeconds) {
+        var x = ((t - startTime) / rangeSeconds) * w;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+
+        var hour = Math.floor(t / 3600) % 24;
+        var min = Math.floor((t % 3600) / 60);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '9px Arial';
+        if (level.hours <= 2) {
+            ctx.fillText(String(hour).padStart(2,'0') + ':' + String(min).padStart(2,'0'), x + 2, h - 4);
+        } else if (min === 0) {
+            ctx.fillText(hour + ':00', x + 2, h - 4);
+        }
+    }
+
+    // Записи (зелёные)
+    if (timelineData && timelineData.recordings) {
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.5)';
+        timelineData.recordings.forEach(function(rec) {
+            var recStart = timeToSeconds(rec.start);
+            var recEnd = timeToSeconds(rec.end || rec.start);
+            if (recEnd >= startTime && recStart <= endTime) {
+                var x1 = ((recStart - startTime) / rangeSeconds) * w;
+                var x2 = ((recEnd - startTime) / rangeSeconds) * w;
+                ctx.fillRect(Math.max(0, x1), 10, Math.max(2, x2 - x1), h - 20);
+            }
+        });
+    }
+
+    // Тревоги (красные)
+    if (timelineData && timelineData.alarms) {
+        timelineData.alarms.forEach(function(alarm) {
+            var sec = timeToSeconds(alarm.time);
+            if (sec >= startTime && sec <= endTime) {
+                var x = ((sec - startTime) / rangeSeconds) * w;
+                ctx.fillStyle = '#f44336';
+                ctx.beginPath();
+                ctx.arc(x, h/2, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+
+    document.getElementById('timelineRange').textContent = 
+        formatTime(startTime) + ' - ' + formatTime(endTime);
+    
+    updateCursorPosition();
+}
+
+function formatTime(sec) {
+    var h = Math.floor(sec / 3600) % 24;
+    var m = Math.floor((sec % 3600) / 60);
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+
+// ============================================================
+// КЛИК ПО ТАЙМЛАЙНУ
+// ============================================================
+function seekToPosition(event) {
+    var container = document.getElementById('timelineContainer');
+    var rect = container.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var percent = x / rect.width;
+    var level = zoomLevels[timelineZoom];
+    var rangeSeconds = level.hours * 3600;
+    var startTime = timelineCenter - rangeSeconds / 2;
+    var seekTime = Math.floor(startTime + (percent * rangeSeconds));
+    seekTime = Math.max(0, Math.min(86399, seekTime));
+    timelineCenter = seekTime;
+
+    document.getElementById('timelineTime').textContent = '🎯 ' + formatTime(seekTime);
+
+    startPlayback(seekTime);
+    drawTimeline();
+}
+
+// ============================================================
+// ЗАПУСК ПЛЕЕРА
+// ============================================================
+function startPlayback(seekTime) {
+    var camId = document.getElementById('playerCamera').value;
+    var date = document.getElementById('playerDate').value;
+    var video = document.getElementById('playerVideo');
+    var noData = document.getElementById('noPlayerData');
+
+    // ✅ Проверяем, есть ли запись в этом месте
+    var hasRecording = false;
+    if (timelineData && timelineData.recordings) {
+        hasRecording = timelineData.recordings.some(function(rec) {
+            var recStart = timeToSeconds(rec.start);
+            var recEnd = timeToSeconds(rec.end || rec.start);
+            return seekTime >= recStart && seekTime <= recEnd;
+        });
+    }
+
+    if (!hasRecording) {
+        // Нет записи — чёрный экран
+        if (hls) { hls.destroy(); hls = null; }
+        video.pause();
+        video.style.display = 'none';
+        noData.style.display = 'block';
+        noData.innerHTML = '<div style="font-size:64px;">🎬</div><p>Нет записи в это время<br>' + formatTime(seekTime) + '</p>';
+        document.getElementById('timelineTime').textContent = '❌ ' + formatTime(seekTime);
+        return;
+    }
+
+    // Есть запись — запускаем плеер
+    if (hls) { hls.destroy(); hls = null; }
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+
+    window._playbackStartTime = seekTime;
+    noData.style.display = 'none';
+    video.style.display = 'block';
+
+    var hlsUrl = '/player/' + camId + '/' + date + '/playlist.m3u8?start=' + seekTime + '&t=' + Date.now();
+
+    if (Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play();
+            updateCursorPosition();
+        });
+        hls.on(Hls.Events.ERROR, function() {
+            // Если HLS не загрузился — тоже чёрный экран
+            video.style.display = 'none';
+            noData.style.display = 'block';
+            noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Не удалось загрузить запись</p>';
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = hlsUrl;
+        video.addEventListener('loadedmetadata', function() { video.play(); });
+        video.addEventListener('error', function() {
+            video.style.display = 'none';
+            noData.style.display = 'block';
+            noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Не удалось загрузить запись</p>';
+        });
+    }
+
+    video.addEventListener('timeupdate', updateCursorPosition);
+}
+
+// ============================================================
+// ПОЛЗУНОК
+// ============================================================
+function updateCursorPosition() {
+    var video = document.getElementById('playerVideo');
+    var cursor = document.getElementById('timelineCursor');
+    if (!video.duration) return;
+
+    var level = zoomLevels[timelineZoom];
+    var rangeSeconds = level.hours * 3600;
+    var startTime = timelineCenter - rangeSeconds / 2;
+    var currentTime = (window._playbackStartTime || 0) + video.currentTime;
+
+    if (currentTime >= startTime && currentTime <= startTime + rangeSeconds) {
+        var x = ((currentTime - startTime) / rangeSeconds) * document.getElementById('timelineContainer').offsetWidth;
+        cursor.style.display = 'block';
+        cursor.style.left = x + 'px';
+    } else {
+        cursor.style.display = 'none';
+    }
+
+    document.getElementById('timelineTime').textContent = '🕐 ' + formatTime(Math.floor(currentTime));
+}
+
+function timeToSeconds(timeStr) {
+    var parts = timeStr.split(':');
+    return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2] || 0);
+}
+
+// Старт
+document.getElementById('playerDate').value = new Date().toISOString().split('T')[0];
+loadTimeline();
+window.addEventListener('resize', drawTimeline);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+{% endblock %}

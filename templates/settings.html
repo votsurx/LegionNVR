@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- Сетка плиток — 5×2 -->
+<!-- Сетка плиток -->
 <div class="menu-grid">
 
     <a href="/dashboard" class="menu-tile">
@@ -46,11 +46,10 @@
         <span style="font-size:11px; color:var(--text-secondary);">Скоро</span>
     </div>
 
-    <div class="menu-tile" style="opacity:0.5; cursor:default;">
-        <span class="menu-tile-icon">☁️</span>
-        <span class="menu-tile-label" style="font-size:18px;">Облачное хранилище</span>
-        <span style="font-size:11px; color:var(--text-secondary);">Скоро</span>
-    </div>
+    <a href="/player" class="menu-tile">
+        <span class="menu-tile-icon">🎬</span>
+        <span class="menu-tile-label" style="font-size:18px;">Плеер</span>
+    </a>
 
     <a href="/logout" class="menu-tile">
         <span class="menu-tile-icon">🚪</span>

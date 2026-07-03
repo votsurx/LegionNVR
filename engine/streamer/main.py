@@ -30,7 +30,7 @@ def signal_handler(sig, frame):
 
 def main():
     print("=" * 50)
-    print("  🎥  LEGION NVR - STREAM ENGINE v3.0")
+    print("  🎥  LEGION NVR - STREAM ENGINE v6.0")
     print("=" * 50)
     print(f"{ts()}   📡 MQTT: {MQTT_BROKER}:{MQTT_PORT}")
     print(f"{ts()}   🎬 HLS сегменты: {HLS_TIME} сек")
@@ -38,6 +38,8 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
     os.makedirs(HLS_DIR, exist_ok=True)
+
+    threading.Thread(target=cleanup_temp_files, daemon=True).start()
 
     # MQTT
     client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
@@ -76,6 +78,26 @@ def main():
             time.sleep(1)
     except KeyboardInterrupt:
         signal_handler(None, None)
+
+def cleanup_temp_files():
+    """Периодически чистит временные файлы"""
+    import glob as glob_module
+    import shutil
+    import time as time_module
+
+    while True:
+        try:
+            cutoff = time_module.time() - 3600  # Старше 1 часа
+            for pattern in ['motion_*', 'ai_frames_*', 'ai_overlay_*', 'mjpeg_*', 'mjpeg_full_*']:
+                for path in glob_module.glob(os.path.join(tempfile.gettempdir(), pattern)):
+                    try:
+                        if os.path.getmtime(path) < cutoff:
+                            shutil.rmtree(path, ignore_errors=True)
+                    except:
+                        pass
+        except:
+            pass
+        time_module.sleep(1800)  # Каждые 30 минут
 
 
 if __name__ == '__main__':

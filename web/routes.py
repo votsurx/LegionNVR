@@ -108,3 +108,10 @@ def delete_camera(camera_id):
 @login_required
 def health_page():
     return render_template('health.html', user=current_user)
+
+@main_bp.route('/player')
+@login_required
+def player():
+    """Страница плеера для просмотра записей"""
+    cameras = Camera.get_all()
+    return render_template('player.html', user=current_user, cameras=cameras)

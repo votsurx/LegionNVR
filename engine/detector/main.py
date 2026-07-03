@@ -15,7 +15,9 @@ from engine.detector.mqtt_handler import on_cmd
 
 
 def main():
-    print("[Legion NVR] Motion Detector")
+    print("=" * 50)
+    print("[Legion NVR] Motion Detector v6.0")
+    print("=" * 50)
     print(f"{ts()} [MQTT] {MQTT_BROKER}:{MQTT_PORT}")
 
     mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)

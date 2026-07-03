@@ -42,24 +42,26 @@ def start_continuous_recording(camera):
 
 
 def _continuous_record_loop(camera):
-    """Фоновый цикл непрерывной записи (с поминутной склейкой)"""
+    """Фоновый цикл непрерывной записи (сегменты сразу в hls_XX/)"""
     import subprocess
     import time
     import os
     import glob as glob_module
-
+    import shutil
+    
     cam_id = str(camera["id"])
     mode = camera.get('record_mode', 'motion_ai')
     retention_days = camera.get('record_retention_days', 7)
     recordings_path = "recordings"
-
+    
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
         return
-
+    
     proc = None
-    last_merge_minute = None  # ← Меняем на минуты!
-
+    last_hour = None
+    current_hls_dir = None
+    
     while True:
         # Проверяем расписание
         if mode in ('schedule_noai', 'schedule_ai'):
@@ -69,13 +71,27 @@ def _continuous_record_loop(camera):
                     proc = None
                 time.sleep(30)
                 continue
-
-        # Запускаем запись если не запущена
+        
+        date_str = time.strftime("%Y-%m-%d")
+        hour_str = time.strftime("%H")
+        current_hour_key = f"{date_str}_{hour_str}"
+        
+        # ✅ При смене часа — создаём новую папку
+        if current_hour_key != last_hour:
+            date_dir = os.path.join(recordings_path, f"camera_{cam_id}", date_str)
+            current_hls_dir = os.path.join(date_dir, f"hls_{hour_str}")
+            os.makedirs(current_hls_dir, exist_ok=True)
+            
+            # Останавливаем старый ffmpeg
+            if proc and proc.poll() is None:
+                proc.terminate()
+                proc = None
+            
+            print(f"{ts()} 📁 Новая HLS папка: {current_hls_dir}")
+            last_hour = current_hour_key
+        
+        # ✅ Запускаем запись сразу в HLS папку
         if proc is None or proc.poll() is not None:
-            date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
-            raw_dir = os.path.join(date_dir, "raw")
-            os.makedirs(raw_dir, exist_ok=True)
-
             cmd = [
                 ffmpeg,
                 "-loglevel", "error",
@@ -83,29 +99,66 @@ def _continuous_record_loop(camera):
                 "-i", camera["rtsp_main"],
                 "-c:v", "copy",
                 "-an",
-                "-f", "segment",
-                "-segment_time", "1",
-                "-reset_timestamps", "1",
+                "-f", "hls",
+                "-hls_time", "1",
+                "-hls_list_size", "0",
+                "-hls_segment_filename", os.path.join(current_hls_dir, "seg_%H-%M-%S.ts"),
                 "-strftime", "1",
-                os.path.join(raw_dir, f"%Y-%m-%d_%H-%M-%S_cont.ts"),
-                "-y"
+                "-hls_flags", "omit_endlist+delete_segments",
+                "-y", os.path.join(current_hls_dir, "playlist.m3u8")
             ]
-
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"{ts()} 🔴 Непрерывная запись {camera['name']} → {raw_dir}")
-
-        # ✅ ПОМИНУТНАЯ СКЛЕЙКА (каждую минуту)
-        current_minute = time.strftime("%Y-%m-%d_%H-%M")
-        if current_minute != last_merge_minute:
-            if last_merge_minute is not None:
-                _merge_minute_segments(cam_id, last_merge_minute, recordings_path, ffmpeg)
-            last_merge_minute = current_minute
-
-        # Очистка старых файлов (каждые 60 минут)
+            print(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")
+        
+        # ✅ Добавляем #EXT-X-START в playlist (каждые 30 сек)
+        playlist_file = os.path.join(current_hls_dir, "playlist.m3u8")
+        if os.path.exists(playlist_file) and int(time.strftime("%S")) < 15:
+            try:
+                with open(playlist_file, 'r') as f:
+                    content = f.read()
+                if '#EXT-X-START' not in content:
+                    content = content.replace('#EXTM3U\n', '#EXTM3U\n#EXT-X-START:TIME-OFFSET=0\n')
+                    with open(playlist_file, 'w') as f:
+                        f.write(content)
+            except:
+                pass
+        
+        # ✅ Очистка старых HLS папок
         if int(time.strftime("%M")) == 0:
-            _cleanup_old_recordings(cam_id, retention_days, recordings_path)
+            _cleanup_old_hls(cam_id, retention_days, recordings_path)
+        
+        time.sleep(15)
 
-        time.sleep(15)  # Проверяем каждые 15 секунд
+
+def _cleanup_old_hls(cam_id, retention_days, recordings_path):
+    """Удаляет HLS-папки старше N дней"""
+    import glob as glob_module
+    import os
+    import shutil
+
+    cam_dir = os.path.join(recordings_path, f"camera_{cam_id}")
+    if not os.path.exists(cam_dir):
+        return
+
+    cutoff_time = time.time() - (retention_days * 86400)
+
+    for date_dir in os.listdir(cam_dir):
+        date_path = os.path.join(cam_dir, date_dir)
+        if not os.path.isdir(date_path):
+            continue
+
+        # Удаляем старые HLS папки
+        for hls_dir in glob_module.glob(os.path.join(date_path, "hls_*")):
+            if os.path.getmtime(hls_dir) < cutoff_time:
+                shutil.rmtree(hls_dir, ignore_errors=True)
+                print(f"{ts()} 🗑️ Удалена старая HLS: {hls_dir}")
+
+        # Удаляем пустые папки дат
+        try:
+            if not os.listdir(date_path):
+                os.rmdir(date_path)
+        except:
+            pass
 
 
 def _merge_minute_segments(cam_id, minute_str, recordings_path, ffmpeg):
@@ -150,7 +203,7 @@ def _merge_minute_segments(cam_id, minute_str, recordings_path, ffmpeg):
         output_file
     ]
 
-    result = subprocess.run(cmd, timeout=30, capture_output=True)
+    result = subprocess.run(cmd, timeout=60, capture_output=True)
 
     if result.returncode == 0 and os.path.exists(output_file):
         file_size = os.path.getsize(output_file)
