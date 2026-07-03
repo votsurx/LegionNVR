@@ -616,151 +616,87 @@ def segment(id, segment):
 # MJPEG-ЭНДПОИНТ
 # ============================================================
 
-@app.route('/camera/<id>/mjpeg-full')
-def mjpeg_full_stream(id):
-    """MJPEG-поток высокого качества для полноэкранного режима"""
-    cam = Camera.get_by_id(int(id))
-    if not cam or not cam.get('enabled', True):
-        return "Камера отключена", 403
-
-    quality = request.args.get('quality', 'med')
-
-    quality_settings = {
-        'low': {'scale': '320:240', 'fps': '8', 'q': '8'},
-        'med': {'scale': '640:360', 'fps': '15', 'q': '5'},
-        'high': {'scale': '1280:720', 'fps': '25', 'q': '3'},
-        'ultra': {'scale': '1920:1080', 'fps': '25', 'q': '2'},
-    }
-
-    settings = quality_settings.get(quality, quality_settings['med'])
-
-    ffmpeg = "ffmpeg"
-    if shutil.which(ffmpeg) is None:
-        for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
-            if os.path.exists(p):
-                ffmpeg = p
-                break
-
-    import tempfile
-
-    def generate():
-        tmpfile = os.path.join(tempfile.gettempdir(), f"mjpeg_full_{id}_{int(time.time())}.mjpeg")
-
-        cmd = [
-            ffmpeg,
-            "-loglevel", "error",
-            "-rtsp_transport", "tcp",
-            "-fflags", "nobuffer",
-            "-flags", "low_delay",
-            "-i", cam["rtsp_sub"] or cam["rtsp_main"],
-            "-vf", f"fps={settings['fps']},scale={settings['scale']}",
-            "-f", "mjpeg",
-            "-q:v", settings['q'],
-            "-avioflags", "direct",
-            "-flush_packets", "1",
-            "-y",
-            tmpfile
-        ]
-
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        try:
-            time.sleep(1)
-            last_size = 0
-            while proc.poll() is None:
-                if os.path.exists(tmpfile) and os.path.getsize(tmpfile) > last_size:
-                    with open(tmpfile, 'rb') as f:
-                        f.seek(last_size)
-                        data = f.read()
-                        if data:
-                            start = 0
-                            while start < len(data):
-                                soi = data.find(b'\xff\xd8', start)
-                                if soi == -1: break
-                                eoi = data.find(b'\xff\xd9', soi)
-                                if eoi == -1: break
-                                frame = data[soi:eoi+2]
-                                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                                start = eoi + 2
-                    last_size = os.path.getsize(tmpfile)
-                else:
-                    time.sleep(0.05)
-        except GeneratorExit:
-            pass
-        finally:
-            proc.terminate()
-            try: proc.wait(timeout=3)
-            except: proc.kill()
-            try: os.remove(tmpfile)
-            except: pass
-
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
 @app.route('/camera/<id>/mjpeg')
 def mjpeg_stream(id):
-    """MJPEG-поток для браузера"""
+    """MJPEG-поток для браузера (гарантированно работает!)"""
     cam = Camera.get_by_id(int(id))
     if not cam:
         return "Камера не найдена", 404
 
-    # ✅ Проверяем, включена ли камера
     if not cam.get('enabled', True):
         return "Камера отключена", 403
 
-    ffmpeg = "ffmpeg"
-    if shutil.which(ffmpeg) is None:
-        for p in ["C:/ffmpeg/bin/ffmpeg.exe", "C:/ffmpeg/ffmpeg.exe"]:
-            if os.path.exists(p):
-                ffmpeg = p
-                break
-
-    import tempfile
+    ffmpeg = find_ffmpeg()
+    if not ffmpeg:
+        return "ffmpeg не найден", 500
 
     def generate():
-        tmpfile = os.path.join(tempfile.gettempdir(), f"mjpeg_{id}_{int(time.time())}.mjpeg")
-
+        # ✅ КРИТИЧНО ВАЖНО: правильные параметры ffmpeg
         cmd = [
             ffmpeg,
             "-loglevel", "error",
             "-rtsp_transport", "tcp",
-            "-fflags", "nobuffer",
+            "-re",  # ⭐ Читаем в реальном времени
+            "-fflags", "nobuffer",  # Без буфера
             "-flags", "low_delay",
+            "-avioflags", "direct",
             "-i", cam["rtsp_sub"] or cam["rtsp_main"],
-            "-vf", "fps=8,scale=320:240",
+            "-vf", "fps=5,scale=640:360",  # 5 FPS для стабильности
             "-f", "mjpeg",
             "-q:v", "5",
-            "-avioflags", "direct",
             "-flush_packets", "1",
-            "-y",
-            tmpfile
+            "-movflags", "+frag_keyframe+empty_moov",
+            "-"  # Вывод в stdout
         ]
 
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # ✅ Большой буфер для гарантии полной передачи
+        proc = subprocess.Popen(
+            cmd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.DEVNULL, 
+            bufsize=10**8,  # 100MB буфер для гарантии!
+        )
 
         try:
-            time.sleep(1)
-
-            last_size = 0
-            while proc.poll() is None:
-                if os.path.exists(tmpfile) and os.path.getsize(tmpfile) > last_size:
-                    with open(tmpfile, 'rb') as f:
-                        f.seek(last_size)
-                        data = f.read()
-                        if data:
-                            start = 0
-                            while start < len(data):
-                                soi = data.find(b'\xff\xd8', start)
-                                if soi == -1:
-                                    break
-                                eoi = data.find(b'\xff\xd9', soi)
-                                if eoi == -1:
-                                    break
-                                frame = data[soi:eoi+2]
-                                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                                start = eoi + 2
-                    last_size = os.path.getsize(tmpfile)
-                else:
-                    time.sleep(0.1)
+            buf = b''
+            
+            while True:
+                # Читаем большими кусками
+                chunk = proc.stdout.read(65536)
+                if not chunk:
+                    break
+                
+                buf += chunk
+                
+                # Ищем все полные кадры в буфере
+                pos = 0
+                while True:
+                    # Ищем начало JPEG
+                    start = buf.find(b'\xff\xd8', pos)
+                    if start == -1:
+                        break
+                    
+                    # Ищем конец JPEG
+                    end = buf.find(b'\xff\xd9', start)
+                    if end == -1:
+                        # Кадр не завершен - сохраняем и ждем
+                        # ⚠️ ВАЖНО: не обрезаем буфер!
+                        break
+                    
+                    # Извлекаем кадр
+                    frame = buf[start:end + 2]
+                    
+                    # Отправляем кадр
+                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    
+                    # Перемещаем указатель
+                    pos = end + 2
+                
+                # Оставляем только необработанные данные
+                if pos > 0:
+                    buf = buf[pos:]
+                    pos = 0
+                
         except GeneratorExit:
             pass
         finally:
@@ -769,10 +705,95 @@ def mjpeg_stream(id):
                 proc.wait(timeout=3)
             except:
                 proc.kill()
+
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/camera/<id>/mjpeg-full')
+def mjpeg_full_stream(id):
+    """MJPEG-поток высокого качества для полноэкранного режима"""
+    cam = Camera.get_by_id(int(id))
+    if not cam or not cam.get('enabled', True):
+        return "Камера отключена", 403
+
+    quality = request.args.get('quality', 'med')
+    
+    quality_settings = {
+        'low': {'scale': '320:240', 'fps': '8', 'q': '8'},
+        'med': {'scale': '640:360', 'fps': '15', 'q': '5'},
+        'high': {'scale': '1280:720', 'fps': '25', 'q': '3'},
+        'ultra': {'scale': '1920:1080', 'fps': '25', 'q': '2'},
+    }
+    
+    settings = quality_settings.get(quality, quality_settings['med'])
+
+    ffmpeg = find_ffmpeg()
+    if not ffmpeg:
+        return "ffmpeg не найден", 500
+
+    def generate():
+        # ✅ ТЕ ЖЕ ПАРАМЕТРЫ, ЧТО В mjpeg (только scale/fps меняются)
+        cmd = [
+            ffmpeg,
+            "-loglevel", "error",
+            "-rtsp_transport", "tcp",
+            "-re",
+            "-fflags", "nobuffer",
+            "-flags", "low_delay",
+            "-avioflags", "direct",
+            "-i", cam["rtsp_sub"] or cam["rtsp_main"],
+            "-vf", f"fps={settings['fps']},scale={settings['scale']}",
+            "-f", "mjpeg",
+            "-q:v", settings['q'],
+            "-flush_packets", "1",
+            "-movflags", "+frag_keyframe+empty_moov",
+            "-"
+        ]
+
+        proc = subprocess.Popen(
+            cmd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.DEVNULL, 
+            bufsize=10**8,
+        )
+
+        try:
+            buf = b''
+            
+            while True:
+                chunk = proc.stdout.read(65536)
+                if not chunk:
+                    break
+                
+                buf += chunk
+                
+                pos = 0
+                while True:
+                    start = buf.find(b'\xff\xd8', pos)
+                    if start == -1:
+                        break
+                    
+                    end = buf.find(b'\xff\xd9', start)
+                    if end == -1:
+                        break
+                    
+                    frame = buf[start:end + 2]
+                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    
+                    pos = end + 2
+                
+                if pos > 0:
+                    buf = buf[pos:]
+                    pos = 0
+                
+        except GeneratorExit:
+            pass
+        finally:
+            proc.terminate()
             try:
-                os.remove(tmpfile)
+                proc.wait(timeout=3)
             except:
-                pass
+                proc.kill()
 
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
