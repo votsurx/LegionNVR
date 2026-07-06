@@ -239,6 +239,21 @@ function seekToPosition(event) {
     timelineCenter = seekTime;
 
     document.getElementById('timelineTime').textContent = '🎯 ' + formatTime(seekTime);
+    window._playbackStartRealTime = Date.now();    // ← сбрасываем
+    window._playbackStartAbsoluteTime = seekTime;  // ← новое абсолютное время
+
+    // ✅ ПЕРЕД ЗАПУСКОМ — УБИВАЕМ СТАРЫЙ ПОТОК И СБРАСЫВАЕМ ВИДЕО
+    if (hls) {
+        hls.destroy();
+        hls = null;
+    }
+    var video = document.getElementById('playerVideo');
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    video.currentTime = 0;
+    document.getElementById('noPlayerData').style.display = 'none';
+    video.style.display = 'none';
 
     startPlayback(seekTime);
     drawTimeline();
@@ -253,61 +268,61 @@ function startPlayback(seekTime) {
     var video = document.getElementById('playerVideo');
     var noData = document.getElementById('noPlayerData');
 
-    // Проверяем есть ли запись
-    var hasRecording = false;
-    if (timelineData && timelineData.recordings) {
-        hasRecording = timelineData.recordings.some(function(rec) {
-            var recStart = timeToSeconds(rec.start);
-            var recEnd = timeToSeconds(rec.end || rec.start);
-            return seekTime >= recStart && seekTime <= recEnd;
-        });
+    // ✅ СБРАСЫВАЕМ СТАРЫЙ ПОТОК
+    if (hls) {
+        hls.destroy();
+        hls = null;
     }
-
-    if (!hasRecording) {
-        if (hls) { hls.destroy(); hls = null; }
-        video.pause();
-        video.style.display = 'none';
-        noData.style.display = 'block';
-        noData.innerHTML = '<div style="font-size:64px;">🎬</div><p>Нет записи в это время<br>' + formatTime(seekTime) + '</p>';
-        document.getElementById('timelineTime').textContent = '❌ ' + formatTime(seekTime);
-        return;
-    }
-
-    // ✅ ОСТАНАВЛИВАЕМ СТАРОЕ ВИДЕО ПОЛНОСТЬЮ
-    if (hls) { hls.destroy(); hls = null; }
     video.pause();
     video.removeAttribute('src');
     video.load();
-    
-    // ✅ СБРАСЫВАЕМ ВРЕМЯ
     video.currentTime = 0;
     window._playbackStartTime = seekTime;
+
+    window._playbackStartRealTime = Date.now();  // ← запоминаем реальное время старта
+    window._playbackStartAbsoluteTime = seekTime; // ← абсолютное время на таймлайне
     
+    // ✅ ПРЯЧЕМ "НЕТ ВИДЕО" ПОКА НЕ ЗНАЕМ
     noData.style.display = 'none';
-    video.style.display = 'block';
+    video.style.display = 'none';
 
-    // Вычисляем час из seekTime
     var startHour = Math.floor(seekTime / 3600);
-    var hlsUrl = '/player/' + camId + '/' + date + '/playlist_' + String(startHour).padStart(2,'0') + '.m3u8?start=' + seekTime + '&t=' + Date.now();
+    var hlsUrl = '/player/' + camId + '/' + date + '/playlist.m3u8?start=' + seekTime + '&t=' + Date.now();
 
-    if (Hls.isSupported()) {
-        hls = new Hls();
-        hls.loadSource(hlsUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            video.play();
-        });
-        hls.on(Hls.Events.ERROR, function() {
-            video.style.display = 'none';
+    // ✅ ЗАГРУЖАЕМ ПЛЕЙЛИСТ И ПРОВЕРЯЕМ 404
+    fetch(hlsUrl)
+        .then(response => {
+            if (response.status === 404) {
+                // Показываем "Нет видео"
+                noData.style.display = 'block';
+                noData.innerHTML = '<div style="font-size:64px;">📭</div><p>Нет записей в это время<br>' + formatTime(seekTime) + '</p>';
+                document.getElementById('timelineTime').textContent = '📭 ' + formatTime(seekTime);
+                return;
+            }
+            // Если всё ок — загружаем HLS
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.style.display = 'block';
+                    video.play();
+                });
+                hls.on(Hls.Events.ERROR, function() {
+                    noData.style.display = 'block';
+                    noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Ошибка загрузки</p>';
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = hlsUrl;
+                video.style.display = 'block';
+                video.addEventListener('loadedmetadata', function() { video.play(); });
+            }
+        })
+        .catch(err => {
             noData.style.display = 'block';
-            noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Не удалось загрузить запись</p>';
+            noData.innerHTML = '<div style="font-size:64px;">⚠️</div><p>Ошибка сети</p>';
         });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = hlsUrl;
-        video.addEventListener('loadedmetadata', function() { video.play(); });
-    }
 
-    // ✅ УБИРАЕМ СТАРЫЙ ОБРАБОТЧИК, ВЕШАЕМ НОВЫЙ
     video.removeEventListener('timeupdate', updateCursorPosition);
     video.addEventListener('timeupdate', updateCursorPosition);
 }
@@ -318,14 +333,18 @@ function startPlayback(seekTime) {
 function updateCursorPosition() {
     var video = document.getElementById('playerVideo');
     var cursor = document.getElementById('timelineCursor');
-    if (!video.duration) return;
+    if (!video.duration || window._playbackStartRealTime === undefined) return;
 
     var level = zoomLevels[timelineZoom];
     var rangeSeconds = level.hours * 3600;
     var startTime = timelineCenter - rangeSeconds / 2;
     
-    // ✅ Текущее время = время начала + время от начала HLS
-    var currentTime = (window._playbackStartTime || 0) + video.currentTime;
+    // ✅ СЧИТАЕМ ВРЕМЯ ОТ РЕАЛЬНОГО СТАРТА (в миллисекундах)
+    var elapsedMs = Date.now() - window._playbackStartRealTime;
+    var elapsedSec = elapsedMs / 1000;
+    
+    // ✅ АБСОЛЮТНОЕ ВРЕМЯ = стартовое время + прошедшие секунды
+    var currentTime = window._playbackStartAbsoluteTime + elapsedSec;
 
     if (currentTime >= startTime && currentTime <= startTime + rangeSeconds) {
         var x = ((currentTime - startTime) / rangeSeconds) * document.getElementById('timelineContainer').offsetWidth;

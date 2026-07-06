@@ -5,7 +5,7 @@ import json
 import time
 from engine.shared.constants import *
 from engine.shared.utils import ts
-from engine.streamer.recorder import (
+from engine.streamer.recording import (
     start_motion_recording,
     extend_recording,
     stop_motion_recording,

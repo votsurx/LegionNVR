@@ -1,36 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
 <a href="/settings" style="color:var(--text-secondary); text-decoration:none; font-size:14px;">← Назад в Настройки</a>
-<h1 style="margin:12px 0;">💾 Хранилище</h1>
+<h1 style="margin:12px 0;">💾 Хранилище и настройки</h1>
 
 <div class="card">
-    <label>Папка для записей</label>
+    <label>Папка для тревожных записей</label>
     <div style="display:flex;gap:8px;">
         <input type="text" id="recordingsPath" class="input" style="flex:1;">
-        <button onclick="savePath()" class="btn btn-primary">💾 Сохранить</button>
+        <button onclick="saveSetting('recordings_path', 'recordingsPath')" class="btn btn-primary">💾 Сохранить</button>
     </div>
-    <span id="pathStatus" style="font-size:13px;color:var(--text-secondary);margin-top:4px;"></span>
+    <span id="recordingsPathStatus" style="font-size:13px;color:var(--text-secondary);margin-top:4px;"></span>
+</div>
+
+<div class="card">
+    <label>Папка для HLS-потоков</label>
+    <div style="display:flex;gap:8px;">
+        <input type="text" id="streamsPath" class="input" style="flex:1;">
+        <button onclick="saveSetting('streams_path', 'streamsPath')" class="btn btn-primary">💾 Сохранить</button>
+    </div>
+    <span id="streamsPathStatus" style="font-size:13px;color:var(--text-secondary);margin-top:4px;"></span>
+</div>
+
+<div class="card">
+    <label>Папка для HLS-сегментов (24/7 запись)</label>
+    <div style="display:flex;gap:8px;">
+        <input type="text" id="hlsRecordingsPath" class="input" style="flex:1;">
+        <button onclick="saveSetting('hls_recordings_path', 'hlsRecordingsPath')" class="btn btn-primary">💾 Сохранить</button>
+    </div>
+    <span id="hlsRecordingsPathStatus" style="font-size:13px;color:var(--text-secondary);margin-top:4px;"></span>
 </div>
 
 <script>
-fetch('/api/settings/recordings_path').then(r=>r.json()).then(d=>{
-    if(d.success)document.getElementById('recordingsPath').value=d.path;
-});
-function savePath(){
-    var p=document.getElementById('recordingsPath').value.trim();
-    if(!p)return;
-    fetch('/api/settings/recordings_path',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})})
-    .then(r=>r.json()).then(d=>{
-        var s=document.getElementById('pathStatus');
-        if(d.success){
-            s.textContent='✅ ' + (d.message || 'Сохранено');
-            s.style.color='#4caf50';
-        }else{
-            s.textContent='❌ ' + (d.error || 'Ошибка');
-            s.style.color='#f44336';
+function loadSettings() {
+    fetch('/api/settings')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) return;
+            var s = d.settings;
+            document.getElementById('recordingsPath').value = s.recordings_path || 'recordings';
+            document.getElementById('streamsPath').value = s.streams_path || 'streams';
+            document.getElementById('hlsRecordingsPath').value = s.hls_recordings_path || 'recordings';
+        });
+}
+
+function saveSetting(key, inputId) {
+    var value = document.getElementById(inputId).value.trim();
+    if (!value) return;
+    
+    fetch('/api/settings/' + key, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({value: value})
+    })
+    .then(r => r.json())
+    .then(d => {
+        var status = document.getElementById(inputId + 'Status');
+        if (d.success) {
+            status.textContent = '✅ Сохранено!';
+            status.style.color = '#4caf50';
+        } else {
+            status.textContent = '❌ ' + (d.error || 'Ошибка');
+            status.style.color = '#f44336';
         }
-        setTimeout(function(){ s.textContent=''; }, 3000);
+        setTimeout(() => status.textContent = '', 3000);
     });
 }
+
+loadSettings();
 </script>
 {% endblock %}

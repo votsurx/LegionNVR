@@ -8,9 +8,9 @@ import shutil
 import tempfile
 import threading
 from engine.shared.constants import *
-from engine.shared.constants import HLS_DIR
 from engine.shared.utils import ts, get_recordings_path
 from engine.shared.utils import find_ffmpeg
+from engine.shared.config import get_config
 
 # Глобальные переменные
 motion_recordings = {}
@@ -31,7 +31,6 @@ def start_continuous_recording(camera):
 
     print(f"{ts()} 📼 Запуск непрерывной записи для {camera['name']} (хранение {retention_days} дн)")
 
-    # Запускаем в фоновом потоке
     import threading
     thread = threading.Thread(
         target=_continuous_record_loop,
@@ -52,7 +51,10 @@ def _continuous_record_loop(camera):
     cam_id = str(camera["id"])
     mode = camera.get('record_mode', 'motion_ai')
     retention_days = camera.get('record_retention_days', 7)
-    recordings_path = "recordings"
+    
+    config = get_config()
+    HLS_RECORDINGS_PATH = config["hls_recordings_path"]
+
     
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
@@ -76,13 +78,16 @@ def _continuous_record_loop(camera):
         hour_str = time.strftime("%H")
         current_hour_key = f"{date_str}_{hour_str}"
         
-        # ✅ При смене часа — создаём новую папку
+        # ✅ При смене часа — завершаем старый плейлист и создаём новую папку
         if current_hour_key != last_hour:
-            date_dir = os.path.join(recordings_path, f"camera_{cam_id}", date_str)
+            # Завершаем старый плейлист (добавляем ENDLIST)
+            if last_hour is not None and current_hls_dir is not None:
+                _finalize_playlist(current_hls_dir, last_hour.split('_')[1])
+            
+            date_dir = os.path.join(HLS_RECORDINGS_PATH, f"camera_{cam_id}", date_str)
             current_hls_dir = os.path.join(date_dir, f"hls_{hour_str}")
             os.makedirs(current_hls_dir, exist_ok=True)
             
-            # Останавливаем старый ffmpeg
             if proc and proc.poll() is None:
                 proc.terminate()
                 proc = None
@@ -104,11 +109,15 @@ def _continuous_record_loop(camera):
                 "-hls_list_size", "0",
                 "-hls_segment_filename", os.path.join(current_hls_dir, "seg_%H-%M-%S.ts"),
                 "-strftime", "1",
-                "-hls_flags", "omit_endlist+delete_segments",
+                "-hls_flags", "omit_endlist",  # ✅ Убрали delete_segments!
                 "-y", os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
             ]
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")
+        
+        # ✅ Принудительно обновляем плейлист из сегментов каждые 30 секунд
+        if int(time.strftime("%S")) % 30 == 0:
+            _update_playlist_from_segments(current_hls_dir, hour_str)
         
         # ✅ Добавляем #EXT-X-START в playlist (каждые 30 сек)
         playlist_file = os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
@@ -125,9 +134,44 @@ def _continuous_record_loop(camera):
         
         # ✅ Очистка старых HLS папок
         if int(time.strftime("%M")) == 0:
-            _cleanup_old_hls(cam_id, retention_days, recordings_path)
+            _cleanup_old_hls(cam_id, retention_days, HLS_RECORDINGS_PATH)
         
         time.sleep(15)
+
+
+def _update_playlist_from_segments(hls_dir, hour_str):
+    """Пересоздаёт плейлист из всех сегментов в папке"""
+    segments = sorted(glob.glob(os.path.join(hls_dir, "seg_*.ts")))
+    if not segments:
+        return
+
+    playlist = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:1", "#EXT-X-MEDIA-SEQUENCE:0"]
+
+    for seg in segments:
+        seg_name = os.path.basename(seg)
+        playlist.append(f"#EXTINF:1.000,")
+        playlist.append(seg_name)
+
+    # Для live-режима НЕ добавляем ENDLIST
+    playlist_file = os.path.join(hls_dir, f"playlist_{hour_str}.m3u8")
+    with open(playlist_file, 'w') as f:
+        f.write("\n".join(playlist))
+
+
+def _finalize_playlist(hls_dir, hour_str):
+    """Добавляет #EXT-X-ENDLIST в плейлист"""
+    playlist_file = os.path.join(hls_dir, f"playlist_{hour_str}.m3u8")
+    if not os.path.exists(playlist_file):
+        return
+
+    with open(playlist_file, 'r') as f:
+        content = f.read()
+
+    if "#EXT-X-ENDLIST" not in content:
+        content += "\n#EXT-X-ENDLIST"
+
+    with open(playlist_file, 'w') as f:
+        f.write(content)
 
 
 def _cleanup_old_hls(cam_id, retention_days, recordings_path):
@@ -147,81 +191,16 @@ def _cleanup_old_hls(cam_id, retention_days, recordings_path):
         if not os.path.isdir(date_path):
             continue
 
-        # Удаляем старые HLS папки
         for hls_dir in glob_module.glob(os.path.join(date_path, "hls_*")):
             if os.path.getmtime(hls_dir) < cutoff_time:
                 shutil.rmtree(hls_dir, ignore_errors=True)
                 print(f"{ts()} 🗑️ Удалена старая HLS: {hls_dir}")
 
-        # Удаляем пустые папки дат
         try:
             if not os.listdir(date_path):
                 os.rmdir(date_path)
         except:
             pass
-
-
-def _merge_minute_segments(cam_id, minute_str, recordings_path, ffmpeg):
-    """Склеивает сегменты за минуту в один MP4"""
-    import glob as glob_module
-    import os
-    import subprocess
-
-    # minute_str = "2026-07-02_14-05"
-    date_part = minute_str[:10]  # "2026-07-02"
-
-    raw_dir = os.path.join(recordings_path, f"camera_{cam_id}", date_part, "raw")
-    archive_dir = os.path.join(recordings_path, f"camera_{cam_id}", date_part)
-
-    if not os.path.exists(raw_dir):
-        return
-
-    # Ищем сегменты за эту минуту
-    pattern = f"{minute_str}*_cont.ts"
-    segments = sorted(glob_module.glob(os.path.join(raw_dir, pattern)))
-
-    if len(segments) < 10:  # Минимум 10 сегментов (10 секунд)
-        return
-
-    output_file = os.path.join(archive_dir, f"{minute_str}_merged.mp4")
-    concat_file = os.path.join(raw_dir, f"concat_{minute_str.replace(':', '-')}.txt")
-
-    # Создаём файл конкатенации
-    with open(concat_file, "w") as f:
-        for seg in segments:
-            escaped = os.path.abspath(seg).replace('\\', '/')
-            f.write(f"file '{escaped}'\n")
-
-    cmd = [
-        ffmpeg,
-        "-loglevel", "error",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", concat_file,
-        "-c", "copy",
-        "-y",
-        output_file
-    ]
-
-    result = subprocess.run(cmd, timeout=60, capture_output=True)
-
-    if result.returncode == 0 and os.path.exists(output_file):
-        file_size = os.path.getsize(output_file)
-
-        # Удаляем сырые сегменты
-        for seg in segments:
-            try:
-                os.remove(seg)
-            except:
-                pass
-
-        # Удаляем файл конкатенации
-        try:
-            os.remove(concat_file)
-        except:
-            pass
-    else:
-        print(f"{ts()} ❌ Ошибка склейки минуты {minute_str}")
 
 
 def _cleanup_old_recordings(cam_id, retention_days, recordings_path):
@@ -250,15 +229,17 @@ def _cleanup_old_recordings(cam_id, retention_days, recordings_path):
     if deleted_count > 0:
         print(f"{ts()} 🗑️ Удалено {deleted_count} старых записей (>{retention_days} дн) для камеры {cam_id}")
 
+
 def _should_record_continuous(camera):
     """Нужно ли писать непрерывно?"""
     mode = camera.get('record_mode', 'motion_ai')
 
     if mode == 'continuous_noai':
-        return True  # Всегда
+        return True
     elif mode in ('schedule_noai', 'schedule_ai'):
-        return _is_in_schedule(camera)  # По расписанию
-    return False  # motion_ai — только по тревоге
+        return _is_in_schedule(camera)
+    return False
+
 
 def _is_in_schedule(camera):
     """Проверяет расписание"""
@@ -307,7 +288,6 @@ def start_motion_recording(camera, motion_start_time=None):
     record_pre_sec = camera.get('record_pre_sec', 5)
     record_post_sec = camera.get('record_post_sec', 10)
 
-    # ✅ ИСПОЛЬЗУЕМ РЕАЛЬНОЕ ВРЕМЯ НАЧАЛА ДВИЖЕНИЯ (от MOG2!)
     if motion_start_time:
         alarm_time = motion_start_time
         print(f"{ts()} {C_GREEN}📼 Тревога! Время MOG2: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
@@ -315,7 +295,6 @@ def start_motion_recording(camera, motion_start_time=None):
         alarm_time = time.time()
         print(f"{ts()} {C_YELLOW}📼 Тревога! Время (текущее): {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
 
-    # ✅ КОПИРУЕМ ПРЕДЗАПИСЬ (сегменты от alarm_time - pre_sec до alarm_time)
     all_segments = []
     for seg in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
         try:
@@ -326,7 +305,6 @@ def start_motion_recording(camera, motion_start_time=None):
 
     all_segments.sort(key=lambda x: x[0])
 
-    # Берём сегменты в диапазоне [alarm_time - pre_sec - 1, alarm_time + 1]
     start_time = alarm_time - record_pre_sec
     pre_segments = []
     for mtime, seg in all_segments:
@@ -334,10 +312,8 @@ def start_motion_recording(camera, motion_start_time=None):
             pre_segments.append(seg)
 
     if not pre_segments and all_segments:
-        # Fallback: берём последние pre_sec сегментов
         pre_segments = [s[1] for s in all_segments[-record_pre_sec:]]
 
-    # Копируем во временную папку
     temp_dir = os.path.join(tempfile.gettempdir(), f"motion_{cam_id}_{int(time.time())}")
     os.makedirs(temp_dir, exist_ok=True)
 
@@ -350,7 +326,6 @@ def start_motion_recording(camera, motion_start_time=None):
         except:
             pass
 
-    # Запоминаем mtime последнего сегмента предзаписи
     last_mtime = os.path.getmtime(pre_segments[-1]) if pre_segments else 0
 
     motion_recordings[cam_id] = {
@@ -368,7 +343,6 @@ def start_motion_recording(camera, motion_start_time=None):
     print(f"{ts()} {C_BLUE}🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек{C_RESET}")
     print(f"{ts()} {C_GREEN}📁 Сохранено {len(saved_pre)} сегментов предзаписи{C_RESET}")
 
-    # Логируем время первого и последнего сегмента
     if saved_pre:
         first_time = os.path.getmtime(saved_pre[0])
         last_time = os.path.getmtime(saved_pre[-1])
@@ -399,7 +373,6 @@ def stop_motion_recording(camera_id):
     print(f"{ts()} ⏱️ Постзапись {post_sec} сек...")
     time.sleep(post_sec)
 
-    # Собираем все сегменты
     all_saved = data['saved_pre'] + data['saved_body']
 
     all_hls = sorted(glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")))
@@ -420,28 +393,14 @@ def stop_motion_recording(camera_id):
         print(f"{ts()} ❌ Слишком мало сегментов: {len(all_saved)}")
         return
 
-    # Сортировка
-    # Убираем дубликаты
     all_saved = list(set(all_saved))
-
-    # ✅ СОРТИРУЕМ ПО РЕАЛЬНОМУ ВРЕМЕНИ СОЗДАНИЯ ФАЙЛА
     all_saved_sorted = sorted(all_saved, key=lambda f: os.path.getmtime(f))
 
-    # Логируем для проверки
     print(f"{ts()} 📊 Сегментов после сортировки по времени: {len(all_saved_sorted)}")
     for i, seg in enumerate(all_saved_sorted[:5]):
         seg_time = os.path.getmtime(seg)
         print(f"{ts()}   #{i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
-    for i, seg in enumerate(all_saved_sorted[:3]):
-        seg_time = os.path.getmtime(seg)
-        print(f"{ts()}   #{i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
-    if len(all_saved_sorted) > 6:
-        print(f"{ts()}   ...")
-        for i, seg in enumerate(all_saved_sorted[-3:]):
-            seg_time = os.path.getmtime(seg)
-            print(f"{ts()}   #{len(all_saved_sorted)-3+i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
 
-    # Склеиваем
     from engine.streamer.concat import concat_with_ai_frames
     from engine.shared.utils import find_ffmpeg
 
@@ -455,7 +414,6 @@ def stop_motion_recording(camera_id):
     os.makedirs(date_dir, exist_ok=True)
     final_output = os.path.join(date_dir, f"{now}_motion.mp4")
 
-    # Ищем JSON с рамками
     boxes_file = _find_boxes_file(cam_id, data['alarm_time'])
 
     if boxes_file:
@@ -472,7 +430,6 @@ def stop_motion_recording(camera_id):
                 pass
             return
 
-    # Обычная склейка
     concat_file = os.path.join(data['temp_dir'], "concat.txt")
     with open(concat_file, "w") as f:
         for seg in all_saved_sorted:

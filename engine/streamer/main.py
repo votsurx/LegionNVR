@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 from engine.shared.constants import MQTT_BROKER, MQTT_PORT, HLS_DIR, HLS_TIME
 from engine.shared.utils import ts, load_cameras
 from engine.streamer.hls_streamer import start_hls_stream, stream_processes
-from engine.streamer.recorder import save_body_segments, motion_recordings
+from engine.streamer.recording import save_body_segments, motion_recordings
 from engine.streamer.mqtt_handler import on_motion_and_cmd
 
 
@@ -57,7 +57,7 @@ def main():
         if cam.get("enabled") and cam.get("stream_enabled", True):
             start_hls_stream(cam)
 
-    from engine.streamer.recorder import start_continuous_recording
+    from engine.streamer.recording import start_continuous_recording
     for cam in cameras:
         mode = cam.get('record_mode', 'motion_ai')
         if cam.get("record_enabled") and mode in ('continuous_noai', 'schedule_noai', 'schedule_ai'):
