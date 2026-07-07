@@ -14,6 +14,7 @@ import threading
 from engine.shared.config import get_config
 from engine.health_monitor_det import DetectorHealer
 from engine.health_monitor_str import StreamerHealer
+from engine.health_monitor_mqtt import MQTThealer
 
 # Отключаем логи HTTP-запросов
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -44,7 +45,9 @@ if __name__ == '__main__':
 
     det_healer = DetectorHealer()
     str_healer = StreamerHealer()
-
+    mqtt_healer = MQTThealer()
+    
+    threading.Thread(target=mqtt_healer.heal_loop, daemon=True).start()
     threading.Thread(target=det_healer.heal_loop, daemon=True).start()
     threading.Thread(target=str_healer.heal_loop, daemon=True).start()
 

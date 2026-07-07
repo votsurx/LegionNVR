@@ -77,8 +77,11 @@ class StreamerHealer:
 
         while True:
             if not self.is_alive():
-                print("❌ streamer не отвечает (MQTT timeout)")
+                print(f"⚠️ streamer недоступен. Проверю через 5 сек...")
+                time.sleep(5)
+                print(f"❌ streamer не отвечает (подтверждено)")
                 print("🔄 Перезапуск streamer...")
                 self.kill()
                 self.start()
+                self.last_restart = time.time()
             time.sleep(30)

@@ -77,8 +77,11 @@ class DetectorHealer:
 
         while True:
             if not self.is_alive():
-                print("❌ detector не отвечает (MQTT timeout)")
+                print(f"⚠️ detector недоступен. Проверю через 5 сек...")
+                time.sleep(5)
+                print(f"❌ detector не отвечает (подтверждено)")
                 print("🔄 Перезапуск detector...")
                 self.kill()
                 self.start()
+                self.last_restart = time.time()
             time.sleep(30)
