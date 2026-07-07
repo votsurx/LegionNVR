@@ -13,12 +13,19 @@ class DetectorHealer:
         self.last_restart = time.time()  # время старта
         self._pong_received = False
 
+    def is_web_alive(self):
+        try:
+            import requests
+            requests.get("http://localhost:8080/health", timeout=2)
+            return True
+        except:
+            return False
+    
     def is_alive(self):
         if time.time() - self.last_restart < 60:
             print(f"⏳ Detector стартует... ({int(time.time() - self.last_restart)}с)")
             return True
 
-        print("📡 Проверяю detector через MQTT...")
         self._pong_received = False
         try:
             client = mqtt.Client()
@@ -32,7 +39,6 @@ class DetectorHealer:
         except:
             pass
         result = self._pong_received
-        print(f"   Detector -> {'✅ жив' if result else '❌ мёртв'}")
         return result
 
     def _on_pong(self, client, userdata, msg):
@@ -73,15 +79,42 @@ class DetectorHealer:
     def heal_loop(self):
         print("⏳ Даю 60 сек на старт detector...")
         time.sleep(60)
-        print("✅ Стартовая пауза завершена")
 
         while True:
+            # Сначала проверяем веб-сервер
+            if not self.is_web_alive():
+                print("❌ Web Server не отвечает!")
+                print("🔄 Перезапуск Web Server...")
+                # Ищем PID веб-сервера
+                ps_cmd = "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object { $_.CommandLine -like '*web_server*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json"
+                result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
+                try:
+                    processes = json.loads(result.stdout)
+                    if isinstance(processes, dict):
+                        processes = [processes]
+                except:
+                    processes = []
+                for proc in processes:
+                    pid = proc.get('ProcessId', 0)
+                    if pid:
+                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True)
+                        print(f"   ✅ Web Server (PID {pid}) убит")
+                # Запускаем веб-сервер заново
+                subprocess.Popen(
+                    ['start', 'cmd', '/k', 'cd /d C:\\legionNVR && python web_server.py'],
+                    shell=True
+                )
+                print("✅ Web Server перезапущен")
+
+            # Потом проверяем себя
             if not self.is_alive():
                 print(f"⚠️ detector недоступен. Проверю через 5 сек...")
                 time.sleep(5)
-                print(f"❌ detector не отвечает (подтверждено)")
-                print("🔄 Перезапуск detector...")
-                self.kill()
-                self.start()
-                self.last_restart = time.time()
+                if not self.is_alive():
+                    print(f"❌ detector не отвечает (подтверждено)")
+                    print("🔄 Перезапуск detector...")
+                    self.kill()
+                    self.start()
+                    self.last_restart = time.time()
+
             time.sleep(30)

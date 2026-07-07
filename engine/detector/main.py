@@ -5,6 +5,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
+import threading
 import time
 import paho.mqtt.client as mqtt
 
@@ -12,7 +13,7 @@ from engine.shared.constants import MQTT_BROKER, MQTT_PORT
 from engine.shared.utils import ts, load_detector_cameras
 from engine.detector.motion_detector import MotionDetector
 from engine.detector.mqtt_handler import on_cmd
-
+from engine.health_monitor_det import DetectorHealer
 
 def main():
     print("=" * 50)
@@ -51,6 +52,11 @@ def main():
     print(f"{ts()} [Detectors] Active: {len(detectors)}")
     print("[Running] Working... (Ctrl+C to exit)")
 
+
+
+    healer = DetectorHealer()
+    threading.Thread(target=healer.heal_loop, daemon=True).start()
+
     try:
         while True:
             for det in detectors:
@@ -77,7 +83,6 @@ def main():
             mqtt_client.disconnect()
         except:
             pass
-
 
 if __name__ == '__main__':
     main()

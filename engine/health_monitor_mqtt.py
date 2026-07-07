@@ -35,7 +35,6 @@ class MQTThealer:
     def heal_loop(self):
         print("⏳ Даю 30 сек на старт MQTT-брокеру...")
         time.sleep(30)
-        print("✅ Стартовая пауза завершена")
 
         while True:
             if not self.is_alive():

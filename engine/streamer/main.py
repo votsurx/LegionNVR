@@ -5,6 +5,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
+import threading
+import tempfile
 import time
 import signal
 import threading
@@ -15,7 +17,7 @@ from engine.shared.utils import ts, load_cameras
 from engine.streamer.hls_streamer import start_hls_stream, stream_processes
 from engine.streamer.recording import save_body_segments, motion_recordings
 from engine.streamer.mqtt_handler import on_motion_and_cmd
-
+from engine.health_monitor_str import StreamerHealer
 
 def signal_handler(sig, frame):
     """Обработчик Ctrl+C"""
@@ -65,6 +67,10 @@ def main():
             print(f"{ts()} 📼 Непрерывная запись: {cam['name']} (режим: {mode})")
 
 
+    healer = StreamerHealer()
+    threading.Thread(target=healer.heal_loop, daemon=True).start()
+
+    
     # Запускаем фоновое сохранение сегментов
     threading.Thread(target=save_body_segments, daemon=True).start()
 
@@ -98,7 +104,6 @@ def cleanup_temp_files():
         except:
             pass
         time_module.sleep(1800)  # Каждые 30 минут
-
 
 if __name__ == '__main__':
     main()
