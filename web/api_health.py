@@ -2,10 +2,10 @@
 API для Health Monitor
 """
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import current_user, login_required
 from models.database import get_db
 from models.camera import Camera
-from web.utils import check_rtsp_available, mqtt_running, check_service_mqtt
+from web.utils import check_rtsp_available, mqtt_running
 import psutil
 import os
 import sys
@@ -13,34 +13,15 @@ import time
 import json
 import glob
 from engine.shared.config import get_config
+from engine.health_monitor_str import StreamerHealer
+from engine.health_monitor_det import DetectorHealer
 
 api_health_bp = Blueprint('api_health', __name__, url_prefix='/api/health')
-
-last_restart_time = {}
 
 config = get_config()
 HLS_RECORDINGS_PATH = config["hls_recordings_path"]
 HLS_DIR = config["streams_path"]
 
-
-@api_health_bp.route('/service/restart/<service_name>', methods=['POST'])
-@login_required
-def restart_service(service_name):
-    """Жёсткий ручной перезапуск сервиса"""
-    from web.utils import restart_service_internal
-
-    if service_name not in ('detector', 'streamer'):
-        return jsonify({'success': False, 'error': 'Неизвестный сервис'}), 400
-
-    result = restart_service_internal(service_name)
-    if result['success']:
-        return jsonify({
-            'success': True,
-            'message': f'{service_name} перезапущен (убито {result.get("killed", 0)})',
-            'killed': result.get('killed', 0)
-        })
-    else:
-        return jsonify({'success': False, 'error': result.get('error', 'Ошибка')}), 500
 
 @api_health_bp.route('/full', methods=['GET'])
 @login_required
@@ -99,11 +80,15 @@ def health_full():
             'ai_enabled': cam.get('ai_enabled', 0)
         })
 
+    # Создаём экземпляры
+    det_healer = DetectorHealer()
+    str_healer = StreamerHealer()
+
     services = {
         'web_server': {'status': 'running', 'port': 8080, 'pid': os.getpid()},
         'mqtt': {'status': 'running' if mqtt_running() else 'stopped', 'port': 1883},
-        'detector': {'status': 'running' if check_service_mqtt('detector') else 'stopped', 'port': None},
-        'streamer': {'status': 'running' if check_service_mqtt('streamer') else 'stopped', 'port': None}
+        'detector': {'status': 'running' if det_healer.is_alive() else 'stopped', 'port': None},
+        'streamer': {'status': 'running' if str_healer.is_alive() else 'stopped', 'port': None}
     }
 
     with get_db() as conn:
@@ -192,60 +177,6 @@ def reset_health_stats():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@api_health_bp.route('/auto-heal', methods=['POST'])
-@login_required
-def auto_heal_services():
-    """Автоматический перезапуск упавших сервисов"""
-    healed = []
-    from web.utils import restart_service_internal
-
-    for service_name in ['detector', 'streamer']:
-        cooldown = 60
-        if service_name in last_restart_time:
-            elapsed = time.time() - last_restart_time[service_name]
-            if elapsed < cooldown:
-                continue
-
-        alive = check_service_mqtt(service_name)
-
-        if not alive:
-            print(f"🔄 Авто-перезапуск {service_name}")
-            result = restart_service_internal(service_name)
-            if result['success']:
-                healed.append(service_name)
-                last_restart_time[service_name] = time.time()
-                try:
-                    with get_db() as conn:
-                        conn.execute(
-                            "INSERT INTO events (camera_id, event_type, details) VALUES (?, ?, ?)",
-                            (0, "auto_heal", json.dumps({
-                                "service": service_name,
-                                "action": "restart",
-                                "status": "pending",
-                                "killed": result.get('killed', 0),
-                                "timestamp": int(time.time())
-                            }))
-                        )
-                        conn.commit()
-                except:
-                    pass
-        else:
-            if service_name in last_restart_time:
-                elapsed = time.time() - last_restart_time[service_name]
-                if elapsed >= cooldown:
-                    print(f"✅ {service_name} отвечает после перезапуска!")
-                    last_restart_time.pop(service_name, None)
-
-    with get_db() as conn:
-        today_heals = conn.execute(
-            "SELECT COUNT(*) FROM events WHERE event_type='auto_heal' AND date(timestamp)=date('now','localtime')"
-        ).fetchone()[0]
-
-    return jsonify({
-        'success': True,
-        'healed': healed,
-        'today_heals': today_heals
-    })
 
 @api_health_bp.route('', methods=['GET'])
 def health():
