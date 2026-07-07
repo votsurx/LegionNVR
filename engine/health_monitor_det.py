@@ -23,7 +23,6 @@ class DetectorHealer:
     
     def is_alive(self):
         if time.time() - self.last_restart < 60:
-            print(f"⏳ Detector стартует... ({int(time.time() - self.last_restart)}с)")
             return True
 
         self._pong_received = False
@@ -73,7 +72,7 @@ class DetectorHealer:
             f'start cmd /k "cd /d {project_root} && python engine/detector/main.py && pause"',
             shell=True
         )
-        self.last_restart = time.time()
+        #self.last_restart = time.time()
         print("✅ detector запущен, даём 60 сек на старт")
 
     def heal_loop(self):
