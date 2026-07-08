@@ -73,7 +73,10 @@ class Camera:
             'location_id',
             'ai_enabled', 'ai_classes', 'ai_confidence',
             'ai_frame_skip',
-            'ai_boxes_enabled', 'ai_boxes_shift'
+            'ai_boxes_enabled', 'ai_boxes_shift',
+            'stream_protocol',
+            'mjpeg_fps',
+            'mjpeg_resolution'
         ]
         updates = {k: data[k] for k in allowed if k in data}
         if not updates:

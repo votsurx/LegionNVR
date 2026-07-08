@@ -137,6 +137,18 @@ def init_db():
             cursor.execute("ALTER TABLE cameras ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
         except:
             pass
+        try:
+            cursor.execute("ALTER TABLE cameras ADD COLUMN stream_protocol TEXT DEFAULT 'hls'")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE cameras ADD COLUMN mjpeg_fps INTEGER DEFAULT 5")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE cameras ADD COLUMN mjpeg_resolution TEXT DEFAULT '640x360'")
+        except:
+            pass
 
         conn.commit()
 

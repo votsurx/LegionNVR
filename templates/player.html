@@ -142,6 +142,7 @@ function loadTimeline() {
 // ОТРИСОВКА ТАЙМЛАЙНА
 // ============================================================
 function drawTimeline() {
+    console.log("drawTimeline() called!");
     var canvas = document.getElementById('timelineCanvas');
     var container = document.getElementById('timelineContainer');
     canvas.width = container.offsetWidth;
@@ -149,7 +150,7 @@ function drawTimeline() {
     var ctx = canvas.getContext('2d');
     var w = canvas.width;
     var h = canvas.height;
-
+    console.log("timelineData:", timelineData);
     var level = zoomLevels[timelineZoom];
     var rangeSeconds = level.hours * 3600;
     var startTime = timelineCenter - rangeSeconds / 2;
@@ -197,20 +198,19 @@ function drawTimeline() {
         });
     }
 
-    // Тревоги (красные)
+    // Тревоги (красные полосы)
     if (timelineData && timelineData.alarms) {
+        ctx.fillStyle = 'rgba(244, 67, 54, 0.5)';  // красный с прозрачностью
         timelineData.alarms.forEach(function(alarm) {
             var sec = timeToSeconds(alarm.time);
             if (sec >= startTime && sec <= endTime) {
                 var x = ((sec - startTime) / rangeSeconds) * w;
-                ctx.fillStyle = '#f44336';
-                ctx.beginPath();
-                ctx.arc(x, h/2, 4, 0, Math.PI * 2);
-                ctx.fill();
+                // Рисуем полосу такой же высоты, как зелёные
+                console.log("Alarm:", alarm.time, "-> sec:", sec, "startTime:", startTime, "x:", x);
+                ctx.fillRect(Math.max(0, x), 10, 4, h - 20);
             }
         });
     }
-
     document.getElementById('timelineRange').textContent = 
         formatTime(startTime) + ' - ' + formatTime(endTime);
     

@@ -1,6 +1,8 @@
 """
 Плеер и таймлайн
 """
+import datetime
+
 from flask import Blueprint, request, jsonify, Response, send_file, render_template
 from flask_login import login_required
 from models.camera import Camera
@@ -101,15 +103,21 @@ def camera_timeline(camera_id):
     try:
         with get_db() as conn:
             rows = conn.execute(
-                "SELECT * FROM events WHERE camera_id=? AND event_type LIKE '%start%' AND date(timestamp)=? ORDER BY timestamp",
+                "SELECT * FROM events WHERE camera_id=? AND event_type='motion_start' AND date(timestamp)=? ORDER BY timestamp",
                 (camera_id, date)
-            ).fetchall()
+            )
             
             for row in rows:
-                alarms.append({
-                    'time': row['timestamp'].strftime('%H:%M:%S') if row['timestamp'] else '--:--:--',
-                    'event_type': row['event_type']
-                })
+                ts = row['timestamp']
+                if ts:
+                    if isinstance(ts, str):
+                        # Если строка — парсим
+                        dt = datetime.datetime.strptime(ts, '%Y-%m-%d %H:%M:%S')
+                    else:
+                        dt = ts
+                    # Добавляем 3 часа (или свой offset)
+                    dt = dt + datetime.timedelta(hours=3)
+                    alarms.append({'time': dt.strftime('%H:%M:%S')})
     except:
         pass
     

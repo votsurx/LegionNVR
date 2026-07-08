@@ -43,7 +43,7 @@
 
 <div id="tab-stream-content" class="tab-content" style="display:none;">
     <table class="cam-table">
-        <thead><tr><th>ID</th><th>Название</th><th>Качество</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Название</th><th>Качество</th><th>Протокол</th><th>MJPEG FPS</th><th>MJPEG Разрешение</th><th></th></tr></thead>
         <tbody id="streamRows"></tbody>
     </table>
 </div>
@@ -96,6 +96,12 @@
 <script>
     var cameras = {{ cameras | tojson | safe }};
 
+    function toggleStreamSettings() {
+        const protocol = document.getElementById('stream_protocol').value;
+        document.getElementById('mjpeg-settings').style.display = protocol === 'mjpeg' ? 'block' : 'none';
+        document.getElementById('hls-settings').style.display = protocol === 'hls' ? 'block' : 'none';
+    }
+    
     function showTab(name) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -189,6 +195,9 @@
             enabled: cam.enabled,
             stream_enabled: cam.stream_enabled,
             stream_quality: cam.stream_quality,
+            stream_protocol: cam.stream_protocol,
+            mjpeg_fps: cam.mjpeg_fps,
+            mjpeg_resolution: cam.mjpeg_resolution,
             motion_enabled: cam.motion_enabled,
             motion_threshold: cam.motion_threshold,
             motion_cooldown: cam.motion_cooldown,
@@ -259,6 +268,17 @@
                 '<option value="copy" ' + (cam.stream_quality=='copy'?'selected':'') + '>Оригинал</option>' +
                 '<option value="medium" ' + (cam.stream_quality=='medium'?'selected':'') + '>Среднее</option>' +
                 '<option value="low" ' + (cam.stream_quality=='low'?'selected':'') + '>Низкое</option>' +
+                '</select></td>' +
+                '<td><select onchange="updateCam(' + cam.id + ', \'stream_protocol\', this.value)" class="input-inline">' +
+                '<option value="hls" ' + (cam.stream_protocol=='hls'?'selected':'') + '>HLS</option>' +
+                '<option value="mjpeg" ' + (cam.stream_protocol=='mjpeg'?'selected':'') + '>MJPEG</option>' +
+                '</select></td>' +
+                '<td><input type="number" value="' + (cam.mjpeg_fps||5) + '" onchange="updateCam(' + cam.id + ', \'mjpeg_fps\', this.value)" class="input-inline" style="width:60px;"></td>' +
+                '<td><select onchange="updateCam(' + cam.id + ', \'mjpeg_resolution\', this.value)" class="input-inline">' +
+                '<option value="320x240" ' + (cam.mjpeg_resolution=='320x240'?'selected':'') + '>320x240</option>' +
+                '<option value="640x360" ' + (cam.mjpeg_resolution=='640x360'?'selected':'') + '>640x360</option>' +
+                '<option value="1280x720" ' + (cam.mjpeg_resolution=='1280x720'?'selected':'') + '>1280x720</option>' +
+                '<option value="1920x1080" ' + (cam.mjpeg_resolution=='1920x1080'?'selected':'') + '>1920x1080</option>' +
                 '</select></td>' +
                 '<td><button onclick="saveCam(' + cam.id + ')" class="btn-icon">💾</button></td></tr>';
         });

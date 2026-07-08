@@ -54,7 +54,6 @@ def _continuous_record_loop(camera):
     
     config = get_config()
     HLS_RECORDINGS_PATH = config["hls_recordings_path"]
-
     
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
@@ -78,9 +77,8 @@ def _continuous_record_loop(camera):
         hour_str = time.strftime("%H")
         current_hour_key = f"{date_str}_{hour_str}"
         
-        # ✅ При смене часа — завершаем старый плейлист и создаём новую папку
+        # При смене часа — завершаем старый плейлист и создаём новую папку
         if current_hour_key != last_hour:
-            # Завершаем старый плейлист (добавляем ENDLIST)
             if last_hour is not None and current_hls_dir is not None:
                 _finalize_playlist(current_hls_dir, last_hour.split('_')[1])
             
@@ -95,7 +93,7 @@ def _continuous_record_loop(camera):
             print(f"{ts()} 📁 Новая HLS папка: {current_hls_dir}")
             last_hour = current_hour_key
         
-        # ✅ Запускаем запись сразу в HLS папку
+        # Запускаем запись сразу в HLS папку
         if proc is None or proc.poll() is not None:
             cmd = [
                 ffmpeg,
@@ -105,23 +103,23 @@ def _continuous_record_loop(camera):
                 "-c:v", "copy",
                 "-an",
                 "-f", "hls",
-                "-hls_time", "1",
+                "-hls_time", "0.5",  # ← уменьшили с 1 до 0.5
                 "-hls_list_size", "0",
                 "-hls_segment_filename", os.path.join(current_hls_dir, "seg_%H-%M-%S.ts"),
                 "-strftime", "1",
-                "-hls_flags", "omit_endlist",  # ✅ Убрали delete_segments!
+                "-hls_flags", "omit_endlist",
                 "-y", os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
             ]
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")
         
-        # ✅ Принудительно обновляем плейлист из сегментов каждые 30 секунд
-        if int(time.strftime("%S")) % 30 == 0:
+        # Принудительно обновляем плейлист из сегментов каждые 5 секунд
+        if int(time.strftime("%S")) % 5 == 0:  # ← каждые 5 секунд вместо 30
             _update_playlist_from_segments(current_hls_dir, hour_str)
         
-        # ✅ Добавляем #EXT-X-START в playlist (каждые 30 сек)
+        # Добавляем #EXT-X-START в playlist (каждые 5 секунд)
         playlist_file = os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
-        if os.path.exists(playlist_file) and int(time.strftime("%S")) < 15:
+        if os.path.exists(playlist_file) and int(time.strftime("%S")) < 5:
             try:
                 with open(playlist_file, 'r') as f:
                     content = f.read()
@@ -132,12 +130,11 @@ def _continuous_record_loop(camera):
             except:
                 pass
         
-        # ✅ Очистка старых HLS папок
+        # Очистка старых HLS папок
         if int(time.strftime("%M")) == 0:
             _cleanup_old_hls(cam_id, retention_days, HLS_RECORDINGS_PATH)
         
-        time.sleep(15)
-
+        time.sleep(5)  # ← уменьшили с 15 до 5 секунд
 
 def _update_playlist_from_segments(hls_dir, hour_str):
     """Пересоздаёт плейлист из всех сегментов в папке"""
