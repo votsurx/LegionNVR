@@ -18,6 +18,11 @@ from engine.streamer.hls_streamer import start_hls_stream, stream_processes
 from engine.streamer.recording import save_body_segments, motion_recordings
 from engine.streamer.mqtt_handler import on_motion_and_cmd
 from engine.health_monitor_str import StreamerHealer
+from engine.shared.logger import get_logger
+
+logger = get_logger("streamer")
+
+logger.info("Streamer started")
 
 def signal_handler(sig, frame):
     """Обработчик Ctrl+C"""
@@ -35,7 +40,6 @@ def main():
     print("  🎥  LEGION NVR - STREAM ENGINE v6.0")
     print("=" * 50)
     print(f"{ts()}   📡 MQTT: {MQTT_BROKER}:{MQTT_PORT}")
-    print(f"{ts()}   🎬 HLS сегменты: {HLS_TIME} сек")
     print()
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -54,7 +58,7 @@ def main():
 
     # Запускаем HLS для всех камер
     cameras = load_cameras()
-    print(f"{ts()} [Cameras] {len(cameras)}")
+    logger.info(f"{ts()} [Cameras] {len(cameras)}")
     for cam in cameras:
         if cam.get("enabled") and cam.get("stream_enabled", True):
             start_hls_stream(cam)
@@ -64,7 +68,7 @@ def main():
         mode = cam.get('record_mode', 'motion_ai')
         if cam.get("record_enabled") and mode in ('continuous_noai', 'schedule_noai', 'schedule_ai'):
             start_continuous_recording(cam)
-            print(f"{ts()} 📼 Непрерывная запись: {cam['name']} (режим: {mode})")
+            logger.info(f"{ts()} 📼 Непрерывная запись: {cam['name']} (режим: {mode})")
 
 
     healer = StreamerHealer()
@@ -74,10 +78,9 @@ def main():
     # Запускаем фоновое сохранение сегментов
     threading.Thread(target=save_body_segments, daemon=True).start()
 
-    print(f"{ts()} [HLS] Streams: {len(stream_processes)}")
-    print(f"{ts()} [Subscriptions] spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
-    print("[Running] Working... (Ctrl+C to exit)")
-    print()
+    logger.info(f"{ts()} [HLS] Streams: {len(stream_processes)}")
+    logger.info(f"{ts()} [Subscriptions] spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
+    logger.info("[Running] Working... (Ctrl+C to exit)")
 
     try:
         while True:

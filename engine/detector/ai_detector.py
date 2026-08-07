@@ -9,7 +9,9 @@ import time
 import tempfile
 from engine.shared.constants import *
 from engine.shared.utils import ts
+from engine.shared.logger import get_logger
 
+logger = get_logger("detector")
 
 class AIDetector:
     def __init__(self, camera):
@@ -31,7 +33,7 @@ class AIDetector:
         """Загружает модель YOLO"""
         try:
             from ultralytics import YOLO
-            print(f"{ts()} 🤖 [{self.camera['name']}] Загружаю YOLOv8n...")
+            logger.info(f"{ts()} 🤖 [{self.camera['name']}] Загружаю YOLOv8n...")
             self.model = YOLO('yolov8n.pt')
 
             if isinstance(self.classes, str):
@@ -40,9 +42,9 @@ class AIDetector:
                 except:
                     self.classes = [0]
 
-            print(f"{ts()} ✅ [{self.camera['name']}] YOLOv8n загружен! Классы: {self.classes}")
+            logger.info(f"{ts()} ✅ [{self.camera['name']}] YOLOv8n загружен! Классы: {self.classes}")
         except Exception as e:
-            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка загрузки YOLO: {e}")
+            logger.warning(f"{ts()} ❌ [{self.camera['name']}] Ошибка загрузки YOLO: {e}")
             self.enabled = False
 
     def detect(self, frame):
@@ -100,7 +102,7 @@ class AIDetector:
             return None, None
 
         except Exception as e:
-            print(f"⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
+            logger.warning(f"⚠️ [{self.camera['name']}] Ошибка YOLO: {e}")
             return None, None
 
     def draw_boxes(self, frame, boxes):
@@ -179,5 +181,5 @@ class AIDetector:
             return filepath
 
         except Exception as e:
-            print(f"{ts()} {C_RED}❌ Ошибка создания overlay: {e}{C_RESET}")
+            logger.warning(f"{ts()} {C_RED}❌ Ошибка создания overlay: {e}{C_RESET}")
             return None

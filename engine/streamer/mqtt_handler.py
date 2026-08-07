@@ -19,6 +19,9 @@ from engine.streamer.hls_streamer import (
 )
 from engine.shared.utils import load_cameras
 from models.database import get_db
+from engine.shared.logger import get_logger
+
+logger = get_logger("streamer")
 
 
 def on_motion(client, userdata, msg):
@@ -30,9 +33,9 @@ def on_motion(client, userdata, msg):
         if data.get("event") == "motion_start":
             # ✅ ПРОСТО ЛОГИРУЕМ, НЕ ВЫЗЫВАЕМ start_motion_recording!
             # Запись запускается через on_cmd (start_recording)
-            print(f"{ts()} 📡 [MOTION] Движение: камера {cam_id}")
+            logger.info(f"{ts()} 📡 [MOTION] Движение: камера {cam_id}")
     except Exception as e:
-        print(f"{ts()} ⚠️ Ошибка обработки motion: {e}")
+        logger.warning(f"{ts()} ⚠️ Ошибка обработки motion: {e}")
 
 
 def on_cmd(client, userdata, msg):
@@ -45,10 +48,10 @@ def on_cmd(client, userdata, msg):
         # Старт записи (с защитой от двойного вызова)
         if action == "start_recording" and cam_id:
             if cam_id in motion_recordings:
-                print(f"{ts()} {C_YELLOW}📡 [CMD] Запись уже активна для камеры {cam_id}, продлеваю{C_RESET}")
+                logger.info(f"{ts()} {C_YELLOW}📡 [CMD] Запись уже активна для камеры {cam_id}, продлеваю{C_RESET}")
                 extend_recording(cam_id)
             else:
-                print(f"{ts()} {C_BLUE}📡 [CMD] Старт записи для камеры {cam_id}{C_RESET}")
+                logger.info(f"{ts()} {C_BLUE}📡 [CMD] Старт записи для камеры {cam_id}{C_RESET}")
                 with get_db() as conn:
                     cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
                 if cam:
@@ -59,17 +62,17 @@ def on_cmd(client, userdata, msg):
 
         # Продление записи
         elif action == "extend_recording" and cam_id:
-            print(f"{ts()} 📡 [CMD] Продление записи для камеры {cam_id}")
+            logger.info(f"{ts()} 📡 [CMD] Продление записи для камеры {cam_id}")
             extend_recording(cam_id)
 
         # Остановка записи
         elif action == "stop_recording" and cam_id:
-            print(f"{ts()} 📡 [CMD] Остановка записи для камеры {cam_id}")
+            logger.info(f"{ts()} 📡 [CMD] Остановка записи для камеры {cam_id}")
             stop_motion_recording(cam_id)
 
         # Запуск стрима
         elif action == "start_stream" and cam_id:
-            print(f"{ts()} ▶️ [CMD] Запуск стрима для камеры {cam_id}")
+            logger.info(f"{ts()} ▶️ [CMD] Запуск стрима для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
             if cam:
@@ -77,17 +80,17 @@ def on_cmd(client, userdata, msg):
 
         # Остановка стрима
         elif action == "stop_stream" and cam_id:
-            print(f"{ts()} ⏹️ [CMD] Остановка стрима для камеры {cam_id}")
+            logger.info(f"{ts()} ⏹️ [CMD] Остановка стрима для камеры {cam_id}")
             stop_hls_stream(cam_id)
 
         # Остановка детектора → останавливаем запись
         elif action == "stop_detector" and cam_id:
-            print(f"{ts()} ⏹️ [CMD] Остановка детектора для камеры {cam_id} → стоп записи")
+            logger.info(f"{ts()} ⏹️ [CMD] Остановка детектора для камеры {cam_id} → стоп записи")
             stop_motion_recording(cam_id)
 
         # Перезагрузка конфига
         elif action == "reload_config" and cam_id:
-            print(f"{ts()} 📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
+            logger.info(f"{ts()} 📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
             with get_db() as conn:
                 cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
             if cam:
@@ -99,12 +102,12 @@ def on_cmd(client, userdata, msg):
 
         # Перезагрузка всех
         elif action == "reload_all":
-            print("📡 [CMD] Перезагрузка ВСЕХ стримов")
+            logger.info("📡 [CMD] Перезагрузка ВСЕХ стримов")
             cameras = load_cameras()
             for cam in cameras:
                 if cam.get("enabled") and cam.get("stream_enabled", True):
                     start_hls_stream(cam)
-            print(f"{ts()} 🔄 Перезапущено стримов: {len(stream_processes)}")
+            logger.info(f"{ts()} 🔄 Перезапущено стримов: {len(stream_processes)}")
 
         # Пинг от Health Monitor
         elif action == "ping":
@@ -116,7 +119,7 @@ def on_cmd(client, userdata, msg):
             }))
 
     except Exception as e:
-        print(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
+        logger.warning(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
 
 
 def on_motion_and_cmd(client, userdata, msg):

@@ -14,6 +14,9 @@ from engine.shared.utils import ts, load_detector_cameras
 from engine.detector.motion_detector import MotionDetector
 from engine.detector.mqtt_handler import on_cmd
 from engine.health_monitor_det import DetectorHealer
+from engine.shared.logger import get_logger
+
+logger = get_logger("detector")
 
 def main():
     print("=" * 50)
@@ -28,9 +31,9 @@ def main():
     try:
         cameras = load_detector_cameras()
     except Exception as e:
-        print(f"{ts()} ⚠️ Ошибка загрузки камер: {e}")
+        logger.warning(f"{ts()} ⚠️ Ошибка загрузки камер: {e}")
 
-    print(f"{ts()} [Cameras] with detector: {len(cameras)}")
+    logger.info(f"{ts()} [Cameras] with detector: {len(cameras)}")
 
     detectors = []
     for cam in cameras:
@@ -39,7 +42,7 @@ def main():
             if det.start():
                 detectors.append(det)
         except Exception as e:
-            print(f"{ts()} ⚠️ Ошибка создания детектора: {e}")
+            logger.warning(f"{ts()} ⚠️ Ошибка создания детектора: {e}")
 
     mqtt_client.user_data_set({
         "detectors": detectors,
@@ -49,8 +52,8 @@ def main():
     mqtt_client.subscribe("spartan/+/cmd")
     mqtt_client.loop_start()
 
-    print(f"{ts()} [Detectors] Active: {len(detectors)}")
-    print("[Running] Working... (Ctrl+C to exit)")
+    logger.info(f"{ts()} [Detectors] Active: {len(detectors)}")
+    logger.info("[Running] Working... (Ctrl+C to exit)")
 
 
 
@@ -64,14 +67,14 @@ def main():
                     if det.running and det.enabled:
                         det.loop()
                 except Exception as e:
-                    print(f"{ts()} ⚠️ Ошибка цикла: {e}")
+                    logger.warning(f"{ts()} ⚠️ Ошибка цикла: {e}")
                     try:
                         det.start()
                     except:
                         pass
             time.sleep(0.05)
     except KeyboardInterrupt:
-        print("\n[Stopping] Shutting down...")
+        logger.info("\n[Stopping] Shutting down...")
     finally:
         for det in detectors:
             try:

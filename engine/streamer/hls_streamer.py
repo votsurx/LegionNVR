@@ -7,6 +7,9 @@ import glob
 import time
 from engine.shared.constants import HLS_DIR, HLS_TIME
 from engine.shared.utils import ts, find_ffmpeg
+from engine.shared.logger import get_logger
+
+logger = get_logger("streamer")
 
 # Глобальные переменные для управления процессами
 stream_processes = {}
@@ -37,7 +40,7 @@ def stop_hls_stream(camera_id):
                 os.remove(m3u8)
             except:
                 pass
-        print(f"{ts()} ⏹️ HLS стрим для камеры {cam_id} остановлен")
+        logger.info(f"{ts()} ⏹️ HLS стрим для камеры {cam_id} остановлен")
 
 
 def start_hls_stream(camera):
@@ -45,11 +48,11 @@ def start_hls_stream(camera):
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
-        print(f"⏸️ Камера {cam_id} отключена, стрим не запущен")
+        logger.info(f"⏸️ Камера {cam_id} отключена, стрим не запущен")
         return
 
     if not camera.get("stream_enabled", True):
-        print(f"⏸️ Стрим для камеры {cam_id} отключен")
+        logger.info(f"⏸️ Стрим для камеры {cam_id} отключен")
         return
 
     stop_hls_stream(cam_id)
@@ -62,7 +65,7 @@ def start_hls_stream(camera):
 
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
-        print("❌ ffmpeg не найден!")
+        logger.warning("❌ ffmpeg не найден!")
         return
 
     record_pre_sec = camera.get('record_pre_sec', 5)
@@ -71,7 +74,7 @@ def start_hls_stream(camera):
     segment_pattern = os.path.join(HLS_DIR, f"camera{cam_id}_%Y%m%d_%H%M%S.ts")
     playlist_file = os.path.join(HLS_DIR, f"camera{cam_id}.m3u8")
 
-    print(f"🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
+    logger.info(f"🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
 
     cmd = [
         ffmpeg,
@@ -97,9 +100,9 @@ def start_hls_stream(camera):
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         stream_processes[cam_id] = proc
-        print(f"🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
+        logger.info(f"🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
     except Exception as e:
-        print(f"❌ Ошибка запуска стрима для {camera['name']}: {e}")
+        logger.warning(f"❌ Ошибка запуска стрима для {camera['name']}: {e}")
 
 
 def restart_hls_stream(camera):

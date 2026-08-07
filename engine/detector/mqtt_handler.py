@@ -8,7 +8,9 @@ from engine.shared.constants import *
 from engine.shared.utils import ts, load_detector_cameras
 from engine.shared.mqtt_utils import send_mqtt_command
 from models.database import get_db
+from engine.shared.logger import get_logger
 
+logger = get_logger("detector")
 
 def on_cmd(client, userdata, msg):
     """Обработчик MQTT команд"""
@@ -27,18 +29,18 @@ def on_cmd(client, userdata, msg):
             _handle_stop_detector(userdata, cam_id)
 
     except Exception as e:
-        print(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
+        logger.warning(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
 
 
 def _handle_reload_config(client, userdata, cam_id):
     """Обрабатывает перезагрузку конфига камеры"""
-    print(f"{ts()} 📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
+    logger.info(f"{ts()} 📡 [CMD] Перезагрузка конфига для камеры {cam_id}")
 
     with get_db() as conn:
         cam = conn.execute("SELECT * FROM cameras WHERE id=?", (cam_id,)).fetchone()
 
     if not cam:
-        print(f"{ts()} ⚠️ Камера {cam_id} не найдена в БД")
+        logger.warning(f"{ts()} ⚠️ Камера {cam_id} не найдена в БД")
         return
 
     cam_dict = dict(cam)
@@ -50,18 +52,18 @@ def _handle_reload_config(client, userdata, cam_id):
 
             # ✅ ЗАЩИТА ОТ ДВОЙНОГО ВЫЗОВА
             if getattr(det, '_reloading', False):
-                print(f"{ts()} ⚠️ [{det.camera['name']}] Уже перезагружается, пропускаю")
+                logger.warning(f"{ts()} ⚠️ [{det.camera['name']}] Уже перезагружается, пропускаю")
                 return
             det._reloading = True
 
-            print(f"{ts()} ⏹️ [{det.camera['name']}] Перезагружаю настройки...")
+            logger.info(f"{ts()} ⏹️ [{det.camera['name']}] Перезагружаю настройки...")
 
             # Останавливаем с защитой
             try:
                 det.stop()
                 time.sleep(2)  # Даём время на освобождение ресурсов
             except Exception as e:
-                print(f"{ts()} {C_YELLOW}⚠️ [{det.camera['name']}] Ошибка остановки: {e}{C_RESET}")
+                logger.warning(f"{ts()} {C_YELLOW}⚠️ [{det.camera['name']}] Ошибка остановки: {e}{C_RESET}")
 
             # Обновляем настройки
             det.camera = cam_dict
@@ -87,25 +89,25 @@ def _handle_reload_config(client, userdata, cam_id):
                 from engine.detector.zones import load_zones
                 load_zones(det)
             except Exception as e:
-                print(f"{ts()} {C_RED}❌ [{det.camera['name']}] Ошибка загрузки зон: {e}{C_RESET}")
+                logger.warning(f"{ts()} {C_RED}❌ [{det.camera['name']}] Ошибка загрузки зон: {e}{C_RESET}")
 
             det.warmup_frames = 0
 
             # Запускаем если нужно
             if det.enabled:
-                print(f"{ts()} ▶️ [{det.camera['name']}] Запускаю детектор...")
+                logger.info(f"{ts()} ▶️ [{det.camera['name']}] Запускаю детектор...")
                 try:
                     result = det.start()
                     if result:
-                        print(f"{ts()} ✅ [{det.camera['name']}] Детектор запущен (порог: {det.threshold}%, зон: {len(det.zones)})")
+                        logger.info(f"{ts()} ✅ [{det.camera['name']}] Детектор запущен (порог: {det.threshold}%, зон: {len(det.zones)})")
                     else:
-                        print(f"{ts()} {C_RED}❌ [{det.camera['name']}] Не удалось запустить{C_RESET}")
+                        logger.warning(f"{ts()} {C_RED}❌ [{det.camera['name']}] Не удалось запустить{C_RESET}")
                 except Exception as e:
-                    print(f"{ts()} {C_RED}❌ [{det.camera['name']}] Ошибка запуска: {e}{C_RESET}")
+                    logger.warning(f"{ts()} {C_RED}❌ [{det.camera['name']}] Ошибка запуска: {e}{C_RESET}")
                     import traceback
                     traceback.print_exc()
             else:
-                print(f"{ts()} ⏸️ [{det.camera['name']}] Детектор отключён")
+                logger.info(f"{ts()} ⏸️ [{det.camera['name']}] Детектор отключён")
 
             # Сбрасываем флаг перезагрузки
             det._reloading = False
@@ -113,17 +115,17 @@ def _handle_reload_config(client, userdata, cam_id):
 
     # Если камера не найдена в активных — создаём новый детектор
     if not found and cam_dict.get("enabled") and cam_dict.get("motion_enabled"):
-        print(f"{ts()} 🆕 Создаю новый детектор для камеры {cam_id}")
+        logger.info(f"{ts()} 🆕 Создаю новый детектор для камеры {cam_id}")
         from engine.detector.motion_detector import MotionDetector
         mqtt_client = userdata.get("mqtt_client", client)
         det = MotionDetector(cam_dict, mqtt_client)
         if det.start():
             userdata["detectors"].append(det)
-            print(f"{ts()} ✅ [{det.camera['name']}] Детектор создан и запущен")
+            logger.info(f"{ts()} ✅ [{det.camera['name']}] Детектор создан и запущен")
         else:
-            print(f"{ts()} {C_RED}❌ [{cam_dict['name']}] Не удалось запустить{C_RESET}")
+            logger.warning(f"{ts()} {C_RED}❌ [{cam_dict['name']}] Не удалось запустить{C_RESET}")
     elif not found:
-        print(f"{ts()} ⏸️ Камера {cam_id} отключена или детектор выключен — пропускаю")
+        logger.info(f"{ts()} ⏸️ Камера {cam_id} отключена или детектор выключен — пропускаю")
 
 
 def _handle_ping(client, userdata):
@@ -136,12 +138,12 @@ def _handle_ping(client, userdata):
 
 
 def _handle_start_detector(client, userdata, cam_id):
-    print(f"{ts()} ▶️ [CMD] Запуск детектора для камеры {cam_id}")
+    logger.info(f"{ts()} ▶️ [CMD] Запуск детектора для камеры {cam_id}")
     # Аналогично reload_config
 
 
 def _handle_stop_detector(userdata, cam_id):
-    print(f"{ts()} ⏹️ [CMD] Остановка детектора для камеры {cam_id}")
+    logger.info(f"{ts()} ⏹️ [CMD] Остановка детектора для камеры {cam_id}")
     for det in userdata["detectors"]:
         if str(det.camera["id"]) == str(cam_id):
             det.enabled = False

@@ -7,7 +7,9 @@ import json
 import time
 from engine.shared.constants import *
 from engine.shared.utils import ts
+from engine.shared.logger import get_logger
 
+logger = get_logger("detector")
 
 class RecordingManager:
     def __init__(self, camera, ai_detector=None):
@@ -39,10 +41,10 @@ class RecordingManager:
             frame_with_boxes = ai.draw_boxes(frame.copy(), boxes)
             cv2.imwrite(filepath, frame_with_boxes, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
-            print(f"{ts()} 📸 [{self.camera['name']}] Скриншот сохранён: {filename}")
+            logger.info(f"{ts()} 📸 [{self.camera['name']}] Скриншот сохранён: {filename}")
             return filepath
         except Exception as e:
-            print(f"{ts()} ❌ [{self.camera['name']}] Ошибка скриншота: {e}")
+            logger.warning(f"{ts()} ❌ [{self.camera['name']}] Ошибка скриншота: {e}")
             return None
 
     def save_motion_boxes(self, boxes, frame_time):
@@ -67,7 +69,7 @@ class RecordingManager:
                         self.ai_frames_list.append(meta)
                     return filepath
             except Exception as e:
-                print(f"{ts()} {C_RED}❌ Ошибка сохранения AI-кадра: {e}{C_RESET}")
+                logger.warning(f"{ts()} {C_RED}❌ Ошибка сохранения AI-кадра: {e}{C_RESET}")
             return None
 
     def save_ai_frames_json(self):
@@ -95,5 +97,5 @@ class RecordingManager:
             os.fsync(f.fileno())
 
         self.ai_frames_list = []
-        print(f"{ts()} 📦 [{self.camera['name']}] AI-кадры сохранены: {len(data['frames'])} шт.")
+        logger.info(f"{ts()} 📦 [{self.camera['name']}] AI-кадры сохранены: {len(data['frames'])} шт.")
         return filepath

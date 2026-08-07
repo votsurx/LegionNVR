@@ -11,6 +11,9 @@ from engine.shared.constants import *
 from engine.shared.utils import ts, get_recordings_path
 from engine.shared.utils import find_ffmpeg
 from engine.shared.config import get_config
+from engine.shared.logger import get_logger
+
+logger = get_logger("streamer")
 
 config = get_config()
 HLS_RECORDINGS_PATH = config["hls_recordings_path"]
@@ -32,7 +35,7 @@ def start_continuous_recording(camera):
 
     retention_days = camera.get('record_retention_days', 7)
 
-    print(f"{ts()} 📼 Запуск непрерывной записи для {camera['name']} (хранение {retention_days} дн)")
+    logger.info(f"{ts()} 📼 Запуск непрерывной записи для {camera['name']} (хранение {retention_days} дн)")
 
     import threading
     thread = threading.Thread(
@@ -95,7 +98,7 @@ def _continuous_record_loop(camera):
                 proc.terminate()
                 proc = None
             
-            print(f"{ts()} 📁 Новая HLS папка: {current_hls_dir}")
+            logger.info(f"{ts()} 📁 Новая HLS папка: {current_hls_dir}")
             last_hour = current_hour_key
         
         # ✅ Запускаем запись сразу в HLS папку
@@ -116,7 +119,7 @@ def _continuous_record_loop(camera):
                 "-y", os.path.join(current_hls_dir, f"playlist_{hour_str}.m3u8")
             ]
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")
+            logger.info(f"{ts()} 🔴 Запись {camera['name']} → {current_hls_dir}")
         
         # ✅ Принудительно обновляем плейлист из сегментов каждые 30 секунд
         if int(time.strftime("%S")) % 30 == 0:
@@ -197,7 +200,7 @@ def _cleanup_old_hls(cam_id, retention_days, recordings_path):
         for hls_dir in glob_module.glob(os.path.join(date_path, "hls_*")):
             if os.path.getmtime(hls_dir) < cutoff_time:
                 shutil.rmtree(hls_dir, ignore_errors=True)
-                print(f"{ts()} 🗑️ Удалена старая HLS: {hls_dir}")
+                logger.info(f"{ts()} 🗑️ Удалена старая HLS: {hls_dir}")
 
         try:
             if not os.listdir(date_path):
@@ -230,7 +233,7 @@ def _cleanup_old_recordings(cam_id, retention_days, recordings_path):
                         pass
 
     if deleted_count > 0:
-        print(f"{ts()} 🗑️ Удалено {deleted_count} старых записей (>{retention_days} дн) для камеры {cam_id}")
+        logger.info(f"{ts()} 🗑️ Удалено {deleted_count} старых записей (>{retention_days} дн) для камеры {cam_id}")
 
 
 def _should_record_continuous(camera):
@@ -278,14 +281,14 @@ def start_motion_recording(camera, motion_start_time=None):
 
     with recording_lock:
         if cam_id in motion_recordings:
-            print(f"{ts()} ⚠️ Запись уже создана для {cam_id}, продлеваю")
+            logger.info(f"{ts()} ⚠️ Запись уже создана для {cam_id}, продлеваю")
             extend_recording(cam_id)
             return
 
     if not camera.get("enabled", True):
         return
     if not camera.get("record_enabled", False):
-        print(f"{ts()} ⏸️ Запись отключена для камеры {cam_id}")
+        logger.info(f"{ts()} ⏸️ Запись отключена для камеры {cam_id}")
         return
 
     record_pre_sec = camera.get('record_pre_sec', 5)
@@ -293,10 +296,10 @@ def start_motion_recording(camera, motion_start_time=None):
 
     if motion_start_time:
         alarm_time = motion_start_time
-        print(f"{ts()} {C_GREEN}📼 Тревога! Время MOG2: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
+        logger.info(f"{ts()} {C_GREEN}📼 Тревога! Время MOG2: {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
     else:
         alarm_time = time.time()
-        print(f"{ts()} {C_YELLOW}📼 Тревога! Время (текущее): {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
+        logger.info(f"{ts()} {C_YELLOW}📼 Тревога! Время (текущее): {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
 
     all_segments = []
     for seg in glob.glob(os.path.join(HLS_RECORDINGS_PATH, f"camera_{cam_id}", "*", "hls_*", "seg_*.ts")):
@@ -342,13 +345,13 @@ def start_motion_recording(camera, motion_start_time=None):
         'last_mtime': last_mtime
     }
 
-    print(f"{ts()} {C_BLUE}🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек{C_RESET}")
-    print(f"{ts()} {C_GREEN}📁 Сохранено {len(saved_pre)} сегментов предзаписи{C_RESET}")
+    logger.info(f"{ts()} {C_BLUE}🔴 Запись: буфер {record_pre_sec} сек + пост {record_post_sec} сек{C_RESET}")
+    logger.info(f"{ts()} {C_GREEN}📁 Сохранено {len(saved_pre)} сегментов предзаписи{C_RESET}")
 
     if saved_pre:
         first_time = os.path.getmtime(saved_pre[0])
         last_time = os.path.getmtime(saved_pre[-1])
-        print(f"{ts()} 📁 Предзапись: {time.strftime('%H:%M:%S', time.localtime(first_time))} → {time.strftime('%H:%M:%S', time.localtime(last_time))}")
+        logger.info(f"{ts()} 📁 Предзапись: {time.strftime('%H:%M:%S', time.localtime(first_time))} → {time.strftime('%H:%M:%S', time.localtime(last_time))}")
 
 
 def extend_recording(cam_id):
@@ -356,7 +359,7 @@ def extend_recording(cam_id):
     if cam_id not in motion_recordings:
         return
     motion_recordings[cam_id]['alarm_time'] = time.time()
-    print(f"{ts()} ⏱️ Запись продлена")
+    logger.info(f"{ts()} ⏱️ Запись продлена")
 
 
 def stop_motion_recording(camera_id):
@@ -367,10 +370,10 @@ def stop_motion_recording(camera_id):
     data = motion_recordings.pop(cam_id)
     data['recording'] = False
 
-    print(f"{ts()} ⏹️ Завершение записи для камеры {cam_id}")
+    logger.info(f"{ts()} ⏹️ Завершение записи для камеры {cam_id}")
 
     post_sec = data.get('post_sec', 10)
-    print(f"{ts()} ⏱️ Постзапись {post_sec} сек...")
+    logger.info(f"{ts()} ⏱️ Постзапись {post_sec} сек...")
     time.sleep(post_sec)
 
     all_saved = data['saved_pre'] + data['saved_body']
@@ -390,7 +393,7 @@ def stop_motion_recording(camera_id):
     all_saved.extend(post_segments)
 
     if len(all_saved) < 2:
-        print(f"{ts()} ❌ Слишком мало сегментов: {len(all_saved)}")
+        logger.warning(f"{ts()} ❌ Слишком мало сегментов: {len(all_saved)}")
         return
 
     all_saved = list(set(all_saved))
@@ -499,7 +502,7 @@ def _find_boxes_file(cam_id, alarm_time):
     age = time.time() - os.path.getmtime(newest)
 
     if age < 300:
-        print(f"{ts()} 📦 Выбран JSON: {os.path.basename(newest)} (возраст: {age:.1f}с)")
+        logger.info(f"{ts()} 📦 Выбран JSON: {os.path.basename(newest)} (возраст: {age:.1f}с)")
         return newest
     return None
 
@@ -514,6 +517,6 @@ def _save_to_db(cam_id, filepath):
                 (int(cam_id), filepath)
             )
             conn.commit()
-        print(f"{ts()} 📝 Запись добавлена в БД")
+        logger.info(f"{ts()} 📝 Запись добавлена в БД")
     except:
         pass

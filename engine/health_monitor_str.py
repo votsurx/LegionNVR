@@ -7,6 +7,9 @@ import subprocess
 import json
 import threading
 import paho.mqtt.client as mqtt
+from engine.shared.logger import get_logger
+
+logger = get_logger("web_server")
 
 class StreamerHealer:
     def __init__(self):
@@ -23,7 +26,7 @@ class StreamerHealer:
 
     def is_alive(self):
         if time.time() - self.last_restart < 60:
-            print(f"⏳ Streamer стартует... ({int(time.time() - self.last_restart)}с)")
+            logger.info(f"⏳ Streamer стартует... ({int(time.time() - self.last_restart)}с)")
             return True
 
         self._pong_received = False
@@ -45,7 +48,7 @@ class StreamerHealer:
         self._pong_received = True
 
     def kill(self):
-        print("🔪 Убиваю streamer (со всеми дочерними)...")
+        logger.info("🔪 Убиваю streamer (со всеми дочерними)...")
         try:
             ps_cmd = "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object { $_.CommandLine -like '*streamer*' -and $_.CommandLine -notlike '*web_server*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json"
             result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
@@ -59,32 +62,32 @@ class StreamerHealer:
                 pid = proc.get('ProcessId', 0)
                 if pid:
                     subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True, timeout=3)
-                    print(f"   ✅ PID {pid} и дочерние убиты")
+                    logger.info(f"   ✅ PID {pid} и дочерние убиты")
             close_cmd = "Get-Process | Where-Object { $_.MainWindowTitle -like '*streamer*' } | ForEach-Object { $_.CloseMainWindow() }"
             subprocess.run(['powershell', '-Command', close_cmd], capture_output=True, timeout=3)
-            print("   ✅ Окно терминала закрыто")
+            logger.info("   ✅ Окно терминала закрыто")
         except Exception as e:
-            print(f"   ⚠️ Ошибка убийства: {e}")
+            logger.warning(f"   ⚠️ Ошибка убийства: {e}")
 
     def start(self):
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print("🚀 Запускаю streamer...")
+        logger.info("🚀 Запускаю streamer...")
         subprocess.Popen(
             f'start cmd /k "cd /d {project_root} && python engine/streamer/main.py && pause"',
             shell=True
         )
         self.last_restart = time.time()
-        print("✅ streamer запущен, даём 60 сек на старт")
+        logger.info("✅ streamer запущен, даём 60 сек на старт")
 
     def heal_loop(self):
-        print("⏳ Даю 60 сек на старт streamer...")
+        logger.info("⏳ Даю 60 сек на старт streamer...")
         time.sleep(60)
 
         while True:
             # Сначала проверяем веб-сервер
             if not self.is_web_alive():
-                print("❌ Web Server не отвечает!")
-                print("🔄 Перезапуск Web Server...")
+                logger.warning("❌ Web Server не отвечает!")
+                logger.info("🔄 Перезапуск Web Server...")
                 # Ищем PID веб-сервера
                 ps_cmd = "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object { $_.CommandLine -like '*web_server*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json"
                 result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
@@ -98,21 +101,21 @@ class StreamerHealer:
                     pid = proc.get('ProcessId', 0)
                     if pid:
                         subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True)
-                        print(f"   ✅ Web Server (PID {pid}) убит")
+                        logger.info(f"   ✅ Web Server (PID {pid}) убит")
                 # Запускаем веб-сервер заново
                 subprocess.Popen(
                     ['start', 'cmd', '/k', 'cd /d C:\\legionNVR && python web_server.py'],
                     shell=True
                 )
-                print("✅ Web Server перезапущен")
+                logger.info("✅ Web Server перезапущен")
 
             # Потом проверяем себя
             if not self.is_alive():
-                print(f"⚠️ streamer недоступен. Проверю через 5 сек...")
+                logger.info(f"⚠️ streamer недоступен. Проверю через 5 сек...")
                 time.sleep(5)
                 if not self.is_alive():
-                    print(f"❌ streamer не отвечает (подтверждено)")
-                    print("🔄 Перезапуск streamer...")
+                    logger.warning(f"❌ streamer не отвечает (подтверждено)")
+                    logger.info("🔄 Перезапуск streamer...")
                     self.kill()
                     self.start()
                     self.last_restart = time.time()

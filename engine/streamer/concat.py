@@ -9,7 +9,9 @@ import tempfile
 import subprocess
 from engine.shared.constants import *
 from engine.shared.utils import ts
+from engine.shared.logger import get_logger
 
+logger = get_logger("streamer")
 
 def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
     """
@@ -17,7 +19,7 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
     1. Склеиваем все сегменты через -c copy (быстро)
     2. Одним ffmpeg накладываем рамки по таймкодам из JSON
     """
-    print(f"{ts()} 🔧 concat_with_ai_frames ВЫЗВАНА!")
+    logger.info(f"{ts()} 🔧 concat_with_ai_frames ВЫЗВАНА!")
 
     if not boxes_file or not os.path.exists(boxes_file):
         return False
@@ -30,13 +32,13 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
         if not ai_frames:
             return False
 
-        print(f"{ts()} 🕐 AI-кадров: {len(ai_frames)}")
+        logger.info(f"{ts()} 🕐 AI-кадров: {len(ai_frames)}")
 
         temp_dir = tempfile.mkdtemp(prefix="ai_post_")
         temp_video = os.path.join(temp_dir, "temp_concat.mp4")
 
         # Шаг 1: Быстрая склейка
-        print(f"{ts()} 🔧 Шаг 1: Быстрая склейка {len(selected_segments)} сегментов...")
+        logger.info(f"{ts()} 🔧 Шаг 1: Быстрая склейка {len(selected_segments)} сегментов...")
 
         concat_file = os.path.join(temp_dir, "concat.txt")
         with open(concat_file, "w", encoding='utf-8') as f:
@@ -50,10 +52,10 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
 
         if result.returncode != 0 or not os.path.exists(temp_video):
             error_msg = result.stderr.decode('utf-8', errors='ignore')[:500] if result.stderr else 'No stderr'
-            print(f"{ts()} {C_RED}❌ Ошибка быстрой склейки: {error_msg}{C_RESET}")
+            logger.warning(f"{ts()} {C_RED}❌ Ошибка быстрой склейки: {error_msg}{C_RESET}")
 
             # Попробуем перекодировать
-            print(f"{ts()} {C_YELLOW}⚠️ Пробую перекодирование...{C_RESET}")
+            logger.info(f"{ts()} {C_YELLOW}⚠️ Пробую перекодирование...{C_RESET}")
             cmd_concat2 = [
                 ffmpeg, "-loglevel", "error",
                 "-f", "concat", "-safe", "0",
@@ -65,15 +67,15 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
 
             if result2.returncode != 0 or not os.path.exists(temp_video):
                 error_msg2 = result2.stderr.decode('utf-8', errors='ignore')[:500] if result2.stderr else 'No stderr'
-                print(f"{ts()} {C_RED}❌ И перекодирование не удалось: {error_msg2}{C_RESET}")
+                logger.warning(f"{ts()} {C_RED}❌ И перекодирование не удалось: {error_msg2}{C_RESET}")
                 return False
 
-            print(f"{ts()} {C_GREEN}✅ Перекодирование удалось{C_RESET}")
+            logger.info(f"{ts()} {C_GREEN}✅ Перекодирование удалось{C_RESET}")
 
-        print(f"{ts()} ✅ Склейка готова: {os.path.getsize(temp_video):,} байт")
+        logger.info(f"{ts()} ✅ Склейка готова: {os.path.getsize(temp_video):,} байт")
 
         # Шаг 2: Накладываем рамки
-        print(f"{ts()} 🔧 Шаг 2: Накладываю рамки...")
+        logger.info(f"{ts()} 🔧 Шаг 2: Накладываю рамки...")
 
         draw_filters = []
         first_segment_time = os.path.getmtime(selected_segments[0])
@@ -112,7 +114,7 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
                 print(f"{ts()} {C_GREEN}✅ AI-ролик готов! ({os.path.getsize(final_output):,} байт){C_RESET}")
             else:
                 shutil.copy2(temp_video, final_output)
-                print(f"{ts()} {C_YELLOW}⚠️ Рамки не наложились{C_RESET}")
+                logger.warning(f"{ts()} {C_YELLOW}⚠️ Рамки не наложились{C_RESET}")
         else:
             shutil.copy2(temp_video, final_output)
 
@@ -124,7 +126,7 @@ def concat_with_ai_frames(selected_segments, boxes_file, final_output, ffmpeg):
         return os.path.exists(final_output) and os.path.getsize(final_output) > 0
 
     except Exception as e:
-        print(f"{ts()} {C_RED}❌ Ошибка AI-склейки: {e}{C_RESET}")
+        logger.warning(f"{ts()} {C_RED}❌ Ошибка AI-склейки: {e}{C_RESET}")
         import traceback
         traceback.print_exc()
         return False

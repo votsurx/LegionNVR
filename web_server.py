@@ -9,15 +9,14 @@ from models.user import User
 from web.auth import auth_bp, login_manager
 from web import register_blueprints
 import os
-import logging
 import threading
 from engine.shared.config import get_config
 from engine.health_monitor_det import DetectorHealer
 from engine.health_monitor_str import StreamerHealer
 from engine.health_monitor_mqtt import MQTThealer
+from engine.shared.logger import get_logger
 
-# Отключаем логи HTTP-запросов
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logger = get_logger("web_server")
 
 # Создаём приложение
 app = Flask(__name__)
@@ -35,7 +34,7 @@ with app.app_context():
     init_db()
     if not User.get_by_username('admin'):
         User.create('admin', 'admin123', 'admin')
-        print("👤 Создан пользователь: admin / admin123")
+        logger.info("👤 Создан пользователь: admin / admin123")
 
 if __name__ == '__main__':
     print("=" * 50)

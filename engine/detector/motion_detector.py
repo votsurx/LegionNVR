@@ -17,6 +17,9 @@ from engine.shared.mqtt_utils import send_mqtt_command
 from engine.detector.zones import load_zones
 from engine.detector.ai_detector import AIDetector
 from engine.detector.recording import RecordingManager
+from engine.shared.logger import get_logger
+
+logger = get_logger("detector")
 
 
 class MotionDetector:
@@ -86,7 +89,7 @@ class MotionDetector:
             return
         self.enabled = True
         self._reconnect_attempts = 0
-        print(f"{ts()} ✅ [{self.camera['name']}] Детектор ВКЛЮЧЕН")
+        logger.info(f"{ts()} ✅ [{self.camera['name']}] Детектор ВКЛЮЧЕН")
         self.start()
 
     def disable(self):
@@ -94,7 +97,7 @@ class MotionDetector:
             return
         self.enabled = False
         self.stop()
-        print(f"{ts()} ⏹️ [{self.camera['name']}] Детектор ВЫКЛЮЧЕН")
+        logger.info(f"{ts()} ⏹️ [{self.camera['name']}] Детектор ВЫКЛЮЧЕН")
 
     def start(self):
         if not self.enabled:
@@ -120,7 +123,7 @@ class MotionDetector:
                     if self.cap.isOpened():
                         break
                 except Exception as e:
-                    print(f"{ts()} {C_RED}⚠️ [{self.camera['name']}] Ошибка OpenCV: {e}{C_RESET}")
+                    logger.warning(f"{ts()} {C_RED}⚠️ [{self.camera['name']}] Ошибка OpenCV: {e}{C_RESET}")
                     time.sleep(self._reconnect_delay)
 
             if not self.cap or not self.cap.isOpened():
@@ -134,10 +137,10 @@ class MotionDetector:
             self._reconnect_attempts = 0
 
             mode = "🤖 AI + MOG2" if self.ai_enabled else "🔍 MOG2"
-            print(f"{ts()} {mode} [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
+            logger.info(f"{ts()} {mode} [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
             return True
         except Exception as e:
-            print(f"{ts()} {C_RED}❌ [{self.camera['name']}] КРИТИЧЕСКАЯ ошибка: {e}{C_RESET}")
+            logger.critical(f"{ts()} {C_RED}❌ [{self.camera['name']}] КРИТИЧЕСКАЯ ошибка: {e}{C_RESET}")
             self.cap = None
             self.running = False
             return False
@@ -178,7 +181,7 @@ class MotionDetector:
             try:
                 ret, frame = self.cap.read()
             except Exception as e:
-                print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
+                logger.warning(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
                 self._reconnect_attempts += 1
                 if self._reconnect_attempts <= self._max_reconnect_attempts:
                     time.sleep(2)
@@ -191,11 +194,11 @@ class MotionDetector:
             # ✅ ЗАЩИТА ОТ БИТЫХ КАДРОВ + АВТО-ПЕРЕПОДКЛЮЧЕНИЕ
             if not ret or frame is None or frame.size == 0:
                 self._consecutive_bad_frames += 1
-                print(f"{ts()} ⚠️ [{self.camera['name']}] Пропущен битый кадр ({self._consecutive_bad_frames}/{self._max_bad_frames})")
+                logger.warning(f"{ts()} ⚠️ [{self.camera['name']}] Пропущен битый кадр ({self._consecutive_bad_frames}/{self._max_bad_frames})")
                 
                 # Если слишком много битых кадров подряд — переподключаемся
                 if self._consecutive_bad_frames >= self._max_bad_frames:
-                    print(f"{ts()} 🔴 [{self.camera['name']}] Слишком много битых кадров! Переподключаюсь...")
+                    logger.warning(f"{ts()} 🔴 [{self.camera['name']}] Слишком много битых кадров! Переподключаюсь...")
                     self.cap = None
                     self.start()
                     self._consecutive_bad_frames = 0
@@ -208,13 +211,13 @@ class MotionDetector:
             try:
                 small = cv2.resize(frame, (320, 240))
             except Exception as e:
-                print(f"{ts()} ❌ [{self.camera['name']}] Ошибка resize: {e}")
+                logger.warning(f"{ts()} ❌ [{self.camera['name']}] Ошибка resize: {e}")
                 return
 
             try:
                 fgmask = self.fgbg.apply(small)
             except Exception as e:
-                print(f"{ts()} ❌ [{self.camera['name']}] Ошибка MOG2: {e}")
+                logger.warning(f"{ts()} ❌ [{self.camera['name']}] Ошибка MOG2: {e}")
                 return
 
             # Зоны
@@ -222,21 +225,21 @@ class MotionDetector:
                 try:
                     self._apply_zones(fgmask, frame)
                 except Exception as e:
-                    print(f"{ts()} ❌ [{self.camera['name']}] Ошибка zones: {e}")
+                    logger.warning(f"{ts()} ❌ [{self.camera['name']}] Ошибка zones: {e}")
                     return
 
             # Прогрев
             if self.warmup_frames < self.WARMUP_NEEDED:
                 self.warmup_frames += 1
                 if self.warmup_frames % 5 == 0:
-                    print(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
+                    logger.info(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
                 return
 
             try:
                 motion_pixels = np.count_nonzero(fgmask)
                 motion_percent = motion_pixels / (320 * 240) * 100
             except Exception as e:
-                print(f"{ts()} ❌ [{self.camera['name']}] Ошибка подсчёта motion: {e}")
+                logger.warning(f"{ts()} ❌ [{self.camera['name']}] Ошибка подсчёта motion: {e}")
                 return
 
             # Защита от смены день/ночь
@@ -254,14 +257,14 @@ class MotionDetector:
                 self._on_no_motion()
 
         except Exception as e:
-            print(f"{ts()} 🔴 КРИТИЧЕСКАЯ ОШИБКА В ЦИКЛЕ ДЕТЕКЦИИ!")
-            print(f"{ts()} 🔴 Ошибка: {e}")
+            logger.warning(f"{ts()} 🔴 КРИТИЧЕСКАЯ ОШИБКА В ЦИКЛЕ ДЕТЕКЦИИ!")
+            logger.warning(f"{ts()} 🔴 Ошибка: {e}")
             import traceback
             traceback.print_exc()
             # 🔄 Перезапускаем только при реальной критической ошибке
             self.running = False
             self.cap = None
-            print(f"{ts()} 🔄 Попытка перезапуска детектора...")
+            logger.info(f"{ts()} 🔄 Попытка перезапуска детектора...")
             self.start()
 
     def _apply_zones(self, fgmask, frame):
@@ -289,14 +292,14 @@ class MotionDetector:
                 self._last_mog2_log = now
                 if motion_percent < self.threshold:
                     if MOG2_LOG_COLORS:
-                        print(f"{ts()} {C_GRAY}👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%){C_RESET}")
+                        logger.info(f"{ts()} {C_GRAY}👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%){C_RESET}")
                     else:
-                        print(f"{ts()} 👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%)")
+                        logger.info(f"{ts()} 👁️ [{self.camera['name']}] MOG2: {motion_percent:.1f}% (порог: {self.threshold:.1f}%)")
                 else:
                     if MOG2_LOG_COLORS:
-                        print(f"{ts()} {C_YELLOW}📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%){C_RESET}")
+                        logger.info(f"{ts()} {C_YELLOW}📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%){C_RESET}")
                     else:
-                        print(f"{ts()} 📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)")
+                        logger.info(f"{ts()} 📊 [{self.camera['name']}] MOG2: {motion_percent:.1f}% (ПРЕВЫШЕН! {self.threshold:.1f}%)")
 
     def _handle_day_night_switch(self, frame, motion_percent):
         """Обрабатывает смену режима день/ночь"""
@@ -306,12 +309,12 @@ class MotionDetector:
             except:
                 ai_result = None
             if not ai_result:
-                print(f"{ts()} {C_GRAY}🌙 [{self.camera['name']}] Смена режима — сброс MOG2{C_RESET}")
+                logger.info(f"{ts()} {C_GRAY}🌙 [{self.camera['name']}] Смена режима — сброс MOG2{C_RESET}")
                 self.fgbg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
                 self.warmup_frames = 0
                 return
         else:
-            print(f"{ts()} {C_GRAY}🌙 [{self.camera['name']}] Смена режима — сброс MOG2{C_RESET}")
+            logger.info(f"{ts()} {C_GRAY}🌙 [{self.camera['name']}] Смена режима — сброс MOG2{C_RESET}")
             self.fgbg = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=25, detectShadows=False)
             self.warmup_frames = 0
 
@@ -364,7 +367,7 @@ class MotionDetector:
                                 if ai_result.get('car', 0) > 0:
                                     desc.append(f"🚗 x{ai_result['car']}")
                                 if desc:
-                                    print(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
+                                    logger.info(f"{ts()} {C_YELLOW}🎯 [{self.camera['name']}] Обновление рамок: {', '.join(desc)}{C_RESET}")
                 else:
                     # AI не нашёл объекты
                     self._ai_found_streak = 0
@@ -378,13 +381,13 @@ class MotionDetector:
                         if self._ai_miss_streak >= self._ai_miss_threshold:
                             if self.motion_end_timer is None:
                                 total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
-                                print(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Объекты не найдены. Жду {total_delay} сек...{C_RESET}")
+                                logger.info(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Объекты не найдены. Жду {total_delay} сек...{C_RESET}")
                                 self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
                                 self.motion_end_timer.daemon = True
                                 self.motion_end_timer.start()
                     else:
                         if motion_percent > 0:
-                            print(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
+                            logger.info(f"{ts()} {C_PURPLE}🤖 [{self.camera['name']}] Ложная тревога отфильтрована AI ({motion_percent:.1f}%){C_RESET}")
                             try:
                                 from models.database import get_db
                                 with get_db() as conn:
@@ -435,7 +438,7 @@ class MotionDetector:
         if self.motion_active:
             if self.motion_end_timer is None:
                 total_delay = self.motion_end_delay + self.camera.get('record_post_sec', 5)
-                print(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек...{C_RESET}")
+                logger.info(f"{ts()} {C_CYAN}⏳ [{self.camera['name']}] Нет движения. Жду {total_delay} сек...{C_RESET}")
                 self.motion_end_timer = threading.Timer(total_delay, self._stop_motion)
                 self.motion_end_timer.daemon = True
                 self.motion_end_timer.start()
@@ -476,27 +479,27 @@ class MotionDetector:
                     desc.append(f"👤 x{ai_result['person']}")
                 if ai_result.get('car', 0) > 0:
                     desc.append(f"🚗 x{ai_result['car']}")
-                print(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
+                logger.info(f"{ts()} {C_RED}{C_BOLD}🤖 [{self.camera['name']}] AI ТРЕВОГА! {', '.join(desc)} ({motion_percent:.1f}%){C_RESET}")
             else:
-                print(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
+                logger.info(f"{ts()} 📊 [{self.camera['name']}] Движение: {motion_percent:.1f}%")
 
             self._publish("motion_start", motion_percent, ai_result)
             result = send_mqtt_command(self.camera['id'], 'start_recording', {
                                  'motion_start_time': self.motion_start_time
                              })
-            print(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
+            logger.info(f"{ts()} {C_BLUE}🔴 [{self.camera['name']}] Старт записи! (MQTT: {'OK' if result else 'ОШИБКА'}){C_RESET}")
 
     def _stop_motion(self):
         """Останавливает тревогу"""
         if self.motion_active:
             boxes_file = self.recording.save_ai_frames_json()
             if boxes_file:
-                print(f"{ts()} {C_BLUE}📦 [{self.camera['name']}] JSON сохранён{C_RESET}")
+                logger.info(f"{ts()} {C_BLUE}📦 [{self.camera['name']}] JSON сохранён{C_RESET}")
 
             self.motion_active = False
             self._publish("motion_end", 0)
             send_mqtt_command(self.camera['id'], 'stop_recording')
-            print(f"{ts()} {C_GREEN}🟢 [{self.camera['name']}] Запись остановлена{C_RESET}")
+            logger.info(f"{ts()} {C_GREEN}🟢 [{self.camera['name']}] Запись остановлена{C_RESET}")
         self.motion_end_timer = None
 
     def _should_detect(self):

@@ -6,6 +6,9 @@ import time
 import subprocess
 import threading
 import paho.mqtt.client as mqtt
+from engine.shared.logger import get_logger
+
+logger = get_logger("web_server")
 
 class MQTThealer:
     def __init__(self):
@@ -22,32 +25,32 @@ class MQTThealer:
             return False
 
     def kill(self):
-        print("🔪 Убиваю MQTT-брокер...")
+        logger.info("🔪 Убиваю MQTT-брокер...")
         subprocess.run(['taskkill', '/F', '/IM', 'mosquitto.exe'], capture_output=True, timeout=3)
-        print("✅ MQTT-брокер убит")
+        logger.info("✅ MQTT-брокер убит")
 
     def start(self):
-        print("🚀 Запускаю MQTT-брокер...")
+        logger.info("🚀 Запускаю MQTT-брокер...")
         subprocess.Popen(['start', 'cmd', '/k', 'mosquitto'], shell=True)
         self.last_restart = time.time()
-        print("✅ MQTT-брокер запущен")
+        logger.info("✅ MQTT-брокер запущен")
 
     def heal_loop(self):
-        print("⏳ Даю 30 сек на старт MQTT-брокеру...")
+        logger.info("⏳ Даю 30 сек на старт MQTT-брокеру...")
         time.sleep(30)
 
         while True:
             if not self.is_alive():
-                print("⚠️ MQTT-брокер недоступен. Проверю через 5 сек...")
+                logger.info("⚠️ MQTT-брокер недоступен. Проверю через 5 сек...")
                 time.sleep(5)
                 
                 # Вторая проверка
                 if not self.is_alive():
-                    print("❌ MQTT-брокер не отвечает (подтверждено)")
-                    print("🔄 Перезапуск MQTT...")
+                    logger.warning("❌ MQTT-брокер не отвечает (подтверждено)")
+                    logger.info("🔄 Перезапуск MQTT...")
                     self.kill()
                     self.start()
-                    print("⏳ Жду 30 сек, чтобы сервисы переподключились...")
+                    logger.info("⏳ Жду 30 сек, чтобы сервисы переподключились...")
                     time.sleep(30)
             
             time.sleep(30)

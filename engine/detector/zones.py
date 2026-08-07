@@ -5,7 +5,9 @@ import json
 from engine.shared.constants import *
 from engine.shared.utils import ts
 from models.database import get_db
+from engine.shared.logger import get_logger
 
+logger = get_logger("detector")
 
 def load_zones(detector):
     """Загружает зоны детекции из БД"""
@@ -23,10 +25,10 @@ def load_zones(detector):
                 zone["points"] = json.loads(zone["points_json"])
                 detector.zones.append(zone)
             except Exception as e:
-                print(f"{ts()} {C_RED}⚠️ [{detector.camera['name']}] Ошибка парсинга зоны: {e}{C_RESET}")
+                logger.warning(f"{ts()} {C_RED}⚠️ [{detector.camera['name']}] Ошибка парсинга зоны: {e}{C_RESET}")
 
         if detector.zones:
-            print(f"{ts()} 🎯 [{detector.camera['name']}] Загружено зон: {len(detector.zones)}")
+            logger.info(f"{ts()} 🎯 [{detector.camera['name']}] Загружено зон: {len(detector.zones)}")
     except Exception as e:
-        print(f"{ts()} {C_RED}⚠️ [{detector.camera['name']}] Ошибка загрузки зон: {e}{C_RESET}")
+        logger.warning(f"{ts()} {C_RED}⚠️ [{detector.camera['name']}] Ошибка загрузки зон: {e}{C_RESET}")
         detector.zones = []
