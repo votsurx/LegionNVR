@@ -69,7 +69,7 @@ Write-Host "  ✅ УСТАНОВКА ЗАВЕРШЕНА!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Запуск: .\start_all.ps1" -ForegroundColor Cyan
-Write-Host "Веб: http://localhost:8080" -ForegroundColor Cyan
+Write-Host "Веб: http://localhost:8081" -ForegroundColor Cyan
 Write-Host "Логин: admin / admin123" -ForegroundColor Cyan
 Write-Host ""
 pause

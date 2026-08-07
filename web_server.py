@@ -41,7 +41,7 @@ if __name__ == '__main__':
     print("=" * 50)
     print("[Legion NVR] Web Server V6.0")
     print("=" * 50)
-    print("[Web] http://localhost:8080")
+    print("[Web] http://localhost:8081")
 
     det_healer = DetectorHealer()
     str_healer = StreamerHealer()
@@ -51,4 +51,4 @@ if __name__ == '__main__':
     threading.Thread(target=det_healer.heal_loop, daemon=True).start()
     threading.Thread(target=str_healer.heal_loop, daemon=True).start()
 
-    app.run(host='0.0.0.0', port=8080, threaded=True)
+    app.run(host='0.0.0.0', port=8081, threaded=True)

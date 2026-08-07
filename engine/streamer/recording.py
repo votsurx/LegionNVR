@@ -12,6 +12,9 @@ from engine.shared.utils import ts, get_recordings_path
 from engine.shared.utils import find_ffmpeg
 from engine.shared.config import get_config
 
+config = get_config()
+HLS_RECORDINGS_PATH = config["hls_recordings_path"]
+
 # Глобальные переменные
 motion_recordings = {}
 recording_lock = threading.Lock()
@@ -296,13 +299,12 @@ def start_motion_recording(camera, motion_start_time=None):
         print(f"{ts()} {C_YELLOW}📼 Тревога! Время (текущее): {time.strftime('%H:%M:%S', time.localtime(alarm_time))}{C_RESET}")
 
     all_segments = []
-    for seg in glob.glob(os.path.join(HLS_DIR, f"camera{cam_id}*.ts")):
+    for seg in glob.glob(os.path.join(HLS_RECORDINGS_PATH, f"camera_{cam_id}", "*", "hls_*", "seg_*.ts")):
         try:
             mtime = os.path.getmtime(seg)
             all_segments.append((mtime, seg))
         except:
             pass
-
     all_segments.sort(key=lambda x: x[0])
 
     start_time = alarm_time - record_pre_sec
@@ -358,9 +360,7 @@ def extend_recording(cam_id):
 
 
 def stop_motion_recording(camera_id):
-    """Завершает запись и склеивает ролик"""
     cam_id = str(camera_id)
-
     if cam_id not in motion_recordings:
         return
 
@@ -396,56 +396,56 @@ def stop_motion_recording(camera_id):
     all_saved = list(set(all_saved))
     all_saved_sorted = sorted(all_saved, key=lambda f: os.path.getmtime(f))
 
-    print(f"{ts()} 📊 Сегментов после сортировки по времени: {len(all_saved_sorted)}")
-    for i, seg in enumerate(all_saved_sorted[:5]):
-        seg_time = os.path.getmtime(seg)
-        print(f"{ts()}   #{i}: {os.path.basename(seg)} → {time.strftime('%H:%M:%S', time.localtime(seg_time))}")
-
-    from engine.streamer.concat import concat_with_ai_frames
-    from engine.shared.utils import find_ffmpeg
-
-    ffmpeg = find_ffmpeg()
-    if not ffmpeg:
-        return
-
-    now = time.strftime("%Y-%m-%d_%H-%M-%S")
-    recordings_path = get_recordings_path()
-    date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
-    os.makedirs(date_dir, exist_ok=True)
-    final_output = os.path.join(date_dir, f"{now}_motion.mp4")
-
-    boxes_file = _find_boxes_file(cam_id, data['alarm_time'])
-
-    if boxes_file:
-        success = concat_with_ai_frames(all_saved_sorted, boxes_file, final_output, ffmpeg)
-        if success:
-            _save_to_db(cam_id, final_output)
-            try:
-                os.remove(boxes_file)
-            except:
-                pass
-            try:
-                shutil.rmtree(data['temp_dir'], ignore_errors=True)
-            except:
-                pass
+    # ✅ ЗАПУСКАЕМ СКЛЕЙКУ В ОТДЕЛЬНОМ ПОТОКЕ
+    import threading
+    def run_concat():
+        from engine.streamer.concat import concat_with_ai_frames
+        from engine.shared.utils import find_ffmpeg
+        ffmpeg = find_ffmpeg()
+        if not ffmpeg:
             return
 
-    concat_file = os.path.join(data['temp_dir'], "concat.txt")
-    with open(concat_file, "w") as f:
-        for seg in all_saved_sorted:
-            f.write(f"file '{os.path.abspath(seg).replace(chr(92), '/')}'\n")
+        now = time.strftime("%Y-%m-%d_%H-%M-%S")
+        recordings_path = get_recordings_path()
+        date_dir = os.path.join(recordings_path, f"camera_{cam_id}", time.strftime("%Y-%m-%d"))
+        os.makedirs(date_dir, exist_ok=True)
+        final_output = os.path.join(date_dir, f"{now}_motion.mp4")
 
-    cmd = ["ffmpeg", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", "-y", final_output]
-    import subprocess
-    result = subprocess.run(cmd, timeout=120, capture_output=True)
+        boxes_file = _find_boxes_file(cam_id, data['alarm_time'])
 
-    if result.returncode == 0 and os.path.exists(final_output):
-        _save_to_db(cam_id, final_output)
+        if boxes_file:
+            success = concat_with_ai_frames(all_saved_sorted, boxes_file, final_output, ffmpeg)
+            if success:
+                _save_to_db(cam_id, final_output)
+                try:
+                    os.remove(boxes_file)
+                except:
+                    pass
+                try:
+                    shutil.rmtree(data['temp_dir'], ignore_errors=True)
+                except:
+                    pass
+                return
 
-    try:
-        shutil.rmtree(data['temp_dir'], ignore_errors=True)
-    except:
-        pass
+        concat_file = os.path.join(data['temp_dir'], "concat.txt")
+        with open(concat_file, "w") as f:
+            for seg in all_saved_sorted:
+                f.write(f"file '{os.path.abspath(seg).replace(chr(92), '/')}'\n")
+
+        cmd = ["ffmpeg", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", "-y", final_output]
+        import subprocess
+        result = subprocess.run(cmd, timeout=120, capture_output=True)
+
+        if result.returncode == 0 and os.path.exists(final_output):
+            _save_to_db(cam_id, final_output)
+
+        try:
+            shutil.rmtree(data['temp_dir'], ignore_errors=True)
+        except:
+            pass
+
+    # Запускаем склейку в фоне
+    threading.Thread(target=run_concat, daemon=True).start()
 
 
 def save_body_segments():

@@ -66,6 +66,9 @@ class MotionDetector:
         self._last_ai_frame_time = 0
         self.frame_count = 0
 
+        self._consecutive_bad_frames = 0
+        self._max_bad_frames = 10
+
     @property
     def ai_enabled(self):
         return self.ai_detector.enabled
@@ -157,81 +160,109 @@ class MotionDetector:
 
     def loop(self):
         """Один цикл детекции"""
-        if not self.running or not self.enabled:
-            return
-
-        # ✅ ПРОВЕРКА РАСПИСАНИЯ
-        if not self._should_detect():
-            return  # Не время для детекции по расписанию
-
-        if self.cap is None:
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                self.start()
-            return
-
-
-        if self.cap is None:
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                self.start()
-            return
-
         try:
-            ret, frame = self.cap.read()
+            if not self.running or not self.enabled:
+                return
+
+            # ✅ ПРОВЕРКА РАСПИСАНИЯ
+            if not self._should_detect():
+                return
+
+            if self.cap is None:
+                self._reconnect_attempts += 1
+                if self._reconnect_attempts <= self._max_reconnect_attempts:
+                    self.start()
+                return
+
+            # Чтение кадра
+            try:
+                ret, frame = self.cap.read()
+            except Exception as e:
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
+                self._reconnect_attempts += 1
+                if self._reconnect_attempts <= self._max_reconnect_attempts:
+                    time.sleep(2)
+                    self.start()
+                else:
+                    self.running = False
+                    self.cap = None
+                return
+
+            # ✅ ЗАЩИТА ОТ БИТЫХ КАДРОВ + АВТО-ПЕРЕПОДКЛЮЧЕНИЕ
+            if not ret or frame is None or frame.size == 0:
+                self._consecutive_bad_frames += 1
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Пропущен битый кадр ({self._consecutive_bad_frames}/{self._max_bad_frames})")
+                
+                # Если слишком много битых кадров подряд — переподключаемся
+                if self._consecutive_bad_frames >= self._max_bad_frames:
+                    print(f"{ts()} 🔴 [{self.camera['name']}] Слишком много битых кадров! Переподключаюсь...")
+                    self.cap = None
+                    self.start()
+                    self._consecutive_bad_frames = 0
+                return
+
+            # Если кадр нормальный — сбрасываем счётчик битых кадров и попыток
+            self._consecutive_bad_frames = 0
+            self._reconnect_attempts = 0
+
+            try:
+                small = cv2.resize(frame, (320, 240))
+            except Exception as e:
+                print(f"{ts()} ❌ [{self.camera['name']}] Ошибка resize: {e}")
+                return
+
+            try:
+                fgmask = self.fgbg.apply(small)
+            except Exception as e:
+                print(f"{ts()} ❌ [{self.camera['name']}] Ошибка MOG2: {e}")
+                return
+
+            # Зоны
+            if self.zones:
+                try:
+                    self._apply_zones(fgmask, frame)
+                except Exception as e:
+                    print(f"{ts()} ❌ [{self.camera['name']}] Ошибка zones: {e}")
+                    return
+
+            # Прогрев
+            if self.warmup_frames < self.WARMUP_NEEDED:
+                self.warmup_frames += 1
+                if self.warmup_frames % 5 == 0:
+                    print(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
+                return
+
+            try:
+                motion_pixels = np.count_nonzero(fgmask)
+                motion_percent = motion_pixels / (320 * 240) * 100
+            except Exception as e:
+                print(f"{ts()} ❌ [{self.camera['name']}] Ошибка подсчёта motion: {e}")
+                return
+
+            # Защита от смены день/ночь
+            if motion_percent > 80.0:
+                self._handle_day_night_switch(frame, motion_percent)
+                return
+
+            # Лог MOG2
+            self._log_mog2(motion_percent)
+
+            # Основная логика
+            if motion_percent > self.threshold:
+                self._on_motion_detected(frame, motion_percent)
+            else:
+                self._on_no_motion()
+
         except Exception as e:
-            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                time.sleep(2)
-                self.start()
-            else:
-                self.running = False
-                self.cap = None
-            return
-
-        if not ret:
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                time.sleep(2)
-                self.start()
-            else:
-                self.running = False
-                self.cap = None
-            return
-
-        self._reconnect_attempts = 0
-
-        small = cv2.resize(frame, (320, 240))
-        fgmask = self.fgbg.apply(small)
-
-        # Зоны
-        if self.zones:
-            self._apply_zones(fgmask, frame)
-
-        # Прогрев
-        if self.warmup_frames < self.WARMUP_NEEDED:
-            self.warmup_frames += 1
-            if self.warmup_frames % 5 == 0:
-                print(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
-            return
-
-        motion_pixels = np.count_nonzero(fgmask)
-        motion_percent = motion_pixels / (320 * 240) * 100
-
-        # Защита от смены день/ночь
-        if motion_percent > 80.0:
-            self._handle_day_night_switch(frame, motion_percent)
-            return
-
-        # Лог MOG2
-        self._log_mog2(motion_percent)
-
-        # Основная логика
-        if motion_percent > self.threshold:
-            self._on_motion_detected(frame, motion_percent)
-        else:
-            self._on_no_motion()
+            print(f"{ts()} 🔴 КРИТИЧЕСКАЯ ОШИБКА В ЦИКЛЕ ДЕТЕКЦИИ!")
+            print(f"{ts()} 🔴 Ошибка: {e}")
+            import traceback
+            traceback.print_exc()
+            # 🔄 Перезапускаем только при реальной критической ошибке
+            self.running = False
+            self.cap = None
+            print(f"{ts()} 🔄 Попытка перезапуска детектора...")
+            self.start()
 
     def _apply_zones(self, fgmask, frame):
         """Применяет зоны детекции"""

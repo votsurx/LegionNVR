@@ -24,7 +24,7 @@ Write-Host ""
 Write-Host "✅ ВСЕ СЕРВИСЫ ЗАПУЩЕНЫ!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Окна:"
-Write-Host "  🖥️  Web Server     - http://localhost:8080" -ForegroundColor Cyan
+Write-Host "  🖥️  Web Server     - http://localhost:8081" -ForegroundColor Cyan
 Write-Host "  🔍  Motion Detector - engine/detector/main.py" -ForegroundColor Cyan
 Write-Host "  🎥  Stream Engine  - engine/streamer/main.py" -ForegroundColor Cyan
 Write-Host ""

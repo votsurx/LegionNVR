@@ -1,3 +1,3 @@
-Write-Host "🖥️ Legion NVR Web Server :8080" -ForegroundColor Cyan
+Write-Host "🖥️ Legion NVR Web Server :8081" -ForegroundColor Cyan
 cd $PSScriptRoot
 python web_server.py

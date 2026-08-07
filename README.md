@@ -61,7 +61,7 @@ pip install ultralytics
 🚀 ЗАПУСК
 bash
 .\start_all.bat
-Веб-интерфейс: http://localhost:8080
+Веб-интерфейс: http://localhost:8081
 Логин: admin / Пароль: admin123
 
 🛠️ СТЕК

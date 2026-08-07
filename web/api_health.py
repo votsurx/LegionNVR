@@ -85,7 +85,7 @@ def health_full():
     str_healer = StreamerHealer()
 
     services = {
-        'web_server': {'status': 'running', 'port': 8080, 'pid': os.getpid()},
+        'web_server': {'status': 'running', 'port': 8081, 'pid': os.getpid()},
         'mqtt': {'status': 'running' if mqtt_running() else 'stopped', 'port': 1883},
         'detector': {'status': 'running' if det_healer.is_alive() else 'stopped', 'port': None},
         'streamer': {'status': 'running' if str_healer.is_alive() else 'stopped', 'port': None}

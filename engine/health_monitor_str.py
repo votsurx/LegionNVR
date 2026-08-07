@@ -16,7 +16,7 @@ class StreamerHealer:
     def is_web_alive(self):
         try:
             import requests
-            requests.get("http://localhost:8080/health", timeout=2)
+            requests.get("http://localhost:8081/health", timeout=2)
             return True
         except:
             return False
