@@ -10,6 +10,7 @@ import time
 import threading
 import tempfile
 import traceback
+import subprocess
 
 from engine.shared.constants import *
 from engine.shared.utils import ts
@@ -72,6 +73,10 @@ class MotionDetector:
         self.last_camera_check = time.time()
         self.camera_health_timer = None
 
+        self.ffmpeg_proc = None
+        self.frame = None
+        self._cap_ready = False
+
     @property
     def ai_enabled(self):
         return self.ai_detector.enabled
@@ -132,27 +137,47 @@ class MotionDetector:
             return False
 
     def _connect_rtsp(self):
-            """Подключается к RTSP в фоновом потоке"""
-            for attempt in range(self._max_reconnect_attempts):
-                try:
-                    self.cap = cv2.VideoCapture(self._rtsp_url, cv2.CAP_FFMPEG)
-                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    if self.cap.isOpened():
-                        self.running = True
-                        self._connecting = False
-                        self.warmup_frames = 0
-                        self._reconnect_attempts = 0
-                        print(f"{ts()} ✅ [{self.camera['name']}] Детектор запущен (RTSP подключён)")
-                        self._start_camera_monitor()
-                        return
-                except Exception as e:
-                    print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка OpenCV: {e}")
-                    time.sleep(self._reconnect_delay)
+        """Запускает ffmpeg через subprocess и читает кадры из pipe"""
+        cmd = [
+            'ffmpeg',
+            '-rtsp_transport', 'tcp',
+            '-i', self._rtsp_url,
+            '-f', 'image2pipe',
+            '-vcodec', 'mjpeg',
+            '-q:v', '5',
+            '-'
+        ]
+        self.ffmpeg_proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=10**8
+        )
+        self._cap_ready = True
+        self.frame = None
+        print(f"{ts()} 🎥 ffmpeg запущен через subprocess")
+        threading.Thread(target=self._ffmpeg_reader, daemon=True).start()
 
-            print(f"{ts()} ❌ [{self.camera['name']}] Не удалось подключиться к RTSP")
-            self.cap = None
-            self.running = False
-            self._connecting = False
+    def _ffmpeg_reader(self):
+        """Читает MJPEG-кадры из stdout ffmpeg"""
+        buffer = bytearray()
+        while self.running and self._cap_ready:
+            chunk = self.ffmpeg_proc.stdout.read(4096)
+            if not chunk:
+                continue
+            buffer += chunk
+
+            # Ищем границы JPEG (0xFFD8 и 0xFFD9)
+            start = buffer.find(b'\xff\xd8')
+            end = buffer.find(b'\xff\xd9', start + 2)
+            if start != -1 and end != -1:
+                jpeg_data = buffer[start:end + 2]
+                frame = cv2.imdecode(np.frombuffer(jpeg_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+                if frame is not None:
+                    self.frame = frame
+                    self._cap_ready = True
+                buffer = buffer[end + 2:]
+            time.sleep(0.01)
 
     def _start_camera_monitor(self):
         if self.camera_health_timer:
@@ -162,53 +187,44 @@ class MotionDetector:
         self.camera_health_timer.start()
 
     def _check_camera_health(self):
-        """Проверяет здоровье камеры и перезапускает только её"""
         if not self.enabled or not self.running:
             return
-
-        # Проверяем, читаются ли кадры
         try:
             ret, frame = self.cap.read()
             if not ret:
-                self.camera_health = False
-                print(f"{ts()} ⚠️ [{self.camera['name']}] Камера не отвечает, переподключаюсь...")
-                if self.enabled:
-                    self._reconnect_attempts += 1
-                    if self._reconnect_attempts <= self._max_reconnect_attempts:
-                        threading.Thread(target=self._connect_rtsp, daemon=True).start()
-                    else:
-                        print(f"{ts()} ❌ [{self.camera['name']}] Исчерпаны попытки, останавливаю камеру")
-                        self.stop()
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Потеря кадра, переподключаюсь...")
+                self._reconnect_attempts += 1
+                if self._reconnect_attempts <= self._max_reconnect_attempts:
+                    self._connecting = True
+                    threading.Thread(target=self._connect_rtsp, daemon=True).start()
+                else:
+                    self.stop()
                 return
-            else:
-                self.camera_health = True
-        except Exception as e:
-            self.camera_health = False
-            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка проверки камеры: {e}")
-            if self.enabled:
-                print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск камеры")
-                self.stop()
-                time.sleep(2)
-                self.start()
-        finally:
-            # Перезапускаем таймер
-            self._start_camera_monitor()
+        except:
+            pass
+        self._start_camera_monitor()
 
     def stop(self):
-        print(f"{ts()} 🔍 DEBUG: stop() вызван")
-        self.running = False
-        self.enabled = False  # ← добавляем, чтобы отключить обработку
-
-        if self.cap:
+        # Останавливаем ffmpeg процесс
+        if self.ffmpeg_proc:
             try:
-                self.cap.release()
+                self.ffmpeg_proc.terminate()
+                self.ffmpeg_proc.wait(timeout=2)
             except:
-                pass
-            self.cap = None
+                self.ffmpeg_proc.kill()
+            self.ffmpeg_proc = None
 
+        self.frame = None
+        self._cap_ready = False
+        self.running = False
+        self.enabled = False
+
+        # Останавливаем таймер мониторинга
         if self.camera_health_timer:
             self.camera_health_timer.cancel()
             self.camera_health_timer = None
+
+        print(f"{ts()} ⏹️ [{self.camera['name']}] Детектор остановлен")
 
     def restart(self):
         self.stop()
@@ -221,43 +237,16 @@ class MotionDetector:
         return self.start()
 
     def loop(self):
-        if not self.running or not self.enabled or self._connecting:
+        # Если детектор выключен или кадры не готовы — выходим
+        if not self.running or not self.enabled or not self._cap_ready:
             return
+
+        frame = self.frame
+        if frame is None:
+            return
+
         try:
-            if not self.running or not self.enabled:
-                return
-
-            if self.cap is None:
-                if not self.enabled:
-                    return
-                self._reconnect_attempts += 1
-                if self._reconnect_attempts <= self._max_reconnect_attempts:
-                    try:
-                        self.start()  # ← ЗАЩИТИТЬ!
-                    except Exception as e:
-                        print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка при start(): {e}")
-                        self.running = False
-                else:
-                    self.running = False
-                return
-
-            ret, frame = self.cap.read()
-            if not ret:
-                self._reconnect_attempts += 1
-                if self._reconnect_attempts <= self._max_reconnect_attempts:
-                    time.sleep(2)
-                    try:
-                        self.start()  # ← ЗАЩИТИТЬ!
-                    except Exception as e:
-                        print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка при start(): {e}")
-                        self.running = False
-                else:
-                    self.running = False
-                    self.cap = None
-                return
-
-            self._reconnect_attempts = 0
-
+            # Дальше обычная обработка кадра, но без self.cap.read()
             small = cv2.resize(frame, (320, 240))
             fgmask = self.fgbg.apply(small)
 
@@ -290,16 +279,11 @@ class MotionDetector:
                 self._on_no_motion()
 
         except Exception as e:
-            print(f"{ts()} 🔴 НЕОБРАБОТАННОЕ ИСКЛЮЧЕНИЕ В loop(): {e}")
+            print(f"{ts()} 🔴 ОШИБКА В loop(): {e}")
             import traceback
             traceback.print_exc()
-            if self.enabled:
-                try:
-                    self.start()
-                except:
-                    pass
-            else:
-                print(f"{ts()} ⏸️ Детектор выключен — не перезапускаю")
+            # При ошибке не перезапускаем, просто выходим
+            return
 
     def _apply_zones(self, fgmask, frame):
         """Применяет зоны детекции"""
