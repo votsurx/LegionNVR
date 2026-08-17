@@ -7,6 +7,7 @@ import subprocess
 import json
 import threading
 import paho.mqtt.client as mqtt
+from engine.shared.utils import ts
 
 class DetectorHealer:
     def __init__(self):
@@ -44,7 +45,7 @@ class DetectorHealer:
         self._pong_received = True
 
     def kill(self):
-        print("🔪 Убиваю detector (со всеми дочерними)...")
+        print(f"{ts()}🔪 Убиваю detector (со всеми дочерними)...")
         try:
             ps_cmd = "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object { $_.CommandLine -like '*detector*' -and $_.CommandLine -notlike '*web_server*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json"
             result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
@@ -58,32 +59,32 @@ class DetectorHealer:
                 pid = proc.get('ProcessId', 0)
                 if pid:
                     subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True, timeout=3)
-                    print(f"   ✅ PID {pid} и дочерние убиты")
+                    print(f"{ts()}   ✅ PID {pid} и дочерние убиты")
             close_cmd = "Get-Process | Where-Object { $_.MainWindowTitle -like '*detector*' } | ForEach-Object { $_.CloseMainWindow() }"
             subprocess.run(['powershell', '-Command', close_cmd], capture_output=True, timeout=3)
-            print("   ✅ Окно терминала закрыто")
+            print(f"{ts()}   ✅ Окно терминала закрыто")
         except Exception as e:
-            print(f"   ⚠️ Ошибка убийства: {e}")
+            print(f"{ts()}   ⚠️ Ошибка убийства: {e}")
 
     def start(self):
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print("🚀 Запускаю detector...")
+        print(f"{ts()}🚀 Запускаю detector...")
         subprocess.Popen(
             f'start cmd /k "cd /d {project_root} && python engine/detector/main.py && pause"',
             shell=True
         )
         #self.last_restart = time.time()
-        print("✅ detector запущен, даём 60 сек на старт")
+        print(f"{ts()}✅ detector запущен, даём 60 сек на старт")
 
     def heal_loop(self):
         while True:
             # Только проверка детектора через MQTT ping/pong
             if not self.is_alive():
-                print(f"⚠️ detector недоступен. Проверю через 5 сек...")
+                print(f"{ts()}⚠️ detector недоступен. Проверю через 5 сек...")
                 time.sleep(5)
                 if not self.is_alive():
-                    print(f"❌ detector не отвечает (подтверждено)")
-                    print("🔄 Перезапуск detector...")
+                    print(f"{ts()}❌ detector не отвечает (подтверждено)")
+                    print(f"{ts()}🔄 Перезапуск detector...")
                     self.kill()
                     self.start()
                     self.last_restart = time.time()

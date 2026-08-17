@@ -17,6 +17,7 @@ from engine.shared.mqtt_utils import send_mqtt_command
 from engine.detector.zones import load_zones
 from engine.detector.ai_detector import AIDetector
 from engine.detector.recording import RecordingManager
+from engine.shared.utils import ts
 
 
 class MotionDetector:
@@ -130,45 +131,6 @@ class MotionDetector:
             self.running = False
             return False
 
-        def _start_camera_monitor(self):
-            if self.camera_health_timer:
-                self.camera_health_timer.cancel()
-            self.camera_health_timer = threading.Timer(self.camera_check_interval, self._check_camera_health)
-            self.camera_health_timer.daemon = True
-            self.camera_health_timer.start()
-
-        def _check_camera_health(self):
-            """Проверяет здоровье камеры и перезапускает только её"""
-            if not self.enabled or not self.running:
-                return
-
-            # Проверяем, читаются ли кадры
-            try:
-                ret, frame = self.cap.read()
-                if not ret:
-                    self.camera_health = False
-                    print(f"{ts()} ⚠️ [{self.camera['name']}] Камера не отвечает")
-                    # Если камера включена — перезапускаем только эту камеру
-                    if self.enabled:
-                        print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск камеры")
-                        self.stop()
-                        time.sleep(2)
-                        self.start()
-                    return
-                else:
-                    self.camera_health = True
-            except Exception as e:
-                self.camera_health = False
-                print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка проверки камеры: {e}")
-                if self.enabled:
-                    print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск камеры")
-                    self.stop()
-                    time.sleep(2)
-                    self.start()
-            finally:
-                # Перезапускаем таймер
-                self._start_camera_monitor()
-
     def _connect_rtsp(self):
             """Подключается к RTSP в фоновом потоке"""
             for attempt in range(self._max_reconnect_attempts):
@@ -192,7 +154,48 @@ class MotionDetector:
             self.running = False
             self._connecting = False
 
+    def _start_camera_monitor(self):
+        if self.camera_health_timer:
+            self.camera_health_timer.cancel()
+        self.camera_health_timer = threading.Timer(self.camera_check_interval, self._check_camera_health)
+        self.camera_health_timer.daemon = True
+        self.camera_health_timer.start()
+
+    def _check_camera_health(self):
+        """Проверяет здоровье камеры и перезапускает только её"""
+        if not self.enabled or not self.running:
+            return
+
+        # Проверяем, читаются ли кадры
+        try:
+            ret, frame = self.cap.read()
+            if not ret:
+                self.camera_health = False
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Камера не отвечает, переподключаюсь...")
+                if self.enabled:
+                    self._reconnect_attempts += 1
+                    if self._reconnect_attempts <= self._max_reconnect_attempts:
+                        threading.Thread(target=self._connect_rtsp, daemon=True).start()
+                    else:
+                        print(f"{ts()} ❌ [{self.camera['name']}] Исчерпаны попытки, останавливаю камеру")
+                        self.stop()
+                return
+            else:
+                self.camera_health = True
+        except Exception as e:
+            self.camera_health = False
+            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка проверки камеры: {e}")
+            if self.enabled:
+                print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск камеры")
+                self.stop()
+                time.sleep(2)
+                self.start()
+        finally:
+            # Перезапускаем таймер
+            self._start_camera_monitor()
+
     def stop(self):
+        print(f"{ts()} 🔍 DEBUG: stop() вызван")
         self.running = False
         self.enabled = False  # ← добавляем, чтобы отключить обработку
 
