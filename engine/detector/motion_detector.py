@@ -66,6 +66,11 @@ class MotionDetector:
         self._last_ai_frame_time = 0
         self.frame_count = 0
 
+        self.camera_health = True
+        self.camera_check_interval = 30  # проверка каждые 30 секунд
+        self.last_camera_check = time.time()
+        self.camera_health_timer = None
+
     @property
     def ai_enabled(self):
         return self.ai_detector.enabled
@@ -94,10 +99,102 @@ class MotionDetector:
         print(f"{ts()} ⏹️ [{self.camera['name']}] Детектор ВЫКЛЮЧЕН")
 
     def start(self):
-        if not self.enabled:
+        try:
+            if not self.enabled:
+                return False
+
+            rtsp_url = self.camera.get("rtsp_sub") or self.camera.get("rtsp_main")
+
+            if self.cap:
+                try:
+                    self.cap.release()
+                except:
+                    pass
+                self.cap = None
+
+            # ✅ Вместо блокирующего цикла — запускаем подключение в фоне
+            self._rtsp_url = rtsp_url
+            self._connecting = True
+            threading.Thread(target=self._connect_rtsp, daemon=True).start()
+
+            # Возвращаем True сразу, чтобы MQTT не блокировался
+            self.running = True
+            self.warmup_frames = 0
+            self._reconnect_attempts = 0
+            print(f"{ts()} ⏳ [{self.camera['name']}] Подключение к RTSP в фоне...")
+            return True
+
+        except Exception as e:
+            print(f"{ts()} ❌ КРИТИЧЕСКАЯ ОШИБКА В start(): {e}")
+            self.cap = None
+            self.running = False
             return False
 
-        rtsp_url = self.camera.get("rtsp_sub") or self.camera.get("rtsp_main")
+        def _start_camera_monitor(self):
+            if self.camera_health_timer:
+                self.camera_health_timer.cancel()
+            self.camera_health_timer = threading.Timer(self.camera_check_interval, self._check_camera_health)
+            self.camera_health_timer.daemon = True
+            self.camera_health_timer.start()
+
+        def _check_camera_health(self):
+            """Проверяет здоровье камеры и перезапускает только её"""
+            if not self.enabled or not self.running:
+                return
+
+            # Проверяем, читаются ли кадры
+            try:
+                ret, frame = self.cap.read()
+                if not ret:
+                    self.camera_health = False
+                    print(f"{ts()} ⚠️ [{self.camera['name']}] Камера не отвечает")
+                    # Если камера включена — перезапускаем только эту камеру
+                    if self.enabled:
+                        print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск камеры")
+                        self.stop()
+                        time.sleep(2)
+                        self.start()
+                    return
+                else:
+                    self.camera_health = True
+            except Exception as e:
+                self.camera_health = False
+                print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка проверки камеры: {e}")
+                if self.enabled:
+                    print(f"{ts()} 🔄 [{self.camera['name']}] Перезапуск камеры")
+                    self.stop()
+                    time.sleep(2)
+                    self.start()
+            finally:
+                # Перезапускаем таймер
+                self._start_camera_monitor()
+
+    def _connect_rtsp(self):
+            """Подключается к RTSP в фоновом потоке"""
+            for attempt in range(self._max_reconnect_attempts):
+                try:
+                    self.cap = cv2.VideoCapture(self._rtsp_url, cv2.CAP_FFMPEG)
+                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    if self.cap.isOpened():
+                        self.running = True
+                        self._connecting = False
+                        self.warmup_frames = 0
+                        self._reconnect_attempts = 0
+                        print(f"{ts()} ✅ [{self.camera['name']}] Детектор запущен (RTSP подключён)")
+                        self._start_camera_monitor()
+                        return
+                except Exception as e:
+                    print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка OpenCV: {e}")
+                    time.sleep(self._reconnect_delay)
+
+            print(f"{ts()} ❌ [{self.camera['name']}] Не удалось подключиться к RTSP")
+            self.cap = None
+            self.running = False
+            self._connecting = False
+
+    def stop(self):
+        self.running = False
+        self.enabled = False  # ← добавляем, чтобы отключить обработку
 
         if self.cap:
             try:
@@ -106,44 +203,9 @@ class MotionDetector:
                 pass
             self.cap = None
 
-        try:
-            for attempt in range(self._max_reconnect_attempts):
-                try:
-                    self.cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
-                    # ✅ Сбрасываем буфер
-                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    # ✅ Устанавливаем TCP транспорт
-                    self.cap.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_NONE)
-                    if self.cap.isOpened():
-                        break
-                except Exception as e:
-                    print(f"{ts()} {C_RED}⚠️ [{self.camera['name']}] Ошибка OpenCV: {e}{C_RESET}")
-                    time.sleep(self._reconnect_delay)
-
-            if not self.cap or not self.cap.isOpened():
-                self.cap = None
-                return False
-
-            self.cap.set(cv2.CAP_PROP_FPS, 5)
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            self.running = True
-            self.warmup_frames = 0
-            self._reconnect_attempts = 0
-
-            mode = "🤖 AI + MOG2" if self.ai_enabled else "🔍 MOG2"
-            print(f"{ts()} {mode} [{self.camera['name']}] Детектор запущен (порог: {self.threshold}%)")
-            return True
-        except Exception as e:
-            print(f"{ts()} {C_RED}❌ [{self.camera['name']}] КРИТИЧЕСКАЯ ошибка: {e}{C_RESET}")
-            self.cap = None
-            self.running = False
-            return False
-
-    def stop(self):
-        self.running = False
-        if self.cap:
-            self.cap.release()
-            self.cap = None
+        if self.camera_health_timer:
+            self.camera_health_timer.cancel()
+            self.camera_health_timer = None
 
     def restart(self):
         self.stop()
@@ -156,82 +218,85 @@ class MotionDetector:
         return self.start()
 
     def loop(self):
-        """Один цикл детекции"""
-        if not self.running or not self.enabled:
+        if not self.running or not self.enabled or self._connecting:
             return
-
-        # ✅ ПРОВЕРКА РАСПИСАНИЯ
-        if not self._should_detect():
-            return  # Не время для детекции по расписанию
-
-        if self.cap is None:
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                self.start()
-            return
-
-
-        if self.cap is None:
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                self.start()
-            return
-
         try:
+            if not self.running or not self.enabled:
+                return
+
+            if self.cap is None:
+                if not self.enabled:
+                    return
+                self._reconnect_attempts += 1
+                if self._reconnect_attempts <= self._max_reconnect_attempts:
+                    try:
+                        self.start()  # ← ЗАЩИТИТЬ!
+                    except Exception as e:
+                        print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка при start(): {e}")
+                        self.running = False
+                else:
+                    self.running = False
+                return
+
             ret, frame = self.cap.read()
+            if not ret:
+                self._reconnect_attempts += 1
+                if self._reconnect_attempts <= self._max_reconnect_attempts:
+                    time.sleep(2)
+                    try:
+                        self.start()  # ← ЗАЩИТИТЬ!
+                    except Exception as e:
+                        print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка при start(): {e}")
+                        self.running = False
+                else:
+                    self.running = False
+                    self.cap = None
+                return
+
+            self._reconnect_attempts = 0
+
+            small = cv2.resize(frame, (320, 240))
+            fgmask = self.fgbg.apply(small)
+
+            # Зоны
+            if self.zones:
+                self._apply_zones(fgmask, frame)
+
+            # Прогрев
+            if self.warmup_frames < self.WARMUP_NEEDED:
+                self.warmup_frames += 1
+                if self.warmup_frames % 5 == 0:
+                    print(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
+                return
+
+            motion_pixels = np.count_nonzero(fgmask)
+            motion_percent = motion_pixels / (320 * 240) * 100
+
+            # Защита от смены день/ночь
+            if motion_percent > 80.0:
+                self._handle_day_night_switch(frame, motion_percent)
+                return
+
+            # Лог MOG2
+            self._log_mog2(motion_percent)
+
+            # Основная логика
+            if motion_percent > self.threshold:
+                self._on_motion_detected(frame, motion_percent)
+            else:
+                self._on_no_motion()
+
         except Exception as e:
-            print(f"{ts()} ⚠️ [{self.camera['name']}] Ошибка чтения кадра: {e}")
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                time.sleep(2)
-                self.start()
+            print(f"{ts()} 🔴 НЕОБРАБОТАННОЕ ИСКЛЮЧЕНИЕ В loop(): {e}")
+            import traceback
+            traceback.print_exc()
+            if self.enabled:
+                try:
+                    self.start()
+                except:
+                    pass
             else:
-                self.running = False
-                self.cap = None
-            return
-
-        if not ret:
-            self._reconnect_attempts += 1
-            if self._reconnect_attempts <= self._max_reconnect_attempts:
-                time.sleep(2)
-                self.start()
-            else:
-                self.running = False
-                self.cap = None
-            return
-
-        self._reconnect_attempts = 0
-
-        small = cv2.resize(frame, (320, 240))
-        fgmask = self.fgbg.apply(small)
-
-        # Зоны
-        if self.zones:
-            self._apply_zones(fgmask, frame)
-
-        # Прогрев
-        if self.warmup_frames < self.WARMUP_NEEDED:
-            self.warmup_frames += 1
-            if self.warmup_frames % 5 == 0:
-                print(f"{ts()} 🔥 [{self.camera['name']}] Прогрев: {self.warmup_frames}/{self.WARMUP_NEEDED}")
-            return
-
-        motion_pixels = np.count_nonzero(fgmask)
-        motion_percent = motion_pixels / (320 * 240) * 100
-
-        # Защита от смены день/ночь
-        if motion_percent > 80.0:
-            self._handle_day_night_switch(frame, motion_percent)
-            return
-
-        # Лог MOG2
-        self._log_mog2(motion_percent)
-
-        # Основная логика
-        if motion_percent > self.threshold:
-            self._on_motion_detected(frame, motion_percent)
-        else:
-            self._on_no_motion()
+                print(f"{ts()} ⏸️ Детектор выключен — не перезапускаю")
 
     def _apply_zones(self, fgmask, frame):
         """Применяет зоны детекции"""

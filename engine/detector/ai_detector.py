@@ -31,8 +31,8 @@ class AIDetector:
         """Загружает модель YOLO"""
         try:
             from ultralytics import YOLO
-            print(f"{ts()} 🤖 [{self.camera['name']}] Загружаю YOLOv8n...")
-            self.model = YOLO('yolov8n.pt')
+            print(f"{ts()} 🤖 [{self.camera['name']}] Загружаю YOLOv10n...")
+            self.model = YOLO('yolov10n.pt')
 
             if isinstance(self.classes, str):
                 try:
@@ -40,7 +40,7 @@ class AIDetector:
                 except:
                     self.classes = [0]
 
-            print(f"{ts()} ✅ [{self.camera['name']}] YOLOv8n загружен! Классы: {self.classes}")
+            print(f"{ts()} ✅ [{self.camera['name']}] YOLOv10n загружен! Классы: {self.classes}")
         except Exception as e:
             print(f"{ts()} ❌ [{self.camera['name']}] Ошибка загрузки YOLO: {e}")
             self.enabled = False

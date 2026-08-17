@@ -7,6 +7,7 @@ import subprocess
 import json
 import threading
 import paho.mqtt.client as mqtt
+from engine.shared.utils import ts
 
 class StreamerHealer:
     def __init__(self):
@@ -44,7 +45,7 @@ class StreamerHealer:
         self._pong_received = True
 
     def kill(self):
-        print("🔪 Убиваю streamer (со всеми дочерними)...")
+        print(f"{ts()}🔪 Убиваю streamer (со всеми дочерними)...")
         try:
             ps_cmd = "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object { $_.CommandLine -like '*streamer*' -and $_.CommandLine -notlike '*web_server*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json"
             result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
@@ -67,23 +68,23 @@ class StreamerHealer:
 
     def start(self):
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print("🚀 Запускаю streamer...")
+        print(f"{ts()}🚀 Запускаю streamer...")
         subprocess.Popen(
             f'start cmd /k "cd /d {project_root} && python engine/streamer/main.py && pause"',
             shell=True
         )
         # self.last_restart = time.time()
-        print("✅ streamer запущен, даём 60 сек на старт")
+        print(f"{ts()}✅ streamer запущен, даём 60 сек на старт")
 
     def heal_loop(self):
-        print("⏳ Даю 60 сек на старт streamer...")
+        print(f"{ts()}⏳ Даю 60 сек на старт streamer...")
         time.sleep(60)
 
         while True:
             # Сначала проверяем веб-сервер
             if not self.is_web_alive():
-                print("❌ Web Server не отвечает!")
-                print("🔄 Перезапуск Web Server...")
+                print(f"{ts()}❌ Web Server не отвечает!")
+                print(f"{ts()}🔄 Перезапуск Web Server...")
                 # Ищем PID веб-сервера
                 ps_cmd = "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | Where-Object { $_.CommandLine -like '*web_server*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json"
                 result = subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True, text=True, timeout=5)
@@ -97,21 +98,21 @@ class StreamerHealer:
                     pid = proc.get('ProcessId', 0)
                     if pid:
                         subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True)
-                        print(f"   ✅ Web Server (PID {pid}) убит")
+                        print(f"{ts()}   ✅ Web Server (PID {pid}) убит")
                 # Запускаем веб-сервер заново
                 subprocess.Popen(
                     ['start', 'cmd', '/k', 'cd /d C:\\legionNVR && python web_server.py'],
                     shell=True
                 )
-                print("✅ Web Server перезапущен")
+                print(f"{ts()}✅ Web Server перезапущен")
 
             # Потом проверяем себя
             if not self.is_alive():
-                print(f"⚠️ streamer недоступен. Проверю через 5 сек...")
+                print(f"{ts()}⚠️ streamer недоступен. Проверю через 5 сек...")
                 time.sleep(5)
                 if not self.is_alive():
-                    print(f"❌ streamer не отвечает (подтверждено)")
-                    print("🔄 Перезапуск streamer...")
+                    print(f"{ts()}❌ streamer не отвечает (подтверждено)")
+                    print(f"{ts()}🔄 Перезапуск streamer...")
                     self.kill()
                     self.start()
                     self.last_restart = time.time()

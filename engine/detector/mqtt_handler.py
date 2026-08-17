@@ -11,7 +11,6 @@ from models.database import get_db
 
 
 def on_cmd(client, userdata, msg):
-    """Обработчик MQTT команд"""
     try:
         data = json.loads(msg.payload.decode())
         action = data.get("action")
@@ -20,14 +19,20 @@ def on_cmd(client, userdata, msg):
         if action == "reload_config":
             _handle_reload_config(client, userdata, cam_id)
         elif action == "ping":
-            _handle_ping(client, userdata)
+            # ← ОБРАБОТКА ПИНГА
+            client.publish("spartan/detector/pong", json.dumps({
+                "status": "alive",
+                "cameras": len(userdata.get("detectors", [])),
+                "timestamp": int(time.time())
+            }))
         elif action == "start_detector":
             _handle_start_detector(client, userdata, cam_id)
         elif action == "stop_detector":
             _handle_stop_detector(userdata, cam_id)
 
     except Exception as e:
-        print(f"{ts()} ⚠️ [CMD] Ошибка: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def _handle_reload_config(client, userdata, cam_id):
@@ -146,4 +151,5 @@ def _handle_stop_detector(userdata, cam_id):
         if str(det.camera["id"]) == str(cam_id):
             det.enabled = False
             det.stop()
+            print(f"{ts()} ⏹️ Детектор камеры {det.camera['name']} (ID {det.camera['id']}) остановлен")
             break

@@ -8,6 +8,7 @@ from models.database import get_db
 from web.utils import send_mqtt_command, check_rtsp_available
 import json
 import time
+from engine.shared.utils import ts
 
 api_cameras_bp = Blueprint('api_cameras', __name__, url_prefix='/api/cameras')
 
@@ -57,26 +58,26 @@ def update_camera(camera_id):
 
     if new_enabled != old_enabled:
         if new_enabled == 1:
-            print(f"🟢 Камера {camera_id} ВКЛЮЧЕНА")
+            print(f"{ts()}🟢 Камера {camera_id} ВКЛЮЧЕНА")
             send_mqtt_command(camera_id, 'start_stream')
         else:
-            print(f"🔴 Камера {camera_id} ВЫКЛЮЧЕНА → стоп всё")
+            print(f"{ts()}🔴 Камера {camera_id} ВЫКЛЮЧЕНА → стоп всё")
             Camera.update_full(camera_id, {'motion_enabled': 0, 'record_enabled': 0})
             send_mqtt_command(camera_id, 'stop_stream')
             send_mqtt_command(camera_id, 'stop_detector')
             send_mqtt_command(camera_id, 'stop_recording')
     elif new_motion != old_motion:
         if new_motion == 1:
-            print(f"🔍 Детектор камеры {camera_id}: ВКЛ")
+            print(f"{ts()}🔍 Детектор камеры {camera_id}: ВКЛ")
             send_mqtt_command(camera_id, 'reload_config')
         else:
-            print(f"🔍 Детектор камеры {camera_id}: ВЫКЛ")
+            print(f"{ts()}🔍 Детектор камеры {camera_id}: ВЫКЛ")
             Camera.update_full(camera_id, {'record_enabled': 0})
             send_mqtt_command(camera_id, 'stop_detector')
             send_mqtt_command(camera_id, 'stop_recording')
     elif new_record != old_record:
         if new_record == 0:
-            print(f"📼 Запись камеры {camera_id}: ВЫКЛ")
+            print(f"{ts()}📼 Запись камеры {camera_id}: ВЫКЛ")
             send_mqtt_command(camera_id, 'stop_recording')
     else:
         if any(k in data for k in ['motion_threshold', 'motion_cooldown', 'motion_fps']):

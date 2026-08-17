@@ -21,7 +21,7 @@ from engine.health_monitor_str import StreamerHealer
 
 def signal_handler(sig, frame):
     """Обработчик Ctrl+C"""
-    print("\n⏹️ Завершение...")
+    print(f"{ts()}\n⏹️ Завершение...")
     for proc in stream_processes.values():
         try:
             proc.terminate()
@@ -76,7 +76,7 @@ def main():
 
     print(f"{ts()} [HLS] Streams: {len(stream_processes)}")
     print(f"{ts()} [Subscriptions] spartan/+/motion, spartan/+/cmd, spartan/streams/reload")
-    print("[Running] Working... (Ctrl+C to exit)")
+    print(f"{ts()} [Running] Working... (Ctrl+C to exit)")
     print()
 
     try:

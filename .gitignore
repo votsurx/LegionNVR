@@ -28,6 +28,7 @@ env/
 # IDE
 .vscode/
 .idea/
+.vs/
 
 # Windows
 Thumbs.db

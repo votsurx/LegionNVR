@@ -1,0 +1,89 @@
+[
+  {
+    "ip": "192.168.0.13",
+    "ping": {
+      "reachable": true,
+      "ping_time": null,
+      "ttl": 128
+    },
+    "hostname": "DESKTOP-U755VRQ",
+    "mac": null,
+    "open_ports": [
+      135,
+      139,
+      445
+    ],
+    "services": {},
+    "camera_detected": false,
+    "manufacturer": null,
+    "http_info": {}
+  },
+  {
+    "ip": "192.168.0.1",
+    "ping": {
+      "reachable": true,
+      "ping_time": null,
+      "ttl": 64
+    },
+    "hostname": null,
+    "mac": "70-F8-2B-3F-A7-20",
+    "open_ports": [
+      80
+    ],
+    "services": {
+      "80": {
+        "service": "HTTP (Date: Mon, 17 Aug 2026 11:33:46 GMT)",
+        "banner": "HTTP/1.1 401 Unauthorized\r\nServer: \r\nDate: Mon, 17 Aug 2026 11:33:46 GMT\r\nCache-Control: no-cache,no-store\r\nPrama: no-cache\r\nWWW-Authenticate: Basic realm=\".\"\r\nContent-Type: text/html\r\nConnection: clo"
+      }
+    },
+    "camera_detected": false,
+    "manufacturer": null,
+    "http_info": {
+      "80": {
+        "status_code": "401",
+        "server": "Date: Mon, 17 Aug 2026 11:33:56 GMT",
+        "headers": {
+          "Server": "",
+          "Date": "Mon, 17 Aug 2026 11:33:56 GMT",
+          "Cache-Control": "no-cache,no-store",
+          "Prama": "no-cache",
+          "WWW-Authenticate": "Basic realm=\".\"",
+          "Content-Type": "text/html",
+          "Connection": "close"
+        },
+        "title": "Authorization warning",
+        "is_camera": false
+      }
+    }
+  },
+  {
+    "ip": "192.168.0.12",
+    "ping": {
+      "reachable": true,
+      "ping_time": null,
+      "ttl": 64
+    },
+    "hostname": null,
+    "mac": "FA-96-14-E8-C9-1E",
+    "open_ports": [],
+    "services": {},
+    "camera_detected": false,
+    "manufacturer": null,
+    "http_info": {}
+  },
+  {
+    "ip": "192.168.0.11",
+    "ping": {
+      "reachable": true,
+      "ping_time": null,
+      "ttl": 64
+    },
+    "hostname": null,
+    "mac": "62-8A-57-28-E6-25",
+    "open_ports": [],
+    "services": {},
+    "camera_detected": false,
+    "manufacturer": null,
+    "http_info": {}
+  }
+]

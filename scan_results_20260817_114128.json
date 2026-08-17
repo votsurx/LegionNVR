@@ -1,0 +1,46 @@
+[
+  {
+    "ip": "192.168.0.13",
+    "hostname": "DESKTOP-U755VRQ",
+    "mac": null,
+    "manufacturer_from_mac": null,
+    "open_ports": [
+      135,
+      139,
+      445
+    ],
+    "services": {},
+    "camera_detected": false,
+    "manufacturer": null,
+    "http_info": {},
+    "has_open_ports": true,
+    "is_alive": true
+  },
+  {
+    "ip": "192.168.0.1",
+    "hostname": null,
+    "mac": null,
+    "manufacturer_from_mac": null,
+    "open_ports": [
+      80
+    ],
+    "services": {
+      "80": {
+        "service": "HTTP (Date: Mon, 17 Aug 2026 11:41:26 GMT)",
+        "banner": "HTTP/1.1 401 Unauthorized\r\nServer: \r\nDate: Mon, 17 Aug 2026 11:41:26 GMT\r\nCache-Control: no-cache,no-store\r\nPrama: no-cache\r\nWWW-Authenticate: Basic realm=\".\"\r\nContent-Type: text/html\r\nConnection: clo"
+      }
+    },
+    "camera_detected": false,
+    "manufacturer": null,
+    "http_info": {
+      "80": {
+        "status_code": "401",
+        "server": "Date: Mon, 17 Aug 2026 11:41:35 GMT",
+        "title": "Authorization warning",
+        "is_camera": false
+      }
+    },
+    "has_open_ports": true,
+    "is_alive": true
+  }
+]

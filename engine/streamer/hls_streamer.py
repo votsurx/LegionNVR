@@ -45,11 +45,11 @@ def start_hls_stream(camera):
     cam_id = str(camera["id"])
 
     if not camera.get("enabled", True):
-        print(f"⏸️ Камера {cam_id} отключена, стрим не запущен")
+        print(f"{ts()}⏸️ Камера {cam_id} отключена, стрим не запущен")
         return
 
     if not camera.get("stream_enabled", True):
-        print(f"⏸️ Стрим для камеры {cam_id} отключен")
+        print(f"{ts()}⏸️ Стрим для камеры {cam_id} отключен")
         return
 
     stop_hls_stream(cam_id)
@@ -71,7 +71,7 @@ def start_hls_stream(camera):
     segment_pattern = os.path.join(HLS_DIR, f"camera{cam_id}_%Y%m%d_%H%M%S.ts")
     playlist_file = os.path.join(HLS_DIR, f"camera{cam_id}.m3u8")
 
-    print(f"🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
+    print(f"{ts()}🎥 [{camera['name']}] Буфер HLS: {hls_list_size} сегментов по {HLS_TIME} сек = {hls_list_size} сек")
 
     cmd = [
         ffmpeg,
@@ -97,9 +97,9 @@ def start_hls_stream(camera):
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         stream_processes[cam_id] = proc
-        print(f"🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
+        print(f"{ts()}🎥 HLS стрим '{camera['name']}' запущен (буфер {hls_list_size} сек)")
     except Exception as e:
-        print(f"❌ Ошибка запуска стрима для {camera['name']}: {e}")
+        print(f"{ts()}❌ Ошибка запуска стрима для {camera['name']}: {e}")
 
 
 def restart_hls_stream(camera):
